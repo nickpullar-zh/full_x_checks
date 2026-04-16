@@ -62,8 +62,6 @@ class TaskSelectorUI:
         )
         task_dropdown.grid(row=1, column=1, padx=10, pady=5)
 
-        print("v0.2-Grouping_By")
-
         self.start_btn = ttk.Button(
             frame,
             text="Start",

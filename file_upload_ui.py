@@ -1,6 +1,7 @@
 import os
 import ctypes
 import tkinter as tk
+from datetime import datetime
 from tkinter import ttk, filedialog, messagebox
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
@@ -258,7 +259,7 @@ class FileUploadUI:
         )
         current_row += 1
 
-        # --- Submit Button ---
+        # --- Proceed Button ---
         self.submit_btn = ttk.Button(
             main_frame,
             text="Proceed",
@@ -335,7 +336,8 @@ class FileUploadUI:
                 label: var.get() or "Sheet1"
                 for label, var in self.sheet_names.items()
             },
-            "output_directory": self.output_directory or None
+            "output_directory": self.output_directory or None,
+            "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S")  # Set once here
         }
         self.root.destroy()
 

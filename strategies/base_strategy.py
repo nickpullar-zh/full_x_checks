@@ -41,8 +41,26 @@ class BaseStrategy(ABC):
             try:
                 ext = os.path.splitext(path)[1].lower()  # ← Normalise to lowercase
 
-                if ext == ".xlsx":
+                if ext in (".xlsx", ".xls"):
                     sheet = sheet_names.get(label, "Sheet1")  # ← Get sheet name
+                    try:
+                        excel_file = pd.ExcelFile(path)
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Excel File Error",
+                            f"Could not open '{os.path.basename(path)}' as an Excel file.\n\n"
+                            f"{str(e)}"
+                        )
+                        return None
+
+                    if sheet not in excel_file.sheet_names:
+                        messagebox.showerror(
+                            "Sheet Not Found",
+                            f"Could not find sheet '{sheet}' in '{os.path.basename(path)}'.\n\n"
+                            f"Please check the file and sheet name then try again."
+                        )
+                        return None
+
                     loaded[label] = pd.read_excel(path, sheet_name=sheet)
                 elif ext == ".csv":
                     loaded[label] = pd.read_csv(path)
