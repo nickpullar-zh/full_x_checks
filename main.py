@@ -1,9 +1,35 @@
 import tkinter as tk
+import os
 from tkinter import ttk
 from file_upload_ui import FileUploadUI
 from task_registry import TASK_REGISTRY
 
 # This is v0.2-Grouping_by
+
+# ==========================================
+# Debug Configuration
+# ← Set to True to skip UI during debugging
+# ← Set to False for normal UI operation
+# ==========================================
+DEBUG_MODE = True
+os.system('cls')  # Clears terminal on every run
+
+DEBUG_FILES = {
+    "files": {
+        "FIP File (ZQ9_VALFLDGR)": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\20260416_162629_FIP File _ZQ9_VALFLDGR_.xlsx",
+        "X-Checks Publication File": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx",
+        "Mapping File":            r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\Mapping Table with 20 rows.txt",
+    },
+    "sheet_names": {
+        "FIP File (ZQ9_VALFLDGR)": "Sheet1",
+        "X-Checks Publication File": "cross checks all",
+        "Mapping File":            "Sheet1",
+    },
+    "output_directory": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\Output",
+    "process_only_differences": False
+}
+
+DEBUG_TASK = "X-Checks Grouping By"  # ← Must match a key in TASK_REGISTRY
 
 class TaskSelectorUI:
     """
@@ -77,13 +103,24 @@ class TaskSelectorUI:
 
         config, strategy_class = TASK_REGISTRY[task_name]
 
+        if DEBUG_MODE:
+            # Skip UI entirely — use hardcoded values
+            import app_state
+            from datetime import datetime
+            app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") 
+            app_state.process_only_differences = DEBUG_FILES["process_only_differences"]
+            strategy = strategy_class(config)
+            strategy.execute(DEBUG_FILES, DEBUG_FILES["output_directory"])
+            self.root.destroy()
+            return
+    
         # Hide launcher while upload dialog is open
         self.root.withdraw()
 
         files = FileUploadUI(config, self.root).run()
 
         if files:
-            strategy = strategy_class()
+            strategy = strategy_class(config)
             strategy.execute(files, files["output_directory"])  # ← Pass full files dict
 
         self.root.destroy()  # ← Closes launcher and exits
@@ -91,6 +128,11 @@ class TaskSelectorUI:
         #self.root.deiconify()
 
     def run(self):
+        if DEBUG_MODE:
+            # Set task directly and start without showing launcher
+            self.task_var.set(DEBUG_TASK)
+            self.root.after(0, self._on_start)  # ← Call _on_start immediately after mainloop starts
+
         self.root.mainloop()
 
 

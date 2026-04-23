@@ -1,6 +1,7 @@
 import os
 import ctypes
 import tkinter as tk
+import app_state
 from datetime import datetime
 from tkinter import ttk, filedialog, messagebox
 from typing import Optional, Dict
@@ -25,6 +26,7 @@ class FileUploadUI:
         self.output_label = None
         self.result: Optional[Dict] = None
         self.parent = parent
+        self.process_only_differences = tk.BooleanVar(value=False)
 
         self.root = tk.Toplevel(parent)  # ← Toplevel not Tk()
         self.root.title(config.window_title)
@@ -259,6 +261,19 @@ class FileUploadUI:
         )
         current_row += 1
 
+        # --- Process Only Differences Checkbox ---
+        ttk.Checkbutton(
+            main_frame,
+            text="Process only differences",
+            variable=self.process_only_differences
+        ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
+        current_row += 1
+
+        ttk.Separator(main_frame, orient="horizontal").grid(
+            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        )
+        current_row += 1
+
         # --- Proceed Button ---
         self.submit_btn = ttk.Button(
             main_frame,
@@ -327,6 +342,11 @@ class FileUploadUI:
 
     def _on_submit(self):
         """All validation already handled by _check_ready() — just package results."""
+        
+        # Set the global timestamp once here
+        app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        app_state.process_only_differences = self.process_only_differences.get()
+
         self.result = {
             "files": {
                 label: var.get() or None
@@ -337,7 +357,8 @@ class FileUploadUI:
                 for label, var in self.sheet_names.items()
             },
             "output_directory": self.output_directory or None,
-            "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S")  # Set once here
+            "timestamp": app_state.timestamp,  # Reference the global timestamp here
+            "process_only_differences": app_state.process_only_differences 
         }
         self.root.destroy()
 

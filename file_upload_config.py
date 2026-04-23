@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 
 @dataclass
@@ -10,6 +10,7 @@ class FileFieldConfig:
     required: bool = True
     description: str = ""                   # Helper text shown below the field
     default_sheet: str = "Sheet1"
+    required_columns: Optional[list[str]] = None  # None means keep all columns
 
     @property
     def show_sheet(self) -> bool:

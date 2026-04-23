@@ -98,7 +98,8 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             description="The X-Checks Publication file with the 'cross checks all' sheet",
-            default_sheet="cross checks all"
+            default_sheet="cross checks all",
+            required_columns=["X-Check No.","Reference  X-Check (Condition)","Grouping By"]
         ),
         FileFieldConfig(
             label="Mapping File",
