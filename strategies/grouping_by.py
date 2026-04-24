@@ -50,10 +50,14 @@ class GroupingBy(BaseStrategy):
         try:
             """Returns (mapping, original, processed) DataFrames and appends to log."""
             print("Processing FIP file...")
-            self.log_step(log, "Mapping File", "Started processing", 0)
 
+            self.log_step(log, "FIP", "Started processing", 0)
+            df_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label].copy()
+            self.log_step(log, "FIP", "Original File copied", len(df_original), "Copied original DataFrame")
+
+            self.log_step(log, "Mapping File", "Started processing", 0)
             mapping_file_content = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label]  # Mapping File
-            self.log_step(log, "Mapping File", "Loaded", len(mapping_file_content.splitlines()))
+            self.log_step(log, "Mapping File", "Loaded", len(mapping_file_content.splitlines()),"Including header row")
             mapping_dict = {}
             for line in mapping_file_content.splitlines()[1:]:  # [1:] skips the header row "FIP Data,EBS item"
                 line = line.strip()
@@ -71,24 +75,26 @@ class GroupingBy(BaseStrategy):
             self.log_step(log, "Mapping File", "Mapping dictionary created", len(mapping_dict))
 
             # Access directly from loaded_files
-            self.log_step(log, "FIP", "Started processing", 0)
-            df_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label].copy()
-            self.log_step(log, "FIP", "Original file", len(df_original))
             df_fip = df_original.copy()  # 'FIP File (ZQ9_VALFLDGR)'
+            self.log_step(log, "FIP", "Original file", len(df_original), "FIP Dataframe ready for processing")
             
             # --- Lookup: map "Field name" to EBS item ---
             df_fip["EBS Item"] = df_fip["Field name"].map(mapping_dict)
-            self.log_step(log, "FIP", "Mapped 'Field name' to 'EBS Item'", df_fip["EBS Item"].notna().sum(), "Mapped using mapping dictionary")
+            self.log_step(log, "FIP", "Mapped 'Field name' to 'EBS Item'", len(df_fip), "Mapped using mapping dictionary")
 
-            # --- Build Key column ---
+            # --- Build Key column ---+
             df_fip["Key"] = df_fip.apply(
                 lambda row: f"{row['ValidRule']}|{row['EBS Item']}"
                 if pd.notna(row["ValidRule"]) and str(row["ValidRule"]).strip() != ""
                 else "",
                 axis=1
             )
-            self.log_step(log, "FIP", "Constructed 'Key' column", df_fip["Key"].notna().sum(), "Concatenated 'ValidRule' and mapped 'EBS Item'")
+            self.log_step(log, "FIP", "Constructed 'Key' column", len(df_fip), "Concatenated 'ValidRule' and mapped 'EBS Item'")
 
+            # Remove all rows where Key is empty or whitespace
+            df_fip = df_fip[df_fip["Key"].str.strip() != ""]    
+            self.log_step(log, "FIP", "Removed blank rows", len(df_fip), "Removed rows where 'Key' is empty or whitespace")
+            
             self.log_step(log, "FIP", "Finished processing", len(df_fip), "Returned processed DataFrame for comparison")
             return df_mapping_file, df_original, df_fip # Return for use in compare
         except Exception as e:
@@ -178,65 +184,65 @@ class GroupingBy(BaseStrategy):
         print("Running comparison...")
         # ... compare logic ...
 
-    def _build_output_path(self, output_directory: str, label: str, timestamp: str) -> str:
-        """
-        Builds a safe, timestamped output file path from a label.
-        Replaces characters that are invalid in Windows filenames.
-        Returns the full output path including filename.
-        """
-        safe_label = re.sub(r'[<>:"/\\|?*()]', '_', label)
-        filename = f"{timestamp}_{safe_label}.xlsx"
-        return os.path.join(output_directory, filename)
+    # def _build_output_path(self, output_directory: str, label: str, timestamp: str) -> str:
+    #     """
+    #     Builds a safe, timestamped output file path from a label.
+    #     Replaces characters that are invalid in Windows filenames.
+    #     Returns the full output path including filename.
+    #     """
+    #     safe_label = re.sub(r'[<>:"/\\|?*()]', '_', label)
+    #     filename = f"{timestamp}_{safe_label}.xlsx"
+    #     return os.path.join(output_directory, filename)
     
-    def _write_output(self, output_directory, df_mapping_file, df_fip_original, df_fip_processed,        
-                    df_ebs_original, df_ebs_processed, log):
-        #def _write_output(self, output_directory, df_fip_original, df_fip_processed,
-        #              df_ebs_original, df_ebs_processed, df_compare, log):        
+    # def _write_output(self, output_directory, df_mapping_file, df_fip_original, df_fip_processed,        
+    #                 df_ebs_original, df_ebs_processed, log):
+    #     #def _write_output(self, output_directory, df_fip_original, df_fip_processed,
+    #     #              df_ebs_original, df_ebs_processed, df_compare, log):        
         
-        import shutil
-        from config import OUTPUT_TEMPLATE
+    #     import shutil
+    #     from config import OUTPUT_TEMPLATE
 
-        """Writes all sheets to a single timestamped Excel workbook."""
-        output_path = self.build_output_path(
-            output_directory,
-            "X-Check Grouping By Results",
-            app_state.timestamp
-        )
+    #     """Writes all sheets to a single timestamped Excel workbook."""
+    #     output_path = self.build_output_path(
+    #         output_directory,
+    #         "X-Check Grouping By Results",
+    #         app_state.timestamp
+    #     )
 
-        # Copy pre-labelled template to output path
-        shutil.copy(OUTPUT_TEMPLATE, output_path)
+    #     # Copy pre-labelled template to output path
+    #     shutil.copy(OUTPUT_TEMPLATE, output_path)
 
-        df_log = pd.DataFrame(log)  # Convert log list to DataFrame
+    #     df_log = pd.DataFrame(log)  # Convert log list to DataFrame
 
-        with pd.ExcelWriter(output_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-            # df_compare.to_excel(writer, sheet_name="Compare",               index=False)
-            df_mapping_file.to_excel(writer, sheet_name="Mapping File",     index=False)
-            df_fip_original.to_excel(writer, sheet_name="FIP - Original",   index=False)
-            df_fip_processed.to_excel(writer, sheet_name="FIP - Processed", index=False)
-            df_ebs_original.to_excel(writer, sheet_name="EBS - Original",   index=False)
-            df_ebs_processed.to_excel(writer, sheet_name="EBS - Processed", index=False)
-            df_log.to_excel(writer, sheet_name="Processing Log",            index=False)
+    #     with pd.ExcelWriter(output_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+    #         # df_compare.to_excel(writer, sheet_name="Compare",               index=False)
+    #         df_mapping_file.to_excel(writer, sheet_name="Mapping File",     index=False)
+    #         df_fip_original.to_excel(writer, sheet_name="FIP - Original",   index=False)
+    #         df_fip_processed.to_excel(writer, sheet_name="FIP - Processed", index=False)
+    #         df_ebs_original.to_excel(writer, sheet_name="EBS - Original",   index=False)
+    #         df_ebs_processed.to_excel(writer, sheet_name="EBS - Processed", index=False)
+    #         df_log.to_excel(writer, sheet_name="Processing Log",            index=False)
         
-            # Remove default Sheet1 from template
-            if "Sheet1" in writer.book.sheetnames:
-                del writer.book["Sheet1"]
+    #         # Remove default Sheet1 from template
+    #         if "Sheet1" in writer.book.sheetnames:
+    #             del writer.book["Sheet1"]
             
-            # Auto-fit all sheets after writing
-            for sheet_name in writer.book.sheetnames:
-                print("Autofitting columns in sheet:", sheet_name) # Debug statement to confirm we're in the loop
-                self.autofit_columns(writer.book[sheet_name])
+    #         # Auto-fit all sheets after writing
+    #         for sheet_name in writer.book.sheetnames:
+    #             print("Autofitting columns in sheet:", sheet_name) # Debug statement to confirm we're in the loop
+    #             self.autofit_columns(writer.book[sheet_name])
 
-        print(f"Output written to: {output_path}")
+    #     print(f"Output written to: {output_path}")
 
-    def _autofit_columns(self, worksheet, max_width: int = 60):
-        """Auto-fits all columns in a worksheet to their content width, capped at max_width."""
-        for column in worksheet.columns:
-            max_length = 0
-            col_letter = column[0].column_letter
-            for cell in column:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            worksheet.column_dimensions[col_letter].width = min(max_length + 2, max_width)  # Capped
+    # def _autofit_columns(self, worksheet, max_width: int = 60):
+    #     """Auto-fits all columns in a worksheet to their content width, capped at max_width."""
+    #     for column in worksheet.columns:
+    #         max_length = 0
+    #         col_letter = column[0].column_letter
+    #         for cell in column:
+    #             if cell.value:
+    #                 max_length = max(max_length, len(str(cell.value)))
+    #         worksheet.column_dimensions[col_letter].width = min(max_length + 2, max_width)  # Capped
 
     def _log(self, log: list, file: str, step: str, rows: int, notes: str = ""):
         """Helper to append a timestamped entry to the processing log."""
