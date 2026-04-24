@@ -1,16 +1,16 @@
-from abc import ABC, abstractmethod
-from tkinter import messagebox
-from typing import Optional
-from file_upload_config import UploadTaskConfig
 import pandas as pd
 import openpyxl
 import os
 import re
 import shutil
 import app_state
+from abc import ABC, abstractmethod
+from tkinter import messagebox
+from typing import Optional
+from file_upload_config import UploadTaskConfig
 from datetime import datetime
 from config import OUTPUT_TEMPLATE
-
+from openpyxl.styles import PatternFill, Font
 
 class BaseStrategy(ABC):
     """
@@ -39,6 +39,9 @@ class BaseStrategy(ABC):
         for label, data in loaded_files.items():
             print(f"  {label}: {type(data)}")
 
+        self.log = []  # Initialised here — available to all strategies via self.log
+        self.log_step(self.log, "System", "Files loaded successfully", len(loaded_files))
+
         self.process(loaded_files, files, output_directory)
 
     # -------------------------------------------------------------------------
@@ -55,26 +58,30 @@ class BaseStrategy(ABC):
         return os.path.join(output_directory, filename)
 
     def log_step(self, log: list, file: str, step: str, rows: int, notes: str = ""):
-        """Appends a timestamped entry to the processing log."""
+        """Appends a timestamped entry to the processing log and prints to console."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"  [{timestamp}] {file} — {step} ({rows} rows)")
         log.append({
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Timestamp": timestamp,
             "File": file,
             "Step": step,
             "Rows": rows,
             "Notes": notes
         })
 
-    def autofit_columns(self, worksheet, max_width: int = 90):
+    def autofit_columns(self, worksheet, max_width: int = 90,  skip_rows: int = 0):
         """Auto-fits all columns in a worksheet to their content width, capped at max_width."""
         for column in worksheet.columns:
             max_length = 0
             col_letter = column[0].column_letter
             for cell in column:
+                if cell.row <= skip_rows:
+                    continue
                 if cell.value:
                     max_length = max(max_length, len(str(cell.value)))
             worksheet.column_dimensions[col_letter].width = min(max_length + 2, max_width)
 
-    def write_excel_output(self, output_path: str, sheets: dict, log: list, df_compare: pd.DataFrame|None = None):
+    def write_excel_output(self, output_path: str, sheets: dict, log: list, summaries: dict | None = None):
         """
         Writes a dictionary of DataFrames to a single timestamped Excel workbook.
         Copies the pre-labelled template, writes all sheets, auto-fits columns.
@@ -83,22 +90,26 @@ class BaseStrategy(ABC):
             output_path:  Full path to the output file
             sheets:       Ordered dict of {sheet_name: DataFrame}
             log:          List of log entry dicts
-            df_compare:   Optional compare DataFrame — written to "Compare" sheet if provided
+            summaries:    Optional dict of {label: value} for summary blocks
         """
         # Copy pre-labelled template to output path
         shutil.copy(OUTPUT_TEMPLATE, output_path)
-
         df_log = pd.DataFrame(log)
 
         with pd.ExcelWriter(output_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
 
             # Write all provided sheets
             for sheet_name, df in sheets.items():
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                if summaries and sheet_name in summaries:
+                    self.write_sheet_with_summary(writer, sheet_name, df, summaries[sheet_name])
+                else:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-            # Write compare sheet if provided
-            if df_compare is not None:
-                df_compare.to_excel(writer, sheet_name="Compare", index=False)
+            # # Write summary sheets if provided
+            # if summaries is not None:
+            #     for label, summary in summaries.items():
+            #         self.write_sheet_with_summary(writer, label, pd.DataFrame(), summary)
+                # df_compare.to_excel(writer, sheet_name="Compare", index=False)
 
             # Write log sheet
             df_log.to_excel(writer, sheet_name="Processing Log", index=False)
@@ -109,8 +120,29 @@ class BaseStrategy(ABC):
 
             # Auto-fit all sheets
             for sheet_name in writer.book.sheetnames:
-                self.autofit_columns(writer.book[sheet_name])
+                if summaries and sheet_name in summaries:
+                    skip = len(summaries[sheet_name]) + 2  # skip summary rows + blank row
+                    self.autofit_columns(writer.book[sheet_name], skip_rows=skip)
+                else:
+                    self.autofit_columns(writer.book[sheet_name])
 
+            print(f"  Sheets in workbook: {writer.book.sheetnames}")
+
+            # Apply conditional formatting to Compare sheet
+            green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            green_font = Font(color="276221")
+            red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+            red_font   = Font(color="9C0006")
+
+            if "Compare" in writer.book.sheetnames:
+                self.apply_conditional_formatting(
+                    worksheet=writer.book["Compare"],
+                    column_name="Result",
+                    rules={
+                        "Matched":    (green_fill, green_font),
+                        "Not in FIP": (red_fill,   red_font),
+                    }
+                )
         print(f"Output written to: {output_path}")
 
     # -------------------------------------------------------------------------
@@ -268,6 +300,72 @@ class BaseStrategy(ABC):
             return None
 
         return df[required_columns]
+    
+    def apply_conditional_formatting(self, worksheet, column_name: str, rules: dict):
+        """
+        Applies conditional formatting to a named column in a worksheet.
+
+        Args:
+            worksheet:    The openpyxl worksheet object
+            column_name:  The header name of the column to format
+            rules:        Dict of {cell_value: PatternFill} e.g. {"Matched": green_fill}
+        """
+        from openpyxl.formatting.rule import CellIsRule
+
+        print(f"  Applying conditional formatting to '{worksheet.title}', column '{column_name}'")
+
+        # Find the column letter by matching the header value
+        target_col = None
+        for cell in worksheet[1]:
+            print(f"  Header cell value: '{cell.value}'")  # ← shows all header values
+            if cell.value == column_name:
+                target_col = cell.column_letter
+                break
+        
+        print(f"  Target column found: {target_col}")
+
+        if target_col is None:
+            return
+
+        last_row = worksheet.max_row
+        target_range = f"{target_col}2:{target_col}{last_row}"
+
+        for value, formatting in rules.items():
+            # Accept either a plain fill or a (fill, font) tuple
+            if isinstance(formatting, tuple):
+                fill, font = formatting
+            else:
+                fill, font = formatting, None
+        
+            worksheet.conditional_formatting.add(
+                target_range,
+                CellIsRule(
+                    operator="equal", 
+                    formula=[f'"{value}"'], 
+                    fill=fill,
+                    font=font
+                )
+            )
+
+    def write_sheet_with_summary(self, writer, sheet_name: str, df: pd.DataFrame, summary: dict):
+        """
+        Writes a summary block followed by a blank row then the main DataFrame.
+
+        Args:
+            writer:       The pd.ExcelWriter instance
+            sheet_name:   Name of the sheet to write to
+            df:           The main DataFrame
+            summary:      Ordered dict of {label: value} for the summary block
+        """
+        # Write main DataFrame first so the sheet is created, leaving room for summary
+        start_row = len(summary) + 2  # +1 for blank row, +1 for header
+        df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=start_row)
+
+        # Write summary rows directly into cells
+        worksheet = writer.sheets[sheet_name]
+        for i, (label, value) in enumerate(summary.items()):
+            worksheet.cell(row=i + 1, column=1, value=label)
+            worksheet.cell(row=i + 1, column=2, value=value)
 
     @abstractmethod
     def process(self, loaded_files: dict, files: dict, output_directory: str):
