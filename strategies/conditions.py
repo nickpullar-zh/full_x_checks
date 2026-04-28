@@ -2,9 +2,12 @@ import os
 import tkinter as tk
 from tkinter import ttk
 import pandas as pd
-from strategies.base_strategy import BaseStrategy
+from strategies.base_strategy import BaseStrategy, UploadTaskConfig
 
 class Conditions(BaseStrategy):
+
+    def __init__(self, config: UploadTaskConfig):  # Accept config
+        super().__init__(config)                   # Pass up to BaseStrategy
 
     def process(self, loaded_files: dict, files: dict, output_directory: str):
         lines = ["=== Conditions: Processing ===\n"]
