@@ -3,14 +3,12 @@ import openpyxl
 import os
 import re
 import shutil
-import app_state
 from abc import ABC, abstractmethod
 from tkinter import messagebox
 from typing import Optional
 from file_upload_config import UploadTaskConfig
 from datetime import datetime
 from config import OUTPUT_TEMPLATE
-from openpyxl.styles import PatternFill, Font
 
 class BaseStrategy(ABC):
     """
@@ -24,25 +22,35 @@ class BaseStrategy(ABC):
     def __init__(self, config: UploadTaskConfig):
         self.config = config
 
-    def execute(self, files: dict, output_directory: str):
+    def execute(self, files: dict):
         """
         Entry point called by main.py.
         Loads all files then hands off to the subclass.
         """
-        print("Loading files into memory...")
-        loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+        from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
+
+        self.log = []  # Initialised here — available to all strategies via self.log
+
+        # Store process flag on instance so _load_files can access it
+        self.process_only_differences = files.get("process_only_differences", False)
+
+        self.log_step(self.log, "System", "Loading files into memory...", 0)
+        try:
+            loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+
+        except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+            self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+            messagebox.showerror("File Loading Error", str(e))
+            return
 
         if loaded_files is None:
             return
 
-        print("Files loaded successfully:")
+        self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
         for label, data in loaded_files.items():
-            print(f"  {label}: {type(data)}")
+            self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
-        self.log = []  # Initialised here — available to all strategies via self.log
-        self.log_step(self.log, "System", "Files loaded successfully", len(loaded_files))
-
-        self.process(loaded_files, files, output_directory)
+        self.process(loaded_files, files)
 
     # -------------------------------------------------------------------------
     # Excel output utilities — available to all strategies
@@ -57,15 +65,15 @@ class BaseStrategy(ABC):
         filename = f"{timestamp}_{safe_label}.xlsx"
         return os.path.join(output_directory, filename)
 
-    def log_step(self, log: list, file: str, step: str, rows: int, notes: str = ""):
+    def log_step(self, log: list, file: str, step: str, count: int, notes: str = ""):
         """Appends a timestamped entry to the processing log and prints to console."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"  [{timestamp}] {file} — {step} ({rows} rows)")
+        print(f"  [{timestamp}] {file} — {step} ({count})")
         log.append({
             "Timestamp": timestamp,
             "File": file,
             "Step": step,
-            "Rows": rows,
+            "Count": count,  # ← Was "Rows" — generic for rows, characters, keys, etc.
             "Notes": notes
         })
 
@@ -105,12 +113,6 @@ class BaseStrategy(ABC):
                 else:
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-            # # Write summary sheets if provided
-            # if summaries is not None:
-            #     for label, summary in summaries.items():
-            #         self.write_sheet_with_summary(writer, label, pd.DataFrame(), summary)
-                # df_compare.to_excel(writer, sheet_name="Compare", index=False)
-
             # Write log sheet
             df_log.to_excel(writer, sheet_name="Processing Log", index=False)
 
@@ -126,24 +128,19 @@ class BaseStrategy(ABC):
                 else:
                     self.autofit_columns(writer.book[sheet_name])
 
-            print(f"  Sheets in workbook: {writer.book.sheetnames}")
+            self.log_step(self.log, "Output", f"  Sheets in workbook: {writer.book.sheetnames}", 0)
 
-            # Apply conditional formatting to Compare sheet
-            green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-            green_font = Font(color="276221")
-            red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-            red_font   = Font(color="9C0006")
+            # Allow subclasses to apply strategy-specific formatting
+            self.apply_output_formatting(writer.book)
 
-            if "Compare" in writer.book.sheetnames:
-                self.apply_conditional_formatting(
-                    worksheet=writer.book["Compare"],
-                    column_name="Result",
-                    rules={
-                        "Matched":    (green_fill, green_font),
-                        "Not in FIP": (red_fill,   red_font),
-                    }
-                )
-        print(f"Output written to: {output_path}")
+        self.log_step(self.log, "Output", f"Output written to: {output_path}", 0)
+    
+    def apply_output_formatting(self, workbook):
+        """
+        Hook for subclasses to apply strategy-specific formatting.
+        Override in subclass — default does nothing.
+        """
+        pass
 
     # -------------------------------------------------------------------------
     # File loading utilities — available to all strategies
@@ -153,6 +150,8 @@ class BaseStrategy(ABC):
         """
         Reads each file into memory based on its extension.
         """
+        from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
+
         loaded = {}
 
         column_map = {
@@ -171,27 +170,23 @@ class BaseStrategy(ABC):
                     try:
                         excel_file = pd.ExcelFile(path)
                     except Exception as e:
-                        messagebox.showerror(
-                            "Excel File Error",
+                        raise FileLoadError(
                             f"Could not open '{os.path.basename(path)}' as an Excel file.\n\n"
                             f"{str(e)}"
                         )
-                        return None
 
                     if sheet not in excel_file.sheet_names:
-                        messagebox.showerror(
-                            "Sheet Not Found",
+                        raise SheetNotFoundError(
                             f"Could not find sheet '{sheet}' in '{os.path.basename(path)}'.\n\n"
                             f"Please check the file and sheet name then try again."
                         )
-                        return None
 
                     df = pd.read_excel(path, sheet_name=sheet)
                     df = self._select_columns(df, label, column_map.get(label), path)
                     if df is None:
                         return None
 
-                    if app_state.process_only_differences:
+                    if self.process_only_differences:
                         df = self._filter_coloured_rows(df, path, sheet)
 
                     loaded[label] = df
@@ -207,55 +202,49 @@ class BaseStrategy(ABC):
                     with open(path, "r") as f:
                         loaded[label] = f.read()
                 else:
-                    raise ValueError(f"Unsupported file type for: {path}")
+                    raise UnsupportedFileTypeError(
+                        f"'{os.path.basename(path)}' is not a supported file type.\n\n"
+                        f"Please select a csv or txt file."
+                    )
 
             except PermissionError:
-                messagebox.showerror(
-                    "File In Use",
+                raise FileLoadError(
                     f"'{os.path.basename(path)}' is currently open in another application.\n\n"
-                    f"Please close it and try again.\n\n"
-                    f"The application will now stop."
+                    f"Please close it and try again."
                 )
-                return None
 
             except ValueError as e:
-                if "Worksheet" in str(e) or "sheet" in str(e).lower():
-                    messagebox.showerror(
-                        "Sheet Not Found",
-                        f"Could not find sheet '{sheet_names.get(label)}' "
-                        f"in '{os.path.basename(path)}'.\n\n"
-                        f"Please check the sheet name and try again."
-                    )
-                else:
-                    messagebox.showerror(
-                        "Unsupported File Type",
-                        f"'{os.path.basename(path)}' is not a supported file type.\n\n"
-                        f"Please select an xlsx, csv or txt file."
-                    )
-                    return None
-
+                # Catch unexpected pandas errors (e.g. malformed CSV, encoding issues)
+                raise FileLoadError(
+                    f"Error reading '{os.path.basename(path)}':\n\n{str(e)}"
+                )
+            
         return loaded
 
     def _filter_coloured_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
         """
         Uses openpyxl to detect rows with any background fill colour,
         then filters the DataFrame to those rows only.
+
+        NOTE: This loads the workbook a second time (first load is via pd.read_excel).
+        This trade-off keeps data loading and colour detection cleanly separated.
+        If performance becomes an issue with large files, consider loading openpyxl
+        first and extracting both data and colours in a single pass.
         """
         ext = os.path.splitext(filepath)[1].lower()
         if ext != ".xlsx":
-            print(f"  [process_only_differences] Skipping colour filter for {os.path.basename(filepath)} — .xls not supported by openpyxl")
+            #print(f"  [process_only_differences] Skipping colour filter for {os.path.basename(filepath)} — .xls not supported by openpyxl")
+            self.log_step(self.log, os.path.basename(filepath), "Colour filter skipped — .xls not supported by openpyxl", 0)
             return df
 
         try:
             wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
             ws = wb[sheet_name]
         except Exception as e:
-            messagebox.showerror(
-                "Colour Filter Error",
-                f"Could not read cell colours from '{os.path.basename(filepath)}'.\n\n"
-                f"{str(e)}\n\n"
-                f"The full dataset will be used instead."
-            )
+            # Non-fatal: fall back to full dataset if colour detection fails
+            self.log_step(self.log, os.path.basename(filepath),
+                        "Colour filter failed — using full dataset", len(df),
+                        notes=str(e))
             return df
 
         coloured_row_indices = []
@@ -274,11 +263,13 @@ class BaseStrategy(ABC):
         wb.close()
 
         if not coloured_row_indices:
-            print(f"  [process_only_differences] No coloured rows found in {os.path.basename(filepath)} — returning empty DataFrame")
+            self.log_step(self.log, os.path.basename(filepath), "No coloured rows found — returning empty DataFrame", 0)
             return df.iloc[[]]
 
         filtered = df.iloc[coloured_row_indices].reset_index(drop=True)
-        print(f"  [process_only_differences] {len(filtered)} coloured row(s) retained from {os.path.basename(filepath)}")
+        self.log_step(self.log, os.path.basename(filepath),
+                "Coloured rows retained", len(filtered),
+                notes=f"Filtered from {len(df)} total rows") 
         return filtered
 
     def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
@@ -286,19 +277,19 @@ class BaseStrategy(ABC):
         Reduces the DataFrame to only the required columns.
         Returns None if any required column is missing.
         """
+        from exceptions import MissingColumnsError
+
         if required_columns is None:
             return df
 
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
-            messagebox.showerror(
-                "Missing Columns",
+            raise MissingColumnsError(
                 f"'{os.path.basename(filepath)}' is missing the following required column(s):\n\n"
                 + "\n".join(f"  • {col}" for col in missing)
                 + f"\n\nPlease check the file and try again."
             )
-            return None
-
+            
         return df[required_columns]
     
     def apply_conditional_formatting(self, worksheet, column_name: str, rules: dict):
@@ -308,23 +299,23 @@ class BaseStrategy(ABC):
         Args:
             worksheet:    The openpyxl worksheet object
             column_name:  The header name of the column to format
-            rules:        Dict of {cell_value: PatternFill} e.g. {"Matched": green_fill}
+            rules:        Dict of {cell_value: (PatternFill, Font)} or {cell_value: PatternFill}
         """
         from openpyxl.formatting.rule import CellIsRule
 
-        print(f"  Applying conditional formatting to '{worksheet.title}', column '{column_name}'")
+        self.log_step(self.log, "Formatting",
+                    f"Applying to '{worksheet.title}', column '{column_name}'", 0)
 
         # Find the column letter by matching the header value
         target_col = None
         for cell in worksheet[1]:
-            print(f"  Header cell value: '{cell.value}'")  # ← shows all header values
             if cell.value == column_name:
                 target_col = cell.column_letter
                 break
-        
-        print(f"  Target column found: {target_col}")
 
         if target_col is None:
+            self.log_step(self.log, "Formatting",
+                        f"Column '{column_name}' not found — skipping", 0)
             return
 
         last_row = worksheet.max_row
@@ -336,16 +327,19 @@ class BaseStrategy(ABC):
                 fill, font = formatting
             else:
                 fill, font = formatting, None
-        
+
             worksheet.conditional_formatting.add(
                 target_range,
                 CellIsRule(
-                    operator="equal", 
-                    formula=[f'"{value}"'], 
+                    operator="equal",
+                    formula=[f'"{value}"'],
                     fill=fill,
                     font=font
                 )
             )
+
+        self.log_step(self.log, "Formatting",
+                    f"Applied {len(rules)} rule(s) to {target_range}", 0)
 
     def write_sheet_with_summary(self, writer, sheet_name: str, df: pd.DataFrame, summary: dict):
         """
@@ -368,9 +362,11 @@ class BaseStrategy(ABC):
             worksheet.cell(row=i + 1, column=2, value=value)
 
     @abstractmethod
-    def process(self, loaded_files: dict, files: dict, output_directory: str):
+    def process(self, loaded_files: dict, files: dict):
         """
         Subclasses implement THIS — not execute().
         By the time this is called, all files are already in memory.
+        Access output_directory via files["output_directory"].
+        Access timestamp via files["timestamp"].        
         """
         pass

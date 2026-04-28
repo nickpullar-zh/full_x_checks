@@ -1,12 +1,8 @@
 import os
-import ctypes
 import tkinter as tk
-import app_state
-from datetime import datetime
 from tkinter import ttk, filedialog, messagebox
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
-
 
 class FileUploadUI:
     """
@@ -70,6 +66,7 @@ class FileUploadUI:
         """
         Positions the dialog at the same top-left as the parent window.
         Clamps to usable screen boundaries (respects taskbar) if needed.
+        NOTE: Taskbar-aware positioning only works on Windows.
         """
         self.root.update_idletasks()
 
@@ -78,18 +75,26 @@ class FileUploadUI:
         window_width = self.root.winfo_reqwidth()
         window_height = self.root.winfo_reqheight()
         screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
 
-        # ← Use ctypes to get the usable screen area (excludes taskbar)
-        work_area = ctypes.wintypes.RECT()
-        ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(work_area), 0)
-        usable_height = work_area.bottom  # ← Top of taskbar
-        usable_width = work_area.right  # ← Right boundary (accounts for side taskbars too)
+        # Use Windows API for taskbar-aware positioning, fall back to screen size
+        if os.name == 'nt':
+            import ctypes
+            import ctypes.wintypes
+
+            work_area = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(work_area), 0)
+            usable_height = work_area.bottom  # ← Top of taskbar
+            usable_width = work_area.right    # ← Right boundary (accounts for side taskbars too)
+        else:
+            usable_height = screen_height
+            usable_width = screen_width
 
         desired_x = parent_x
         desired_y = parent_y
 
-        if desired_x + window_width > screen_width:
-            desired_x = screen_width - window_width
+        if desired_x + window_width > usable_width:
+            desired_x = usable_width - window_width
 
         # ← Clamp against usable height, not full screen height
         if desired_y + window_height > usable_height:
@@ -334,18 +339,22 @@ class FileUploadUI:
         )
         if directory:
             self.output_directory = directory  # ← Store as plain string
-            self.output_label.config(
-                text=directory,  # ← Show full path for directory
-                foreground="black"  # ← Change from grey to black
-            )
+            if self.output_label is not None:
+                self.output_label.config(
+                    text=directory,  # ← Show full path for directory
+                    foreground="black"  # ← Change from grey to black
+                )
             self._check_ready()
 
     def _on_submit(self):
+        
+        from datetime import datetime
+
         """All validation already handled by _check_ready() — just package results."""
         
         # Set the global timestamp once here
-        app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        app_state.process_only_differences = self.process_only_differences.get()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        #app_state.process_only_differences = self.process_only_differences.get()
 
         self.result = {
             "files": {
@@ -357,8 +366,8 @@ class FileUploadUI:
                 for label, var in self.sheet_names.items()
             },
             "output_directory": self.output_directory or None,
-            "timestamp": app_state.timestamp,  # Reference the global timestamp here
-            "process_only_differences": app_state.process_only_differences 
+            "timestamp": timestamp,  # Reference the local timestamp here
+            "process_only_differences": self.process_only_differences.get()
         }
         self.root.destroy()
 

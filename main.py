@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 import os
 from tkinter import ttk
@@ -11,8 +12,9 @@ from task_registry import TASK_REGISTRY
 # ← Set to True to skip UI during debugging
 # ← Set to False for normal UI operation
 # ==========================================
-DEBUG_MODE = True
-os.system('cls')  # Clears terminal on every run
+DEBUG_MODE = False
+# Clears terminal on every run (cross-platform)
+os.system('cls' if os.name == 'nt' else 'clear')
 
 DEBUG_FILES = {
     "files": {
@@ -50,7 +52,7 @@ class TaskSelectorUI:
         Exits the application cleanly.
         """
         self.root.destroy()
-        exit()
+        sys.exit()
 
     def _on_task_selected(self, *args):
         """
@@ -105,12 +107,34 @@ class TaskSelectorUI:
 
         if DEBUG_MODE:
             # Skip UI entirely — use hardcoded values
-            import app_state
+            #import app_state
             from datetime import datetime
-            app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") 
-            app_state.process_only_differences = DEBUG_FILES["process_only_differences"]
+
+            # Validate that DEBUG_FILES keys match the config labels
+            required_labels = {f.label for f in config.file_fields if f.required}
+            provided_labels = set(DEBUG_FILES["files"].keys())
+            missing = required_labels - provided_labels
+            extra = provided_labels - {f.label for f in config.file_fields}
+
+            if missing:
+                print(f"  [ERROR] DEBUG_FILES is missing required file(s):")
+                for label in missing:
+                    print(f"    • {label}")
+                print(f"  Please update DEBUG_FILES in main.py to match {config.task_name} config.")
+                self.root.destroy()
+                return
+
+            if extra:
+                print(f"  [WARNING] DEBUG_FILES contains unrecognised file(s):")
+                for label in extra:
+                    print(f"    • {label}")
+                print(f"  These will be ignored.")
+
+            DEBUG_FILES["timestamp"] = datetime.now().strftime("%Y%m%d_%H%M%S")
+            #app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") 
+            #app_state.process_only_differences = DEBUG_FILES["process_only_differences"]
             strategy = strategy_class(config)
-            strategy.execute(DEBUG_FILES, DEBUG_FILES["output_directory"])
+            strategy.execute(DEBUG_FILES)
             self.root.destroy()
             return
     
@@ -121,7 +145,7 @@ class TaskSelectorUI:
 
         if files:
             strategy = strategy_class(config)
-            strategy.execute(files, files["output_directory"])  # ← Pass full files dict
+            strategy.execute(files)  # ← Pass full files dict
 
         self.root.destroy()  # ← Closes launcher and exits
         # Return to launcher after task completes
@@ -129,6 +153,8 @@ class TaskSelectorUI:
 
     def run(self):
         if DEBUG_MODE:
+            # Hide the launcher window in debug mode
+            self.root.withdraw()
             # Set task directly and start without showing launcher
             self.task_var.set(DEBUG_TASK)
             self.root.after(0, self._on_start)  # ← Call _on_start immediately after mainloop starts

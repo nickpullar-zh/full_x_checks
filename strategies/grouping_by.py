@@ -1,32 +1,29 @@
-from csv import writer
-from logging import log
 import os
-import tkinter as tk
-from tkinter import ttk
 import pandas as pd
-import re
-import shutil
-import app_state
-from datetime import datetime
 from strategies.base_strategy import BaseStrategy
 from task_configs import GROUPING_BY_UPLOAD_CONFIG, UploadTaskConfig
+
+# --- File label constants (avoids fragile index-based lookups) ---
+FIP_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label       # "FIP File (ZQ9_VALFLDGR)"
+EBS_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label       # "X-Checks Publication File"
+MAPPING_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label   # "Mapping File"
 
 class GroupingBy(BaseStrategy):
 
     def __init__(self, config: UploadTaskConfig):  # Accept config
         super().__init__(config)                   # Pass up to BaseStrategy
     
-    def process(self, loaded_files, files, output_directory):
-        print(loaded_files.keys())  
+    def process(self, loaded_files, files):
+        self.log_step(self.log, "System", f"Processing files: {list(loaded_files.keys())}", 0)
 
         df_mapping_file, df_fip_original, df_fip_processed = self._process_fip(loaded_files)
         if df_fip_original is None:
-            print("FIP processing failed — aborting.")
+            self.log_step(self.log, "System", "FIP processing failed — aborting.", 0)
             return
 
         df_ebs_original, df_ebs_processed = self._process_ebs(loaded_files)
         if df_ebs_original is None:
-            print("EBS processing failed — aborting.")
+            self.log_step(self.log, "System", "EBS processing failed — aborting.", 0)
             return
         
         assert df_fip_processed is not None
@@ -36,14 +33,14 @@ class GroupingBy(BaseStrategy):
         assert df_comparison is not None
         matched     = (df_comparison["Result"] == "Matched").sum()
         not_matched = (df_comparison["Result"] == "Not in FIP").sum()
-        fip_path    = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label]  # ← add here
-        ebs_path    = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label]  # ← add here
+        fip_path    = files["files"][FIP_LABEL]  
+        ebs_path    = files["files"][EBS_LABEL]  
 
         self.write_excel_output(
             output_path=self.build_output_path(
-                output_directory,
+                files["output_directory"],
                 "X-Check Grouping By Results",
-                app_state.timestamp
+                files["timestamp"]
             ),
             sheets={
                 "Mapping File":    df_mapping_file,
@@ -64,79 +61,74 @@ class GroupingBy(BaseStrategy):
         )
 
     def _process_fip(self, loaded_files) -> tuple[pd.DataFrame|None, pd.DataFrame|None, pd.DataFrame|None]:
-        try:
-            """Returns (mapping, original, processed) DataFrames and appends to log."""
-            self.log_step(self.log, "Mapping File", "Started processing", 0)
-            mapping_file_content = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label]  # Mapping File
-            self.log_step(self.log, "Mapping File", "Loaded", len(mapping_file_content.splitlines()),"Including header row")
-            mapping_dict = {}
-            for line in mapping_file_content.splitlines()[1:]:  # [1:] skips the header row "FIP Data,EBS item"
-                line = line.strip()
-                if not line:
-                    continue  # Skip empty lines
-                parts = line.split(",", maxsplit=1)  # maxsplit=1 protects against commas in values
-                if len(parts) == 2:
-                    key, value = parts[0].strip(), parts[1].strip()
-                    mapping_dict[key] = value
-            self.log_step(self.log, "Mapping File", "Mapping dictionary created", len(mapping_dict))
-            # Split each line on comma into two values, then build the DataFrame
-            df_mapping_file = pd.DataFrame(
-                [line.split(",", maxsplit=1) for line in mapping_file_content.splitlines()[1:] if line.strip()],
-                columns=["FIP Data", "EBS item"]
-            )
-            self.log_step(self.log, "Mapping File", "df_mapping_data created", len(df_mapping_file), "DataFrame created from mapping dictionary for output")
-            self.log_step(self.log, "Mapping File", "Finished processing", len(mapping_dict))
+        """Returns (mapping, original, processed) DataFrames and appends to log."""
 
-            # Access directly from loaded_files
-            self.log_step(self.log, "FIP", "Started processing", 0)
-            df_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label].copy()
-            self.log_step(self.log, "FIP", "Original File copied", len(df_original), "Copied original DataFrame for output comparison")            
-            df_fip = df_original.copy()  # 'FIP File (ZQ9_VALFLDGR)'
-            self.log_step(self.log, "FIP", "Original file", len(df_original), "FIP Dataframe ready for processing")
-            
-            # --- Lookup: map "Field name" to EBS item ---
-            df_fip["EBS Item"] = df_fip["Field name"].map(mapping_dict)
-            self.log_step(self.log, "FIP", "Mapped 'Field name' to 'EBS Item'", len(df_fip), "Mapped using mapping dictionary")
+        self.log_step(self.log, "Mapping File", "Started processing", 0)
+        mapping_file_content = loaded_files[MAPPING_LABEL]  # Mapping File
+        self.log_step(self.log, "Mapping File", "Loaded", len(mapping_file_content.splitlines()),"Including header row")
+        mapping_dict = {}
+        for line in mapping_file_content.splitlines()[1:]:  # [1:] skips the header row "FIP Data,EBS item"
+            line = line.strip()
+            if not line:
+                continue  # Skip empty lines
+            parts = line.split(",", maxsplit=1)  # maxsplit=1 protects against commas in values
+            if len(parts) == 2:
+                key, value = parts[0].strip(), parts[1].strip()
+                mapping_dict[key] = value
+        self.log_step(self.log, "Mapping File", "Mapping dictionary created", len(mapping_dict))
+        # Split each line on comma into two values, then build the DataFrame
+        df_mapping_file = pd.DataFrame(
+            [line.split(",", maxsplit=1) for line in mapping_file_content.splitlines()[1:] if line.strip()],
+            columns=["FIP Data", "EBS item"]
+        )
+        self.log_step(self.log, "Mapping File", "df_mapping_data created", len(df_mapping_file), "DataFrame created from mapping dictionary for output")
+        self.log_step(self.log, "Mapping File", "Finished processing", len(mapping_dict))
 
-            # Remove all rows where EBS Item is empty or whitespace
-            df_fip = df_fip[
-                df_fip["EBS Item"].notna() &   
-                (df_fip["EBS Item"].str.strip() != "") & 
-                (df_fip["EBS Item"].str.strip().str.lower() != "ignore")  # Also exclude rows where mapping resulted in "ignore"
-            ]
-            # Remove all rows where ValidRule Item is empty or whitespace
-            df_fip = df_fip[
-                df_fip["ValidRule"].notna() &   
-                (df_fip["ValidRule"].str.strip() != "")
-            ]
-            # Debug — remove once fixed
-            self.log_step(self.log, "FIP", "Removed blank rows", len(df_fip), "Removed rows where 'Key' is empty or 'ignore'")
+        # Access directly from loaded_files
+        self.log_step(self.log, "FIP", "Started processing", 0)
+        df_original = loaded_files[FIP_LABEL]
+        self.log_step(self.log, "FIP", "Original File saved", len(df_original), "Original DataFrame for output comparison")            
+        df_fip = df_original.copy()  # 'FIP File (ZQ9_VALFLDGR)'
+        self.log_step(self.log, "FIP", "Original file", len(df_original), "FIP Dataframe ready for processing")
+        
+        # --- Lookup: map "Field name" to EBS item ---
+        df_fip["EBS Item"] = df_fip["Field name"].map(mapping_dict)
+        self.log_step(self.log, "FIP", "Mapped 'Field name' to 'EBS Item'", len(df_fip), "Mapped using mapping dictionary")
 
-            # --- Build Key column ---+
-            df_fip["Key"] = df_fip.apply(
-                lambda row: f"{row['ValidRule']}|{row['EBS Item']}"
-                if pd.notna(row["ValidRule"]) and str(row["ValidRule"]).strip() != ""
-                else "",
-                axis=1
-            )
-            self.log_step(self.log, "FIP", "Constructed 'Key' column", len(df_fip), "Concatenated 'ValidRule' and mapped 'EBS Item'")
-            
-            self.log_step(self.log, "FIP", "Finished processing", len(df_fip), "Returned processed DataFrame for comparison")
-            return df_mapping_file, df_original, df_fip # Return for use in compare
-        except Exception as e:
-            import traceback
-            print(f"  ERROR inside _process_fip: {e}")
-            print(traceback.format_exc())
-            return None, None, None  # ← Prevents the unpack error masking the real one
+        # Remove all rows where EBS Item is empty or whitespace
+        df_fip = df_fip[
+            df_fip["EBS Item"].notna() &   
+            (df_fip["EBS Item"].str.strip() != "") & 
+            (df_fip["EBS Item"].str.strip().str.lower() != "ignore")  # Also exclude rows where mapping resulted in "ignore"
+        ]
+        # Remove all rows where ValidRule Item is empty or whitespace
+        df_fip = df_fip[
+            df_fip["ValidRule"].notna() &   
+            (df_fip["ValidRule"].str.strip() != "")
+        ]
+        # Debug — remove once fixed
+        self.log_step(self.log, "FIP", "Removed blank rows", len(df_fip), "Removed rows where 'Key' is empty or 'ignore'")
+
+        # --- Build Key column ---+
+        df_fip["Key"] = df_fip.apply(
+            lambda row: f"{row['ValidRule']}|{row['EBS Item']}"
+            if pd.notna(row["ValidRule"]) and str(row["ValidRule"]).strip() != ""
+            else "",
+            axis=1
+        )
+        self.log_step(self.log, "FIP", "Constructed 'Key' column", len(df_fip), "Concatenated 'ValidRule' and mapped 'EBS Item'")
+        
+        self.log_step(self.log, "FIP", "Finished processing", len(df_fip), "Returned processed DataFrame for comparison")
+        return df_mapping_file, df_original, df_fip # Return for use in compare
 
     def _process_ebs(self, loaded_files) -> tuple[pd.DataFrame|None, pd.DataFrame|None]:
         """Processes the EBS file and writes output."""
         self.log_step(self.log, "EBS", "Started processing", 0)
 
         # Step 1 — Load the EBS file
-        df_ebs_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label].copy()
+        df_ebs_original = loaded_files[EBS_LABEL]
         df_ebs_loaded = df_ebs_original.copy()
-        self.log_step(self.log, "EBS", "Original file copied", len(df_ebs_original), "Copied original DataFrame for output comparison")
+        self.log_step(self.log, "EBS", "Original file saved", len(df_ebs_original), "Original DataFrame for output comparison")
 
         # Step 2 — Strip out rows that don't have a 'Grouping By' element
         df_ebs_loaded = df_ebs_loaded[df_ebs_loaded["Grouping By"].notna() & (df_ebs_loaded["Grouping By"].str.strip() != "")]
@@ -247,3 +239,26 @@ class GroupingBy(BaseStrategy):
         self.log_step(self.log, "Compare", "Finished comparison", len(df_compare))
 
         return df_compare
+    
+    def apply_output_formatting(self, workbook):
+        """Applies conditional formatting to the Compare sheet."""
+        from openpyxl.styles import PatternFill, Font
+
+        if "Compare" not in workbook.sheetnames:
+            return
+
+        # Define formatting styles
+        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        green_font = Font(color="276221")
+        red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        red_font   = Font(color="9C0006")
+
+        # Apply to the "Result" column in the Compare sheet
+        self.apply_conditional_formatting(
+            worksheet=workbook["Compare"],
+            column_name="Result",
+            rules={
+                "Matched":    (green_fill, green_font),
+                "Not in FIP": (red_fill,   red_font),
+            }
+        )

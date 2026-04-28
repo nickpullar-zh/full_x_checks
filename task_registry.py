@@ -5,7 +5,7 @@ from task_configs import (
     GROUPING_BY_UPLOAD_CONFIG,
 )
 from strategies.x_checks import XChecks
-from strategies.accounting_principals import AccountingPrinciples
+from strategies.accounting_principles import AccountingPrinciples
 from strategies.conditions import Conditions
 from strategies.grouping_by import GroupingBy
 

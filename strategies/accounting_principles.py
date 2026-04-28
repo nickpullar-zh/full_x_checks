@@ -9,7 +9,7 @@ class AccountingPrinciples(BaseStrategy):
     def __init__(self, config: UploadTaskConfig):  # Accept config
         super().__init__(config)                   # Pass up to BaseStrategy
 
-    def process(self, loaded_files: dict, files: dict, output_directory: str):
+    def process(self, loaded_files: dict, files: dict):
         lines = ["=== Accounting Principles: Processing ===\n"]
 
         for label, data in loaded_files.items():
