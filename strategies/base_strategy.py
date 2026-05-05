@@ -3,6 +3,7 @@ import openpyxl
 import os
 import re
 import shutil
+import threading
 from abc import ABC, abstractmethod
 from tkinter import messagebox
 from typing import Optional
@@ -21,6 +22,8 @@ class BaseStrategy(ABC):
     
     def __init__(self, config: UploadTaskConfig):
         self.config = config
+        self._progress_dialog = None          # Set via set_progress_dialog()
+        self._stop_event: threading.Event | None = None    
 
     def execute(self, files: dict):
         """
@@ -30,27 +33,59 @@ class BaseStrategy(ABC):
         from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
 
         self.log = []  # Initialised here — available to all strategies via self.log
+        self.process_only_differences = files.get("process_only_differences", False)
 
         # Store process flag on instance so _load_files can access it
         self.process_only_differences = files.get("process_only_differences", False)
 
-        self.log_step(self.log, "System", "Loading files into memory...", 0)
         try:
-            loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+            self.log_step(self.log, "System", "Loading files into memory...", 0)
+            try:
+                loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+            except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+                self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+                return
 
-        except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
-            self.log_step(self.log, "System", f"Error loading files: {e}", 0)
-            messagebox.showerror("File Loading Error", str(e))
-            return
+            if loaded_files is None:
+                return
 
-        if loaded_files is None:
-            return
+            self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
+            for label, data in loaded_files.items():
+                self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
-        self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
-        for label, data in loaded_files.items():
-            self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
+            self.process(loaded_files, files)
 
-        self.process(loaded_files, files)
+        except StopIteration:
+            # User pressed Stop — log it, then return cleanly
+            timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"  [{timestamp}] System — Processing halted by user.")
+            self.log.append({
+                "Timestamp": timestamp,
+                "File": "System",
+                "Step": "Processing halted by user.",
+                "Count": 0,
+                "Notes": ""
+            })
+            if self._progress_dialog is not None:
+                self._progress_dialog.append_entry("System", "Processing halted by user. You may now close this window.")
+
+#        self.log_step(self.log, "System", "Loading files into memory...", 0)
+#        try:
+#            loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+#
+#        except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+#            self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+#            messagebox.showerror("File Loading Error", str(e))
+#            return
+#
+#        if loaded_files is None:
+#            return
+#
+#        self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
+#        for label, data in loaded_files.items():
+#            self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
+#
+#        self.process(loaded_files, files)
 
     # -------------------------------------------------------------------------
     # Excel output utilities — available to all strategies
@@ -65,17 +100,39 @@ class BaseStrategy(ABC):
         filename = f"{timestamp}_{safe_label}.xlsx"
         return os.path.join(output_directory, filename)
 
+    def set_progress_dialog(self, dialog):
+        """
+        Called by main.py (debug mode only) to attach the ProgressDialog.
+        Also stores a reference to its stop event for checkpoint polling.
+        """
+        self._progress_dialog = dialog
+        self._stop_event = dialog.stop_event
+
     def log_step(self, log: list, file: str, step: str, count: int, notes: str = ""):
-        """Appends a timestamped entry to the processing log and prints to console."""
+        """
+        Appends a timestamped entry to the processing log and prints to console.
+        If a ProgressDialog is attached, pushes the entry to it.
+        If the stop event has been set, raises StopIteration to unwind processing.
+        The stop check happens AFTER the current step is recorded, so the step
+        that was already running completes before the halt takes effect.
+        """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"  [{timestamp}] {file} — {step} ({count})")
         log.append({
             "Timestamp": timestamp,
             "File": file,
             "Step": step,
-            "Count": count,  # ← Was "Rows" — generic for rows, characters, keys, etc.
+            "Count": count,
             "Notes": notes
         })
+
+        # Push to UI dialog if attached
+        if self._progress_dialog is not None:
+            self._progress_dialog.append_entry(file, step, count, notes)
+
+        # Check stop event AFTER completing this step
+        if self._stop_event is not None and self._stop_event.is_set():
+            raise StopIteration("Processing stopped by user.")
 
     def autofit_columns(self, worksheet, max_width: int = 90,  skip_rows: int = 0):
         """Auto-fits all columns in a worksheet to their content width, capped at max_width."""

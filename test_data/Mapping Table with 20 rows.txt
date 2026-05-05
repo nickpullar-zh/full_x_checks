@@ -1,0 +1,20 @@
+FIP Data,EBS item
+/BIC/ZZF_ASSLI,ALC
+/BIC/ZZF_AYEAR,AY
+/BIC/ZZF_BBACA,BBA Set					
+/BIC/ZZF_FSACC,FS Item
+/BIC/ZZF_GRCED,GRC
+/BIC/ZZF_GCOA,ignore
+/BIC/ZZF_INVSE,Investee Segment
+/BIC/ZZF_INVUN,Investee Unit
+/BIC/ZZF_LOB,LoB
+/BIC/ZZF_MATUR,MAT
+/BIC/ZZF_PSEGM,Partner Segment
+/BIC/ZZF_PUNIT,Partner Unit
+CS_PLEVEL,Posting Level
+/BIC/ZZF_REEXP,REX
+/BIC/ZZF_SEGM,Segment
+/BIC/ZZF_MOVTY,ToM
+/BIC/ZZF_VARIO,VAR
+/BIC/ZZF_VALUE,VLT
+/1FB/CURKEY_GC,"/1FB/CURKEY_GC" is a technical attribute only in FIP, and is not part of the testing process

@@ -1,0 +1,2292 @@
+﻿===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\build.py =====
+import os
+import shutil
+import subprocess
+import re
+
+# ==========================================
+# Version â€” update this for each release
+# ==========================================
+VERSION = "v0.2.2"
+
+# ==========================================
+# Build configuration
+# ==========================================
+BUILDS = [
+    {
+        "name":          f"X-Checks_Debug_{VERSION}",
+        "debug_mode": True,
+        "add_test_data": True,
+    },
+    {
+        "name":       f"X-Checks_{VERSION}",
+        "debug_mode": False,
+        "add_test_data": False,
+    },
+]
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+MAIN_PY      = os.path.join(PROJECT_ROOT, "main.py")
+TEMP_MAIN    = os.path.join(PROJECT_ROOT, "_main_build_temp.py")
+
+def force_remove(func, path, _):
+    import stat
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+def build(config: dict):
+    print(f"\n  Building: {config['name']}  (DEBUG_MODE={config['debug_mode']})")
+
+    # --- Read main.py ---
+    with open(MAIN_PY, "r", encoding="utf-8") as f:
+        source = f.read()
+
+    # --- Patch DEBUG_MODE line ---
+    source = re.sub(
+        r"DEBUG_MODE\s*=\s*(True|False)",
+        f"DEBUG_MODE = {config['debug_mode']}",
+        source
+    )
+
+    # --- Write patched temp file ---
+    with open(TEMP_MAIN, "w", encoding="utf-8") as f:
+        f.write(source)
+
+    # --- Pre-clean build folder before PyInstaller runs ---
+    build_folder = os.path.join(PROJECT_ROOT, "build", config["name"])
+    if os.path.exists(build_folder):
+        print(f"  Pre-cleaning: {build_folder}")
+        try:
+            shutil.rmtree(build_folder)
+        except PermissionError:
+            shutil.rmtree(build_folder, onexc=force_remove)
+
+    # --- Build PyInstaller command (without --clean) ---
+    cmd = [
+        "pyinstaller",
+        "--onefile",
+        "--name", config["name"],
+        "--add-data", "templates;templates",
+    ]
+
+    if config["add_test_data"]:
+        cmd += ["--add-data", "test_data;test_data"]
+
+    cmd.append(TEMP_MAIN)
+
+    print(f"  [BUILD] Command: {' '.join(cmd)}")
+
+    # --- Run PyInstaller ---
+    subprocess.run(cmd, check=True)
+
+    # --- Clean up temp file ---
+    os.remove(TEMP_MAIN)
+
+    print(f"  Built successfully: dist\\{config['name']}.exe")
+
+
+if __name__ == "__main__":
+    for build_config in BUILDS:
+        build(build_config)
+
+    # --- Clean up build artifacts ---
+    print("\n  Cleaning up build folders...")
+    for build_config in BUILDS:
+        build_folder = os.path.join(PROJECT_ROOT, "build", build_config["name"])
+        spec_file    = os.path.join(PROJECT_ROOT, f"{build_config['name']}.spec")
+
+        if os.path.exists(build_folder):
+            try:
+                shutil.rmtree(build_folder)
+                print(f"  Removed: {build_folder}")
+            except PermissionError:
+                # OneDrive or antivirus may be locking files â€” force remove
+                import stat
+                def force_remove(func, path, _):
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
+                shutil.rmtree(build_folder, onexc=force_remove)
+                print(f"  Removed (forced): {build_folder}")
+
+        if os.path.exists(spec_file):
+            try:
+                os.remove(spec_file)
+                print(f"  Removed: {spec_file}")
+            except PermissionError:
+                print(f"  WARNING: Could not remove {spec_file} â€” delete manually if needed")
+
+    print(f"\n  All builds complete. Executables are in the dist\\ folder.")
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\config.py =====
+import os
+# Path to templates folder, relative to this file's location
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+OUTPUT_TEMPLATE = os.path.join(TEMPLATES_DIR, "output_template.xlsx")
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\exceptions.py =====
+"""
+Custom exceptions for file loading and processing errors.
+These allow the data layer to signal problems without
+depending on Tkinter or any other UI framework.
+"""
+
+class FileLoadError(Exception):
+    """Raised when a file cannot be opened or read."""
+    pass
+
+class SheetNotFoundError(Exception):
+    """Raised when a required sheet is missing from an Excel file."""
+    pass
+
+class MissingColumnsError(Exception):
+    """Raised when required columns are not found in a file."""
+    pass
+
+class UnsupportedFileTypeError(Exception):
+    """Raised when a file has an unrecognised extension."""
+    pass
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\file_upload_config.py =====
+from dataclasses import dataclass, field
+from typing import List, Tuple, Optional
+
+
+@dataclass
+class FileFieldConfig:
+    """Configuration for a single file input field."""
+    label: str                              # Display label for the file input
+    file_types: List[Tuple[str, str]]       # e.g. [("Excel files", "*.xlsx")]
+    required: bool = True
+    description: str = ""                   # Helper text shown below the field
+    default_sheet: str = "Sheet1"
+    required_columns: Optional[list[str]] = None  # None means keep all columns
+
+    @property
+    def show_sheet(self) -> bool:
+        """Only show sheet name input for Excel files."""
+        return any(
+            ext.lower().endswith(".xlsx") or ext.lower().endswith(".xls")
+            for _, ext in self.file_types
+        )
+
+@dataclass
+class UploadTaskConfig:
+    """Configuration for a complete upload task (one use case)."""
+    task_name: str                          # e.g. "X-Checks Publication File"
+    file_fields: List[FileFieldConfig] = field(default_factory=list)
+    window_title: str = "File Upload"
+    requires_output_directory: bool = True  # Most tasks will need this
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\file_upload_ui.py =====
+import os
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+from typing import Optional, Dict
+from file_upload_config import UploadTaskConfig
+
+class FileUploadUI:
+    """
+    Dynamically builds a file upload dialog from an UploadTaskConfig.
+    Handles any number of file fields, optional fields, and an optional
+    output directory picker â€” all driven by configuration.
+    """
+
+    def __init__(self, config: UploadTaskConfig, parent: tk.Tk):
+        self.config = config
+        self.file_paths: Dict[str, tk.StringVar] = {}
+        self.sheet_names: Dict[str, tk.StringVar] = {}
+        self.sheet_entries: Dict[str, ttk.Entry] = {}
+        self.path_labels: Dict[str, ttk.Label] = {}
+        self.sheet_labels: Dict[str, ttk.Label] = {}
+        self.output_directory = ""
+        self.output_label = None
+        self.result: Optional[Dict] = None
+        self.parent = parent
+        self.process_only_differences = tk.BooleanVar(value=False)
+
+        self.root = tk.Toplevel(parent)  # â† Toplevel not Tk()
+        self.root.title(config.window_title)
+        self.root.resizable(False, False)
+        self.root.grab_set()  # â† Modal
+        self._build_ui()
+        self._set_position()  # â† Position logic
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ==========================================
+    # UI Construction
+    # ==========================================
+
+    def _on_close(self):
+        """
+        Called when the user clicks the red X button.
+        Destroys the window and exits the application cleanly.
+        """
+        self.root.destroy()
+
+    def _check_ready(self):
+        """
+        Enables the Proceed button only when all required
+        fields have been filled.
+        """
+        # Check all required file fields
+        for field in self.config.file_fields:
+            if field.required and not self.file_paths[field.label].get():
+                self.submit_btn.config(state="disabled")
+                return
+
+        # Check output directory if required
+        if self.config.requires_output_directory and not self.output_directory:
+            self.submit_btn.config(state="disabled")
+            return
+
+        # All required fields filled â€” enable the button
+        self.submit_btn.config(state="normal")
+
+    def _set_position(self):
+        """
+        Positions the dialog at the same top-left as the parent window.
+        Clamps to usable screen boundaries (respects taskbar) if needed.
+        NOTE: Taskbar-aware positioning only works on Windows.
+        """
+        self.root.update_idletasks()
+
+        parent_x = self.parent.winfo_x()
+        parent_y = self.parent.winfo_y()
+        window_width = self.root.winfo_reqwidth()
+        window_height = self.root.winfo_reqheight()
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        # Use Windows API for taskbar-aware positioning, fall back to screen size
+        if os.name == 'nt':
+            import ctypes
+            import ctypes.wintypes
+
+            work_area = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(work_area), 0)
+            usable_height = work_area.bottom  # â† Top of taskbar
+            usable_width = work_area.right    # â† Right boundary (accounts for side taskbars too)
+        else:
+            usable_height = screen_height
+            usable_width = screen_width
+
+        desired_x = parent_x
+        desired_y = parent_y
+
+        if desired_x + window_width > usable_width:
+            desired_x = usable_width - window_width
+
+        # â† Clamp against usable height, not full screen height
+        if desired_y + window_height > usable_height:
+            desired_y = usable_height - window_height
+
+        desired_x = max(0, desired_x)
+        desired_y = max(0, desired_y)
+
+        self.root.geometry(f"+{desired_x}+{desired_y}")
+
+    def _build_ui(self):
+        """Dynamically builds UI rows from config."""
+        main_frame = ttk.Frame(self.root, padding="15")
+        main_frame.grid(row=0, column=0, sticky="nsew")
+
+        # ==========================================
+        # Constants
+        # ==========================================
+        HINT_WRAP_LENGTH = 800  # â† Max width before hint text wraps
+        LABEL_FALLBACK_WIDTH = 400  # â† Fallback if no hints exist
+
+        current_row = 0
+
+        # --- Title ---
+        ttk.Label(
+            main_frame,
+            text=self.config.task_name,
+            font=("Helvetica", 14, "bold")
+        ).grid(row=current_row, column=0, columnspan=3, pady=(0, 15))
+        current_row += 1
+
+        ttk.Separator(main_frame, orient="horizontal").grid(
+            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        )
+        current_row += 1
+
+        # ==========================================
+        # Pass 1 â€” Build all rows, store hint label
+        # references so we can measure them later
+        # ==========================================
+        hint_labels = []
+
+        for field in self.config.file_fields:
+            path_var = tk.StringVar()
+            self.file_paths[field.label] = path_var
+
+            # --- Field label ---
+            label_text = (
+                f"{field.label} *" if field.required
+                else f"{field.label} (optional)"
+            )
+            ttk.Label(
+                main_frame,
+                text=label_text,
+                wraplength=150,
+                justify="left",
+                anchor="w"
+            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
+
+            # --- Path display label (placeholder for now) ---
+            path_label = ttk.Label(
+                main_frame,
+                text="No file selected",
+                foreground="grey",
+                justify="left",
+                anchor="w"
+            )
+            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+            self.path_labels[field.label] = path_label
+
+            # --- Browse button ---
+            ttk.Button(
+                main_frame,
+                text="Browse...",
+                command=lambda f=field, v=path_var: self._browse_file(f, v)
+            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+
+            current_row += 1
+
+            # --- Sheet name row ---
+            if field.show_sheet:
+                sheet_var = tk.StringVar(value=field.default_sheet)  # â† Default value
+                self.sheet_names[field.label] = sheet_var
+
+                sheet_label = ttk.Label(
+                    main_frame,
+                    text="Sheet name:",
+                    font=("Helvetica", 8),
+                    foreground="grey"
+                )
+                sheet_label.grid(row=current_row, column=0, padx=5, pady=(0, 4), sticky="e")
+                self.sheet_labels[field.label] = sheet_label  # â† Store reference
+
+                sheet_entry = ttk.Entry(
+                    main_frame,
+                    textvariable=sheet_var,
+                    width=30,
+                    font=("Helvetica", 8),
+                    state="disabled"
+                )
+                sheet_entry.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
+                self.sheet_entries[field.label] = sheet_entry
+
+                current_row += 1
+
+            # --- Hint label ---
+            hint_text = f"  {field.description}" if field.description else ""
+            hint_label = ttk.Label(
+                main_frame,
+                text=hint_text,
+                foreground="black",
+                font=("Helvetica", 8),
+                wraplength=HINT_WRAP_LENGTH,  # â† Max width before wrapping
+                justify="left"
+            )
+            hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
+            hint_labels.append(hint_label)  # â† Store for measuring later
+
+            current_row += 1
+
+        ttk.Separator(main_frame, orient="horizontal").grid(
+            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        )
+        current_row += 1
+
+        # --- Output Directory ---
+        if self.config.requires_output_directory:
+            ttk.Label(
+                main_frame,
+                text="Output Directory *",
+                wraplength=150,
+                justify="left",
+                anchor="w"
+            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
+
+            self.output_label = ttk.Label(
+                main_frame,
+                text="No directory selected",
+                foreground="grey",
+                justify="left",
+                anchor="w"
+            )
+            self.output_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+
+            ttk.Button(
+                main_frame,
+                text="Browse...",
+                command=self._browse_directory
+            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+
+            current_row += 1
+
+            # --- Output directory hint ---
+            output_hint_label = ttk.Label(
+                main_frame,
+                text="  Folder where output files will be saved",
+                foreground="black",
+                font=("Helvetica", 8),
+                wraplength=HINT_WRAP_LENGTH,  # â† Max width before wrapping
+                justify="left"
+            )
+            output_hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
+            hint_labels.append(output_hint_label)  # â† Include in measurement
+
+            current_row += 1
+
+        ttk.Separator(main_frame, orient="horizontal").grid(
+            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        )
+        current_row += 1
+
+        # --- Process Only Differences Checkbox ---
+        ttk.Checkbutton(
+            main_frame,
+            text="Process only differences",
+            variable=self.process_only_differences
+        ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
+        current_row += 1
+
+        ttk.Separator(main_frame, orient="horizontal").grid(
+            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        )
+        current_row += 1
+
+        # --- Proceed Button ---
+        self.submit_btn = ttk.Button(
+            main_frame,
+            text="Proceed",
+            command=self._on_submit
+        )
+        self.submit_btn.grid(row=current_row, column=0, columnspan=3, pady=15)
+        self.submit_btn.config(state="disabled")
+
+        # ==========================================
+        # Pass 2 â€” Measure hint labels AFTER render
+        # and apply the widest as the uniform width
+        # for all path/directory display labels
+        # ==========================================
+        self.root.update_idletasks()  # â† Force Tkinter to render
+
+        # Find the widest hint label
+        max_hint_width = max(
+            (label.winfo_width() for label in hint_labels if label.winfo_width() > 1),
+            default=LABEL_FALLBACK_WIDTH
+        )
+
+        # Apply uniform width to all path display labels
+        for path_label in self.path_labels.values():
+            path_label.config(wraplength=max_hint_width)
+
+        # Apply same width to output directory label
+        if self.output_label:
+            self.output_label.config(wraplength=max_hint_width)
+
+
+    # ==========================================
+    # Event Handlers
+    # ==========================================
+
+    def _browse_file(self, field, path_var: tk.StringVar):
+        """Opens a file picker for a specific field."""
+        filepath = filedialog.askopenfilename(
+            title=f"Select {field.label}",
+            filetypes=field.file_types + [("All Files", "*.*")]
+        )
+        if filepath:
+            path_var.set(filepath)
+            # Update the label directly â€” no StringVar/Entry issues
+            self.path_labels[field.label].config(
+                text=os.path.basename(filepath),  # â† Show filename only, not full path
+                foreground="black"  # â† Change from grey to black
+            )
+            if field.show_sheet:
+                self.sheet_labels[field.label].config(foreground="black")
+                self.sheet_entries[field.label].config(state="normal")  # â† Enable on file select
+            self._check_ready()
+
+    def _browse_directory(self):
+        """Opens a directory picker for the output location."""
+        directory = filedialog.askdirectory(
+            title="Select Output Directory"
+        )
+        if directory:
+            self.output_directory = directory  # â† Store as plain string
+            if self.output_label is not None:
+                self.output_label.config(
+                    text=directory,  # â† Show full path for directory
+                    foreground="black"  # â† Change from grey to black
+                )
+            self._check_ready()
+
+    def _on_submit(self):
+        
+        from datetime import datetime
+
+        """All validation already handled by _check_ready() â€” just package results."""
+        
+        # Set the global timestamp once here
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        #app_state.process_only_differences = self.process_only_differences.get()
+
+        self.result = {
+            "files": {
+                label: var.get() or None
+                for label, var in self.file_paths.items()
+            },
+            "sheet_names": {
+                label: var.get() or "Sheet1"
+                for label, var in self.sheet_names.items()
+            },
+            "output_directory": self.output_directory or None,
+            "timestamp": timestamp,  # Reference the local timestamp here
+            "process_only_differences": self.process_only_differences.get()
+        }
+        self.root.destroy()
+
+    # ==========================================
+    # Public Interface
+    # ==========================================
+
+    def run(self) -> Optional[Dict]:
+        """
+        Launch the UI and return a dict when complete:
+        {
+            "files": {"Label": "path/to/file" or None},
+            "output_directory": "path/to/dir" or None
+        }
+        Returns None if the user closes the window without submitting.
+        """
+        self.root.wait_window()
+        return self.result
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\main.py =====
+import sys
+import tkinter as tk
+import os
+from tkinter import ttk
+from file_upload_ui import FileUploadUI
+from task_registry import TASK_REGISTRY
+
+# This is v0.2-Grouping_by
+
+# ==========================================
+# Debug Configuration
+# â† Set to True to skip UI during debugging
+# â† Set to False for normal UI operation
+# ==========================================
+DEBUG_MODE = False
+# Clears terminal on every run (cross-platform)
+os.system('cls' if os.name == 'nt' else 'clear')
+
+def _get_base_path() -> str:
+    """Returns the base path for test data â€” works both in dev and bundled exe."""
+    if getattr(sys, 'frozen', False):
+        # Running as bundled exe
+        return sys._MEIPASS
+    else:
+        # Running in development
+        return os.path.dirname(os.path.abspath(__file__))
+
+_BASE = _get_base_path()
+
+DEBUG_FILES = {
+    "files": {
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
+        "X-Checks Publication File":   os.path.join(_BASE, "test_data", "EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx"),
+        "Mapping File":                os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
+    },
+    "sheet_names": {
+        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "X-Checks Publication File":   "cross checks all",
+        "Mapping File":                "Sheet1",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False
+}
+
+DEBUG_TASK = "X-Checks Grouping By"  # â† Must match a key in TASK_REGISTRY
+
+class TaskSelectorUI:
+    """
+    Simple launcher window â€” user picks a task,
+    then the appropriate upload dialog is shown.
+    """
+
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("X_Check Application")
+        self.root.resizable(False, False)
+        self._build_ui()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        """
+        Called when the user clicks the red X on the launcher.
+        Exits the application cleanly.
+        """
+        self.root.destroy()
+        sys.exit()
+
+    def _on_task_selected(self, *args):
+        """
+        Called whenever the dropdown selection changes.
+        Enables the Start button only when a task is selected.
+        """
+        if self.task_var.get():
+            self.start_btn.config(state="normal")
+        else:
+            self.start_btn.config(state="disabled")
+
+    def _build_ui(self):
+        frame = ttk.Frame(self.root, padding="20")
+        frame.grid(row=0, column=0)
+
+        ttk.Label(
+            frame,
+            text="X-Check Application",
+            font=("Helvetica", 16, "bold")
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 20))
+
+        ttk.Label(
+            frame,
+            text="Select a task to begin:"
+        ).grid(row=1, column=0, sticky="w", pady=5)
+
+        self.task_var = tk.StringVar()
+        self.task_var.trace_add("write", self._on_task_selected)
+        task_dropdown = ttk.Combobox(
+            frame,
+            textvariable=self.task_var,
+            values=list(TASK_REGISTRY.keys()),
+            state="readonly",
+            width=30
+        )
+        task_dropdown.grid(row=1, column=1, padx=10, pady=5)
+
+        self.start_btn = ttk.Button(
+            frame,
+            text="Start",
+            command=self._on_start
+        )
+        self.start_btn.grid(row=2, column=0, columnspan=2, pady=15)
+        self.start_btn.config(state="disabled")  # â† Disabled by default
+
+    def _on_start(self):
+        task_name = self.task_var.get()
+        if not task_name:
+            return
+
+        config, strategy_class = TASK_REGISTRY[task_name]
+
+        from progress_dialog import ProgressDialog
+        import threading
+
+        def run_processing(strategy, dialog, files):
+            try:
+                strategy.execute(files)
+                if not dialog.is_stopped():
+                    dialog.append_entry("System", "Processing complete. You may close this window.")
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+            except Exception as e:
+                import traceback
+                error_msg = traceback.format_exc()
+                print(f"  [ERROR] Unhandled exception in processing thread:\n{error_msg}")
+                dialog.append_entry("ERROR", f"Unhandled exception: {e}")
+                self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+
+        if DEBUG_MODE:
+            from datetime import datetime
+
+            required_labels = {f.label for f in config.file_fields if f.required}
+            provided_labels = set(DEBUG_FILES["files"].keys())
+            missing = required_labels - provided_labels
+            extra = provided_labels - {f.label for f in config.file_fields}
+
+            if missing:
+                print(f"  [ERROR] DEBUG_FILES is missing required file(s):")
+                for label in missing:
+                    print(f"    - {label}")
+                self.root.destroy()
+                return
+
+            if extra:
+                print(f"  [WARNING] DEBUG_FILES contains unrecognised file(s):")
+                for label in extra:
+                    print(f"    - {label}")
+
+            DEBUG_FILES["timestamp"] = datetime.now().strftime("%Y%m%d_%H%M%S")
+            os.makedirs(DEBUG_FILES["output_directory"], exist_ok=True)
+
+            strategy = strategy_class(config)
+            dialog = ProgressDialog(self.root)
+            self.root.withdraw()
+            strategy.set_progress_dialog(dialog)
+
+            thread = threading.Thread(target=run_processing, args=(strategy, dialog, DEBUG_FILES), daemon=True)
+            thread.start()
+            return
+
+        # --- Normal (non-debug) mode ---
+        self.root.withdraw()
+        files = FileUploadUI(config, self.root).run()
+
+        if files:
+            strategy = strategy_class(config)
+            dialog = ProgressDialog(self.root)
+            self.root.withdraw()
+            strategy.set_progress_dialog(dialog)
+
+            thread = threading.Thread(target=run_processing, args=(strategy, dialog, files), daemon=True)
+            thread.start()
+        else:
+            # User closed the upload dialog without submitting
+            self.root.destroy()
+
+    def run(self):
+        if DEBUG_MODE:
+            # Hide the launcher window in debug mode
+            #self.root.withdraw()
+            # Set task directly and start without showing launcher
+            self.task_var.set(DEBUG_TASK)
+            self.root.after(0, self._on_start)  # â† Call _on_start immediately after mainloop starts
+
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    TaskSelectorUI().run()
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\progress_dialog.py =====
+import sys
+import tkinter as tk
+from tkinter import ttk
+import threading
+
+
+class ProgressDialog:
+    """
+    A scrollable progress log dialog for UAT/debug runs.
+    Displays log entries in real time as processing occurs.
+    Runs on the main thread; processing runs on a background thread.
+
+    Stop behaviour:
+    - "Stop" sets the stop event; processing halts at the next log_step checkpoint.
+    - Button changes to "Close".
+    - "Close" destroys the window and exits the application.
+    """
+
+    WINDOW_SIZE = 550  # Square dimensions in pixels
+
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.stop_event = threading.Event()
+        self._stopped = False
+
+        self._build_ui()
+        self._centre_on_screen()
+
+    # =========================================================
+    # UI Construction
+    # =========================================================
+
+    def _build_ui(self):
+        self.window = tk.Toplevel(self.root)
+        self.window.title("X-Checks UAT â€” Processing Log")
+        self.window.resizable(False, False)
+        self.window.protocol("WM_DELETE_WINDOW", self._on_stop_or_close)
+
+        # Prevent interaction with the launcher behind it
+        self.window.grab_set()
+
+        outer_frame = ttk.Frame(self.window, padding="12")
+        outer_frame.pack(fill="both", expand=True)
+
+        # --- Title label ---
+        ttk.Label(
+            outer_frame,
+            text="Processing Log",
+            font=("Helvetica", 13, "bold")
+        ).pack(pady=(0, 8))
+
+        # --- Scrollable text area ---
+        text_frame = ttk.Frame(outer_frame)
+        text_frame.pack(fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(text_frame, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        self.text_area = tk.Text(
+            text_frame,
+            state="disabled",       # Read-only
+            wrap="word",
+            font=("Courier", 9),
+            bg="#f7f7f7",
+            fg="#222222",
+            relief="sunken",
+            borderwidth=1,
+            yscrollcommand=scrollbar.set,
+            width=60,
+            height=28
+        )
+        self.text_area.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=self.text_area.yview)
+
+        # --- Stop / Close button ---
+        btn_frame = ttk.Frame(outer_frame)
+        btn_frame.pack(pady=(10, 0))
+
+        self.action_btn = ttk.Button(
+            btn_frame,
+            text="Stop",
+            width=12,
+            command=self._on_stop_or_close
+        )
+        self.action_btn.pack()
+
+    def _centre_on_screen(self):
+        self.window.update_idletasks()
+        w = self.WINDOW_SIZE
+        h = self.WINDOW_SIZE
+        screen_w = self.window.winfo_screenwidth()
+        screen_h = self.window.winfo_screenheight()
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
+        self.window.geometry(f"{w}x{h}+{x}+{y}")
+
+    # =========================================================
+    # Button handler
+    # =========================================================
+
+    def _on_stop_or_close(self):
+        if not self._stopped:
+            # First press â€” stop processing
+            self._stopped = True
+            self.stop_event.set()
+            self.action_btn.config(text="Close")
+            self.append_entry("---", "User requested stop. Waiting for current step to finish...")
+        else:
+            # Second press â€” clean up and exit
+            self.window.grab_release()
+            self.window.destroy()
+            self.root.destroy()
+            sys.exit(0)
+
+    # =========================================================
+    # Public interface â€” called from background thread
+    # =========================================================
+
+    def append_entry(self, file: str, step: str, count: int = 0, notes: str = ""):
+        """
+        Thread-safe method to append a log line to the text area.
+        Uses root.after() to marshal the update onto the main thread.
+        """
+        line = f"[{file}]  {step}"
+        if count:
+            line += f"  ({count})"
+        if notes:
+            line += f"  â€” {notes}"
+        line += "\n"
+
+        self.root.after(0, self._write_line, line)
+
+    def _write_line(self, line: str):
+        """Must only be called on the main thread via root.after()."""
+        self.text_area.config(state="normal")
+        self.text_area.insert("end", line)
+        self.text_area.see("end")          # Auto-scroll to latest entry
+        self.text_area.config(state="disabled")
+
+    def is_stopped(self) -> bool:
+        return self.stop_event.is_set()
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\task_configs.py =====
+from file_upload_config import UploadTaskConfig, FileFieldConfig
+
+# --- X-Checks Task ---
+X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="X-Checks",
+    window_title="X-Check Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="FIP file",
+            file_types=[("Text Files", "*.txt")],
+            description="Data from the 'Validation Rule' in FIP Consolidation Workbench"
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all"
+        ),
+        FileFieldConfig(
+            label="GCoA Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False, # If the file is not uploaded, no QU values can be returned
+            description="The X-Checks Publication file with the 'GCoA Base account table' sheet\n  If the file is not uploaded, no QU values can be returned",
+            default_sheet="GCoA Base account table"
+        ),
+        FileFieldConfig(
+            label="Known Exception List",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False,  # If the file is not uploaded, no known exception values can be returned
+            description="The spreadsheet containing a list of x-check numbers and the known exception for that x-check in the 'Known Exception' sheet\n  If the file is not uploaded, no known exception values can be returned",
+            default_sheet="Sheet1"
+        ),
+    ]
+)
+
+# --- Accounting Principles Task ---
+ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="X-Check Accounting Principles",
+    window_title="X-Check Accounting Principles Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALMSG)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="Data from ZQ9_VALMSG in FIP",
+            default_sheet="Sheet1"
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all"
+        ),
+        FileFieldConfig(
+            label="Validation Methods",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The Validation Methods Excel file with the sheet 'Validation Methods'",
+            default_sheet="Validation Methods"
+        ),
+    ]
+)
+
+# --- Conditions Task ---
+CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="X-Check Conditions",
+    window_title="X-Check Conditions Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALMETH)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="Data from ZQ9_VALMETH in FIP",
+            default_sheet="Sheet1"
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all"
+        ),
+    ]
+)
+
+# --- Grouping By Task ---
+GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="X-Check Grouping By",
+    window_title="X-Check Grouping By Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALFLDGR)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="Data from ZQ9_VALFLDGR in FIP",
+            default_sheet="Sheet1"
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all",
+            required_columns=["X-Check No.","Reference  X-Check (Condition)","Grouping By"]
+        ),
+        FileFieldConfig(
+            label="Mapping File",
+            file_types=[("Text Files", "*.txt")],
+            description="Mapping file in CSV format"
+        ),
+    ]
+)
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\task_registry.py =====
+from task_configs import (
+    X_CHECKS_UPLOAD_CONFIG,
+    ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,
+    CONDITIONS_UPLOAD_CONFIG,
+    GROUPING_BY_UPLOAD_CONFIG,
+)
+#from strategies.x_checks import XChecks  # Same â€” __init__.py re-exports it
+#from strategies.accounting_principles import AccountingPrinciples
+#from strategies.conditions import Conditions
+from strategies.grouping_by import GroupingBy
+
+# Registry maps display name â†’ (UI config, processing strategy)
+# To add a new use case: add one line here and a new config in task_configs.py
+TASK_REGISTRY = {
+    #"X-Checks":     (X_CHECKS_UPLOAD_CONFIG,  XChecks),
+    #"X-Checks Accounting Principles": (ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,  AccountingPrinciples),
+    #"X-Checks Conditions":     (CONDITIONS_UPLOAD_CONFIG,   Conditions),
+    "X-Checks Grouping By":     (GROUPING_BY_UPLOAD_CONFIG,   GroupingBy),
+}
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\core\comparator.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\core\file_loader.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\core\reporter.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\core\__init__.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\accounting_principles.py =====
+import os
+import tkinter as tk
+from tkinter import ttk
+import pandas as pd
+from strategies.base_strategy import BaseStrategy, UploadTaskConfig
+
+class AccountingPrinciples(BaseStrategy):
+
+    def __init__(self, config: UploadTaskConfig):  # Accept config
+        super().__init__(config)                   # Pass up to BaseStrategy
+
+    def process(self, loaded_files: dict, files: dict):
+        lines = ["=== Accounting Principles: Processing ===\n"]
+
+        for label, data in loaded_files.items():
+            filename = os.path.basename(files["files"][label])
+            if isinstance(data, pd.DataFrame):
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Rows    : {len(data)}")
+                lines.append(f"  Columns : {len(data.columns)}")
+                lines.append(f"  Columns : {list(data.columns)}\n")
+            else:
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Content : loaded OK (text file)\n")
+
+        output = "\n".join(lines)
+        print(output)
+        self._show_output(output)
+
+    def _show_output(self, output: str):
+        """Display output in a resizable window with a Text widget."""
+        window = tk.Toplevel()
+        window.title("Accounting Principles â€” Processing Summary")
+        window.resizable(True, True)
+
+        # --- Text widget with scrollbar ---
+        frame = ttk.Frame(window, padding="10")
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(frame, orient="vertical")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        text = tk.Text(
+            frame,
+            width=120,
+            height=20,
+            font=("Courier New", 10),
+            yscrollcommand=scrollbar.set,
+            wrap="none"
+        )
+        text.grid(row=0, column=0, sticky="nsew")
+        scrollbar.config(command=text.yview)
+
+        # --- Horizontal scrollbar ---
+        h_scrollbar = ttk.Scrollbar(frame, orient="horizontal", command=text.xview)
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        text.config(xscrollcommand=h_scrollbar.set)
+
+        # --- Insert output and lock editing ---
+        text.insert("1.0", output)
+        text.config(state="disabled")
+
+        # --- OK button ---
+        ttk.Button(
+            window,
+            text="OK",
+            command=window.destroy
+        ).grid(row=1, column=0, pady=10)
+
+        # --- Make window and frame resizable ---
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        window.wait_window()
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\base_strategy.py =====
+import pandas as pd
+import openpyxl
+import os
+import re
+import shutil
+import threading
+from abc import ABC, abstractmethod
+from tkinter import messagebox
+from typing import Optional
+from file_upload_config import UploadTaskConfig
+from datetime import datetime
+from config import OUTPUT_TEMPLATE
+
+class BaseStrategy(ABC):
+    """
+    Handles everything that is ALWAYS the same:
+    - Loading files into memory
+    - Calling the use-case-specific processing
+    - Writing Excel output
+    - Logging processing steps
+    """
+    
+    def __init__(self, config: UploadTaskConfig):
+        self.config = config
+        self._progress_dialog = None          # Set via set_progress_dialog()
+        self._stop_event: threading.Event | None = None    
+
+    def execute(self, files: dict):
+        """
+        Entry point called by main.py.
+        Loads all files then hands off to the subclass.
+        """
+        from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
+
+        self.log = []  # Initialised here â€” available to all strategies via self.log
+        self.process_only_differences = files.get("process_only_differences", False)
+
+        # Store process flag on instance so _load_files can access it
+        self.process_only_differences = files.get("process_only_differences", False)
+
+        try:
+            self.log_step(self.log, "System", "Loading files into memory...", 0)
+            try:
+                loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+            except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+                self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+                return
+
+            if loaded_files is None:
+                return
+
+            self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
+            for label, data in loaded_files.items():
+                self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
+
+            self.process(loaded_files, files)
+
+        except StopIteration:
+            # User pressed Stop â€” log it, then return cleanly
+            timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"  [{timestamp}] System â€” Processing halted by user.")
+            self.log.append({
+                "Timestamp": timestamp,
+                "File": "System",
+                "Step": "Processing halted by user.",
+                "Count": 0,
+                "Notes": ""
+            })
+            if self._progress_dialog is not None:
+                self._progress_dialog.append_entry("System", "Processing halted by user. You may now close this window.")
+
+#        self.log_step(self.log, "System", "Loading files into memory...", 0)
+#        try:
+#            loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+#
+#        except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+#            self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+#            messagebox.showerror("File Loading Error", str(e))
+#            return
+#
+#        if loaded_files is None:
+#            return
+#
+#        self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
+#        for label, data in loaded_files.items():
+#            self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
+#
+#        self.process(loaded_files, files)
+
+    # -------------------------------------------------------------------------
+    # Excel output utilities â€” available to all strategies
+    # -------------------------------------------------------------------------
+
+    def build_output_path(self, output_directory: str, label: str, timestamp: str) -> str:
+        """
+        Builds a safe, timestamped output file path from a label.
+        Replaces characters that are invalid in Windows filenames.
+        """
+        safe_label = re.sub(r'[<>:"/\\|?*()]', '_', label)
+        filename = f"{timestamp}_{safe_label}.xlsx"
+        return os.path.join(output_directory, filename)
+
+    def set_progress_dialog(self, dialog):
+        """
+        Called by main.py (debug mode only) to attach the ProgressDialog.
+        Also stores a reference to its stop event for checkpoint polling.
+        """
+        self._progress_dialog = dialog
+        self._stop_event = dialog.stop_event
+
+    def log_step(self, log: list, file: str, step: str, count: int, notes: str = ""):
+        """
+        Appends a timestamped entry to the processing log and prints to console.
+        If a ProgressDialog is attached, pushes the entry to it.
+        If the stop event has been set, raises StopIteration to unwind processing.
+        The stop check happens AFTER the current step is recorded, so the step
+        that was already running completes before the halt takes effect.
+        """
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"  [{timestamp}] {file} â€” {step} ({count})")
+        log.append({
+            "Timestamp": timestamp,
+            "File": file,
+            "Step": step,
+            "Count": count,
+            "Notes": notes
+        })
+
+        # Push to UI dialog if attached
+        if self._progress_dialog is not None:
+            self._progress_dialog.append_entry(file, step, count, notes)
+
+        # Check stop event AFTER completing this step
+        if self._stop_event is not None and self._stop_event.is_set():
+            raise StopIteration("Processing stopped by user.")
+
+    def autofit_columns(self, worksheet, max_width: int = 90,  skip_rows: int = 0):
+        """Auto-fits all columns in a worksheet to their content width, capped at max_width."""
+        for column in worksheet.columns:
+            max_length = 0
+            col_letter = column[0].column_letter
+            for cell in column:
+                if cell.row <= skip_rows:
+                    continue
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            worksheet.column_dimensions[col_letter].width = min(max_length + 2, max_width)
+
+    def write_excel_output(self, output_path: str, sheets: dict, log: list, summaries: dict | None = None):
+        """
+        Writes a dictionary of DataFrames to a single timestamped Excel workbook.
+        Copies the pre-labelled template, writes all sheets, auto-fits columns.
+
+        Args:
+            output_path:  Full path to the output file
+            sheets:       Ordered dict of {sheet_name: DataFrame}
+            log:          List of log entry dicts
+            summaries:    Optional dict of {label: value} for summary blocks
+        """
+        # Copy pre-labelled template to output path
+        shutil.copy(OUTPUT_TEMPLATE, output_path)
+        df_log = pd.DataFrame(log)
+
+        with pd.ExcelWriter(output_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+
+            # Write all provided sheets
+            for sheet_name, df in sheets.items():
+                if summaries and sheet_name in summaries:
+                    self.write_sheet_with_summary(writer, sheet_name, df, summaries[sheet_name])
+                else:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            # Write log sheet
+            df_log.to_excel(writer, sheet_name="Processing Log", index=False)
+
+            # Remove default Sheet1 from template
+            if "Sheet1" in writer.book.sheetnames:
+                del writer.book["Sheet1"]
+
+            # Auto-fit all sheets
+            for sheet_name in writer.book.sheetnames:
+                if summaries and sheet_name in summaries:
+                    skip = len(summaries[sheet_name]) + 2  # skip summary rows + blank row
+                    self.autofit_columns(writer.book[sheet_name], skip_rows=skip)
+                else:
+                    self.autofit_columns(writer.book[sheet_name])
+
+            self.log_step(self.log, "Output", f"  Sheets in workbook: {writer.book.sheetnames}", 0)
+
+            # Allow subclasses to apply strategy-specific formatting
+            self.apply_output_formatting(writer.book)
+
+        self.log_step(self.log, "Output", f"Output written to: {output_path}", 0)
+    
+    def apply_output_formatting(self, workbook):
+        """
+        Hook for subclasses to apply strategy-specific formatting.
+        Override in subclass â€” default does nothing.
+        """
+        pass
+
+    # -------------------------------------------------------------------------
+    # File loading utilities â€” available to all strategies
+    # -------------------------------------------------------------------------
+
+    def _load_files(self, files: dict, sheet_names: dict, file_fields: list) -> Optional[dict]:
+        """
+        Reads each file into memory based on its extension.
+        """
+        from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
+
+        loaded = {}
+
+        column_map = {
+            f.label: f.required_columns
+            for f in file_fields
+        }
+
+        for label, path in files.items():
+            if path is None:
+                continue
+            try:
+                ext = os.path.splitext(path)[1].lower()
+
+                if ext in (".xlsx", ".xls"):
+                    sheet = sheet_names.get(label, "Sheet1")
+                    try:
+                        excel_file = pd.ExcelFile(path)
+                    except Exception as e:
+                        raise FileLoadError(
+                            f"Could not open '{os.path.basename(path)}' as an Excel file.\n\n"
+                            f"{str(e)}"
+                        )
+
+                    if sheet not in excel_file.sheet_names:
+                        raise SheetNotFoundError(
+                            f"Could not find sheet '{sheet}' in '{os.path.basename(path)}'.\n\n"
+                            f"Please check the file and sheet name then try again."
+                        )
+
+                    df = pd.read_excel(path, sheet_name=sheet)
+                    df = self._select_columns(df, label, column_map.get(label), path)
+                    if df is None:
+                        return None
+
+                    if self.process_only_differences:
+                        df = self._filter_coloured_rows(df, path, sheet)
+
+                    loaded[label] = df
+
+                elif ext == ".csv":
+                    df = pd.read_csv(path)
+                    df = self._select_columns(df, label, column_map.get(label), path)
+                    if df is None:
+                        return None
+                    loaded[label] = df
+
+                elif ext == ".txt":
+                    with open(path, "r") as f:
+                        loaded[label] = f.read()
+                else:
+                    raise UnsupportedFileTypeError(
+                        f"'{os.path.basename(path)}' is not a supported file type.\n\n"
+                        f"Please select a csv or txt file."
+                    )
+
+            except PermissionError:
+                raise FileLoadError(
+                    f"'{os.path.basename(path)}' is currently open in another application.\n\n"
+                    f"Please close it and try again."
+                )
+
+            except ValueError as e:
+                # Catch unexpected pandas errors (e.g. malformed CSV, encoding issues)
+                raise FileLoadError(
+                    f"Error reading '{os.path.basename(path)}':\n\n{str(e)}"
+                )
+            
+        return loaded
+
+    def _filter_coloured_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
+        """
+        Uses openpyxl to detect rows with any background fill colour,
+        then filters the DataFrame to those rows only.
+
+        NOTE: This loads the workbook a second time (first load is via pd.read_excel).
+        This trade-off keeps data loading and colour detection cleanly separated.
+        If performance becomes an issue with large files, consider loading openpyxl
+        first and extracting both data and colours in a single pass.
+        """
+        ext = os.path.splitext(filepath)[1].lower()
+        if ext != ".xlsx":
+            #print(f"  [process_only_differences] Skipping colour filter for {os.path.basename(filepath)} â€” .xls not supported by openpyxl")
+            self.log_step(self.log, os.path.basename(filepath), "Colour filter skipped â€” .xls not supported by openpyxl", 0)
+            return df
+
+        try:
+            wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
+            ws = wb[sheet_name]
+        except Exception as e:
+            # Non-fatal: fall back to full dataset if colour detection fails
+            self.log_step(self.log, os.path.basename(filepath),
+                        "Colour filter failed â€” using full dataset", len(df),
+                        notes=str(e))
+            return df
+
+        coloured_row_indices = []
+
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                fill = cell.fill
+                if (
+                    fill.fill_type not in (None, "none")
+                    and fill.fgColor.type != "auto"
+                ):
+                    if cell.row is not None:
+                        coloured_row_indices.append(cell.row - 2)
+                    break
+
+        wb.close()
+
+        if not coloured_row_indices:
+            self.log_step(self.log, os.path.basename(filepath), "No coloured rows found â€” returning empty DataFrame", 0)
+            return df.iloc[[]]
+
+        filtered = df.iloc[coloured_row_indices].reset_index(drop=True)
+        self.log_step(self.log, os.path.basename(filepath),
+                "Coloured rows retained", len(filtered),
+                notes=f"Filtered from {len(df)} total rows") 
+        return filtered
+
+    def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
+        """
+        Reduces the DataFrame to only the required columns.
+        Returns None if any required column is missing.
+        """
+        from exceptions import MissingColumnsError
+
+        if required_columns is None:
+            return df
+
+        missing = [col for col in required_columns if col not in df.columns]
+        if missing:
+            raise MissingColumnsError(
+                f"'{os.path.basename(filepath)}' is missing the following required column(s):\n\n"
+                + "\n".join(f"  â€¢ {col}" for col in missing)
+                + f"\n\nPlease check the file and try again."
+            )
+            
+        return df[required_columns]
+    
+    def apply_conditional_formatting(self, worksheet, column_name: str, rules: dict):
+        """
+        Applies conditional formatting to a named column in a worksheet.
+
+        Args:
+            worksheet:    The openpyxl worksheet object
+            column_name:  The header name of the column to format
+            rules:        Dict of {cell_value: (PatternFill, Font)} or {cell_value: PatternFill}
+        """
+        from openpyxl.formatting.rule import CellIsRule
+
+        self.log_step(self.log, "Formatting",
+                    f"Applying to '{worksheet.title}', column '{column_name}'", 0)
+
+        # Find the column letter by matching the header value
+        target_col = None
+        for cell in worksheet[1]:
+            if cell.value == column_name:
+                target_col = cell.column_letter
+                break
+
+        if target_col is None:
+            self.log_step(self.log, "Formatting",
+                        f"Column '{column_name}' not found â€” skipping", 0)
+            return
+
+        last_row = worksheet.max_row
+        target_range = f"{target_col}2:{target_col}{last_row}"
+
+        for value, formatting in rules.items():
+            # Accept either a plain fill or a (fill, font) tuple
+            if isinstance(formatting, tuple):
+                fill, font = formatting
+            else:
+                fill, font = formatting, None
+
+            worksheet.conditional_formatting.add(
+                target_range,
+                CellIsRule(
+                    operator="equal",
+                    formula=[f'"{value}"'],
+                    fill=fill,
+                    font=font
+                )
+            )
+
+        self.log_step(self.log, "Formatting",
+                    f"Applied {len(rules)} rule(s) to {target_range}", 0)
+
+    def write_sheet_with_summary(self, writer, sheet_name: str, df: pd.DataFrame, summary: dict):
+        """
+        Writes a summary block followed by a blank row then the main DataFrame.
+
+        Args:
+            writer:       The pd.ExcelWriter instance
+            sheet_name:   Name of the sheet to write to
+            df:           The main DataFrame
+            summary:      Ordered dict of {label: value} for the summary block
+        """
+        # Write main DataFrame first so the sheet is created, leaving room for summary
+        start_row = len(summary) + 2  # +1 for blank row, +1 for header
+        df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=start_row)
+
+        # Write summary rows directly into cells
+        worksheet = writer.sheets[sheet_name]
+        for i, (label, value) in enumerate(summary.items()):
+            worksheet.cell(row=i + 1, column=1, value=label)
+            worksheet.cell(row=i + 1, column=2, value=value)
+
+    @abstractmethod
+    def process(self, loaded_files: dict, files: dict):
+        """
+        Subclasses implement THIS â€” not execute().
+        By the time this is called, all files are already in memory.
+        Access output_directory via files["output_directory"].
+        Access timestamp via files["timestamp"].        
+        """
+        pass
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\conditions.py =====
+import os
+import tkinter as tk
+from tkinter import ttk
+import pandas as pd
+from strategies.base_strategy import BaseStrategy, UploadTaskConfig
+
+class Conditions(BaseStrategy):
+
+    def __init__(self, config: UploadTaskConfig):  # Accept config
+        super().__init__(config)                   # Pass up to BaseStrategy
+
+    def process(self, loaded_files: dict, files: dict):
+        lines = ["=== Conditions: Processing ===\n"]
+
+        for label, data in loaded_files.items():
+            filename = os.path.basename(files["files"][label])
+            if isinstance(data, pd.DataFrame):
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Rows    : {len(data)}")
+                lines.append(f"  Columns : {len(data.columns)}")
+                lines.append(f"  Columns : {list(data.columns)}\n")
+            else:
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Content : loaded OK (text file)\n")
+
+        output = "\n".join(lines)
+        print(output)
+        self._show_output(output)
+
+    def _show_output(self, output: str):
+        """Display output in a resizable window with a Text widget."""
+        window = tk.Toplevel()
+        window.title("Conditions â€” Processing Summary")
+        window.resizable(True, True)
+
+        # --- Text widget with scrollbar ---
+        frame = ttk.Frame(window, padding="10")
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(frame, orient="vertical")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        text = tk.Text(
+            frame,
+            width=120,
+            height=20,
+            font=("Courier New", 10),
+            yscrollcommand=scrollbar.set,
+            wrap="none"
+        )
+        text.grid(row=0, column=0, sticky="nsew")
+        scrollbar.config(command=text.yview)
+
+        # --- Horizontal scrollbar ---
+        h_scrollbar = ttk.Scrollbar(frame, orient="horizontal", command=text.xview)
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        text.config(xscrollcommand=h_scrollbar.set)
+
+        # --- Insert output and lock editing ---
+        text.insert("1.0", output)
+        text.config(state="disabled")
+
+        # --- OK button ---
+        ttk.Button(
+            window,
+            text="OK",
+            command=window.destroy
+        ).grid(row=1, column=0, pady=10)
+
+        # --- Make window and frame resizable ---
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        window.wait_window()
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\grouping_by.py =====
+import os
+import pandas as pd
+from strategies.base_strategy import BaseStrategy
+from task_configs import GROUPING_BY_UPLOAD_CONFIG, UploadTaskConfig
+
+# --- File label constants (avoids fragile index-based lookups) ---
+FIP_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label       # "FIP File (ZQ9_VALFLDGR)"
+EBS_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label       # "X-Checks Publication File"
+MAPPING_LABEL = GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label   # "Mapping File"
+
+class GroupingBy(BaseStrategy):
+
+    def __init__(self, config: UploadTaskConfig):  # Accept config
+        super().__init__(config)                   # Pass up to BaseStrategy
+    
+    def process(self, loaded_files, files):
+        self.log_step(self.log, "System", f"Processing files: {list(loaded_files.keys())}", 0)
+
+        df_mapping_file, df_fip_original, df_fip_processed = self._process_fip(loaded_files)
+        if df_fip_original is None:
+            self.log_step(self.log, "System", "FIP processing failed â€” aborting.", 0)
+            return
+
+        df_ebs_original, df_ebs_processed = self._process_ebs(loaded_files)
+        if df_ebs_original is None:
+            self.log_step(self.log, "System", "EBS processing failed â€” aborting.", 0)
+            return
+        
+        assert df_fip_processed is not None
+        assert df_ebs_processed is not None
+        df_comparison = self._process_compare(df_fip_processed, df_ebs_processed)
+
+        assert df_comparison is not None
+        matched     = (df_comparison["Result"] == "Matched").sum()
+        not_matched = (df_comparison["Result"] == "Not in FIP").sum()
+        fip_path    = files["files"][FIP_LABEL]  
+        ebs_path    = files["files"][EBS_LABEL]  
+
+        self.write_excel_output(
+            output_path=self.build_output_path(
+                files["output_directory"],
+                "X-Check Grouping By Results",
+                files["timestamp"]
+            ),
+            sheets={
+                "Mapping File":    df_mapping_file,
+                "FIP - Original":  df_fip_original,
+                "FIP - Processed": df_fip_processed,
+                "EBS - Original":  df_ebs_original,
+                "EBS - Processed": df_ebs_processed,
+                "Compare":      df_comparison
+            },
+            log=self.log,
+            summaries={
+                "FIP - Original":  {"Source filename:": fip_path, "Number of rows:": len(df_fip_original)},
+                "FIP - Processed": {"Source filename:": fip_path, "Number of rows:": len(df_fip_processed)},
+                "EBS - Original":  {"Source filename:": ebs_path, "Number of rows:": len(df_ebs_original)},
+                "EBS - Processed": {"Source filename:": ebs_path, "Number of rows:": len(df_ebs_processed)},
+                "Compare":         {"Number of rows:": len(df_comparison), "Number matched:": matched, "Number of errors:": not_matched},            
+            }
+        )
+
+    def _process_fip(self, loaded_files) -> tuple[pd.DataFrame|None, pd.DataFrame|None, pd.DataFrame|None]:
+        """Returns (mapping, original, processed) DataFrames and appends to log."""
+
+        self.log_step(self.log, "Mapping File", "Started processing", 0)
+        mapping_file_content = loaded_files[MAPPING_LABEL]  # Mapping File
+        self.log_step(self.log, "Mapping File", "Loaded", len(mapping_file_content.splitlines()),"Including header row")
+        mapping_dict = {}
+        for line in mapping_file_content.splitlines()[1:]:  # [1:] skips the header row "FIP Data,EBS item"
+            line = line.strip()
+            if not line:
+                continue  # Skip empty lines
+            parts = line.split(",", maxsplit=1)  # maxsplit=1 protects against commas in values
+            if len(parts) == 2:
+                key, value = parts[0].strip(), parts[1].strip()
+                mapping_dict[key] = value
+        self.log_step(self.log, "Mapping File", "Mapping dictionary created", len(mapping_dict))
+        # Split each line on comma into two values, then build the DataFrame
+        df_mapping_file = pd.DataFrame(
+            [line.split(",", maxsplit=1) for line in mapping_file_content.splitlines()[1:] if line.strip()],
+            columns=["FIP Data", "EBS item"]
+        )
+        self.log_step(self.log, "Mapping File", "df_mapping_data created", len(df_mapping_file), "DataFrame created from mapping dictionary for output")
+        self.log_step(self.log, "Mapping File", "Finished processing", len(mapping_dict))
+
+        # Access directly from loaded_files
+        self.log_step(self.log, "FIP", "Started processing", 0)
+        df_original = loaded_files[FIP_LABEL]
+        self.log_step(self.log, "FIP", "Original File saved", len(df_original), "Original DataFrame for output comparison")            
+        df_fip = df_original.copy()  # 'FIP File (ZQ9_VALFLDGR)'
+        self.log_step(self.log, "FIP", "Original file", len(df_original), "FIP Dataframe ready for processing")
+        
+        # --- Lookup: map "Field name" to EBS item ---
+        df_fip["EBS Item"] = df_fip["Field name"].map(mapping_dict)
+        self.log_step(self.log, "FIP", "Mapped 'Field name' to 'EBS Item'", len(df_fip), "Mapped using mapping dictionary")
+
+        # Remove all rows where EBS Item is empty or whitespace
+        df_fip = df_fip[
+            df_fip["EBS Item"].notna() &   
+            (df_fip["EBS Item"].str.strip() != "") & 
+            (df_fip["EBS Item"].str.strip().str.lower() != "ignore")  # Also exclude rows where mapping resulted in "ignore"
+        ]
+        # Remove all rows where ValidRule Item is empty or whitespace
+        df_fip = df_fip[
+            df_fip["ValidRule"].notna() &   
+            (df_fip["ValidRule"].str.strip() != "")
+        ]
+        # Debug â€” remove once fixed
+        self.log_step(self.log, "FIP", "Removed blank rows", len(df_fip), "Removed rows where 'Key' is empty or 'ignore'")
+
+        # --- Build Key column ---+
+        df_fip["Key"] = df_fip.apply(
+            lambda row: f"{row['ValidRule']}|{row['EBS Item']}"
+            if pd.notna(row["ValidRule"]) and str(row["ValidRule"]).strip() != ""
+            else "",
+            axis=1
+        )
+        self.log_step(self.log, "FIP", "Constructed 'Key' column", len(df_fip), "Concatenated 'ValidRule' and mapped 'EBS Item'")
+        
+        self.log_step(self.log, "FIP", "Finished processing", len(df_fip), "Returned processed DataFrame for comparison")
+        return df_mapping_file, df_original, df_fip # Return for use in compare
+
+    def _process_ebs(self, loaded_files) -> tuple[pd.DataFrame|None, pd.DataFrame|None]:
+        """Processes the EBS file and writes output."""
+        self.log_step(self.log, "EBS", "Started processing", 0)
+
+        # Step 1 â€” Load the EBS file
+        df_ebs_original = loaded_files[EBS_LABEL]
+        df_ebs_loaded = df_ebs_original.copy()
+        self.log_step(self.log, "EBS", "Original file saved", len(df_ebs_original), "Original DataFrame for output comparison")
+
+        # Step 2 â€” Strip out rows that don't have a 'Grouping By' element
+        df_ebs_loaded = df_ebs_loaded[df_ebs_loaded["Grouping By"].notna() & (df_ebs_loaded["Grouping By"].str.strip() != "")]
+        self.log_step(self.log, "EBS", "Filtered to rows with 'Grouping By'", len(df_ebs_loaded), "Removed rows without 'Grouping By' value")
+
+        # Step 3 â€” Remove duplicate rows based on "X-Check No." â€” keep first occurrence
+        df_ebs_loaded = df_ebs_loaded.drop_duplicates(subset=["X-Check No."], keep="first").reset_index(drop=True)
+        self.log_step(self.log, "EBS", "Removed duplicate 'X-Check No.' rows", len(df_ebs_loaded), "Kept first occurrence of duplicates")
+
+        # Step 4 â€” Split "Grouping By" column on comma into separate columns
+        split_cols = df_ebs_loaded["Grouping By"].str.split(",", expand=True)
+        split_cols.columns = [f"Grouping By {i + 1}" for i in range(split_cols.shape[1])]
+        split_cols = split_cols.apply(lambda col: col.str.strip())
+        self.log_step(self.log, "EBS", "Split 'Grouping By' into separate columns", split_cols.notna().sum().sum(), f"Created {split_cols.shape[1]} 'Grouping By n' columns")    
+
+        # Step 5 â€” Drop original "Grouping By" column and insert split columns in its place
+        col_position = df_ebs_loaded.columns.get_loc("Grouping By")
+        df_ebs_loaded = df_ebs_loaded.drop(columns=["Grouping By"])
+        for i, col in enumerate(reversed(split_cols.columns.tolist())):
+            df_ebs_loaded.insert(col_position, col, split_cols[col])
+        self.log_step(self.log, "EBS", "Inserted split 'Grouping By n' columns", len(df_ebs_loaded), "Replaced original 'Grouping By' column with split columns")    
+
+        # Step 6 â€” Build the base key value
+        df_ebs_loaded["_base_key"] = df_ebs_loaded["Reference  X-Check (Condition)"].where(
+            df_ebs_loaded["Reference  X-Check (Condition)"].notna() &
+            (df_ebs_loaded["Reference  X-Check (Condition)"].str.strip() != ""),
+            other=df_ebs_loaded["X-Check No."].astype(str).str.strip()
+        )
+        self.log_step(self.log, "EBS", "Constructed base key column", df_ebs_loaded["_base_key"].notna().sum(), "Used 'Reference  X-Check (Condition)' where available, otherwise 'X-Check No.'")    
+
+        # Step 7 â€” For each "Grouping By n" column, build key columns
+        grouping_by_cols = [col for col in df_ebs_loaded.columns if col.startswith("Grouping By ")]
+        for col in grouping_by_cols:
+            key_col_name = col.replace("Grouping By ", "Grouping By Key ")
+            df_ebs_loaded[key_col_name] = df_ebs_loaded.apply(
+                lambda row, c=col: (
+                    f"{row['_base_key']}|{str(row[c]).strip()}"
+                    if pd.notna(row[c]) and str(row[c]).strip() != ""
+                    else ""
+                ),
+                axis=1
+            )
+        self.log_step(self.log, "EBS", "Constructed 'Grouping By Key n' columns", df_ebs_loaded[[col for col in df_ebs_loaded.columns if col.startswith("Grouping By Key ")]].notna().sum().sum(), "Concatenated base key with each 'Grouping By n' value to create 'Grouping By Key n' columns")    
+
+        # Step 8 â€” Drop the temporary base key column
+        df_ebs = df_ebs_loaded.drop(columns=["_base_key"])
+
+        # Step 9 â€” Stack
+        key_cols = [col for col in df_ebs.columns if col.startswith("Grouping By Key ")]
+        index_cols = [c for c in df_ebs.columns if c not in key_cols]
+        stacked = (
+            df_ebs.set_index(index_cols)
+            .stack()
+            .reset_index()
+            .rename(columns={0: "Key"})
+        )
+        # Drop the level column that stack() adds (named after the column position)
+        level_col = f"level_{len(index_cols)}"
+        if level_col in stacked.columns:
+            stacked = stacked.drop(columns=[level_col])
+        self.log_step(self.log, "EBS", "Stacked 'Grouping By Key n' columns into single 'Key' column", len(stacked), "Transformed from wide to long format based on 'Grouping By Key n' columns")    
+
+        # Step 10 â€” Remove rows where Key is empty or whitespace
+        df_ebs = stacked[stacked["Key"].str.strip() != ""].reset_index(drop=True)  # Fix: filter AND reset on same variable
+        
+        self.log_step(self.log, "EBS", "Finished processing", len(df_ebs), "Returned processed DataFrame for comparison")
+        return df_ebs_original, df_ebs # Return for use in compare
+
+    def _process_compare(self, df_fip: pd.DataFrame, df_ebs: pd.DataFrame) -> pd.DataFrame|None:
+        """Compares FIP and EBS processed data and writes output."""
+        
+        self.log_step(self.log, "Compare", "Started comparison", 0)
+
+        # Build a lookup set from FIP keys
+        fip_keys = df_fip[["Key"]].drop_duplicates().copy()
+        fip_keys["In FIP"] = True
+        self.log_step(self.log, "Compare", "FIP key lookup built", len(fip_keys), f"{len(fip_keys)} unique keys extracted from FIP")
+
+        # Get unique EBS keys
+        ebs_keys = df_ebs[["Key"]].drop_duplicates().copy()
+        self.log_step(self.log, "Compare", "EBS keys extracted", len(ebs_keys), f"{len(ebs_keys)} unique keys extracted from EBS")
+
+        # Left join EBS onto FIP keys
+        df_compare = ebs_keys.merge(
+            fip_keys,
+            on="Key",
+            how="left"
+        )
+        self.log_step(self.log, "Compare", "Merge completed", len(df_compare), "Left join of EBS keys onto FIP keys")
+
+        # Fill unmatched rows and add readable Match column
+        df_compare["In FIP"] = df_compare["In FIP"].fillna(False)
+        df_compare["Result"] = df_compare["In FIP"].map({True: "Matched", False: "Not in FIP"})
+
+        # Summary counts
+        matched = df_compare["Result"].eq("Matched").sum()
+        not_matched = df_compare["Result"].eq("Not in FIP").sum()
+        self.log_step(self.log, "Compare", "Match results calculated", len(df_compare), f"Matched: {matched} | Not in FIP: {not_matched}")
+
+        # Rename columns and sort
+        df_compare = (
+            df_compare
+            .drop(columns=["In FIP"])
+            .rename(columns={"Key": "EBS Key"})
+            .sort_values("EBS Key")
+            .reset_index(drop=True)
+        )
+        self.log_step(self.log, "Compare", "Finished comparison", len(df_compare))
+
+        return df_compare
+    
+    def apply_output_formatting(self, workbook):
+        """Applies conditional formatting to the Compare sheet."""
+        from openpyxl.styles import PatternFill, Font
+
+        if "Compare" not in workbook.sheetnames:
+            return
+
+        # Define formatting styles
+        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        green_font = Font(color="276221")
+        red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        red_font   = Font(color="9C0006")
+
+        # Apply to the "Result" column in the Compare sheet
+        self.apply_conditional_formatting(
+            worksheet=workbook["Compare"],
+            column_name="Result",
+            rules={
+                "Matched":    (green_fill, green_font),
+                "Not in FIP": (red_fill,   red_font),
+            }
+        )
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\__init__.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\x_checks\compare.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\x_checks\ebx_extraction.py =====
+
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\x_checks\fip_extraction.py =====
+"""
+FIP Text File Extraction
+
+Parses the raw FIP Validation Rule text output and extracts:
+- X-Check Number
+- FIP Formula
+- FIP Variables (pipe-delimited string of variable definitions)
+"""
+
+from itertools import groupby
+import re
+
+
+def extract_fip(fip_text: str, x_check_list: list[str]) -> list[dict]:
+    """
+    Main entry point. Parses FIP text and returns a list of dicts:
+    [{"X-Check Number": ..., "FIP Formula": ..., "FIP Variables": ...}, ...]
+
+    Args:
+        fip_text:       The raw merged FIP text content (already in memory)
+        x_check_list:   List of X-Check numbers to search for (from EBX file)
+
+    Returns:
+        List of dicts, one per X-Check found in the FIP text
+    """
+    clean_lines = _clean_text(fip_text)
+    results = _parse_x_checks(clean_lines, x_check_list)
+    return results
+
+
+def _clean_text(raw_text: str) -> dict[int, str]:
+    """
+    Cleans the raw FIP text:
+    - Removes period thousands separators between digits
+    - Collapses repeated | and - characters
+    - Strips leading pipe-space patterns
+    - Removes empty/whitespace-only lines
+    """
+    counter = 0
+    cleaned = {}
+
+    for line in raw_text.splitlines():
+        line = re.sub(r'(\d)\.(\d)', r'\1\2', line)
+        line = _replace_multiple_occurrence(line, '-')
+        line = _replace_multiple_occurrence(line, '|')
+        line = line.replace('| ', '')
+        line = " ".join(line.split())
+        line = line.replace('- ', '-')
+        if line != '' and line != '\n':
+            cleaned[counter] = line
+            counter += 1
+
+    return cleaned
+
+
+def _replace_multiple_occurrence(string: str, ch: str) -> str:
+    """Replaces consecutive occurrences of a character with a single instance."""
+    groups = groupby(string)
+    new_str = ""
+    for key, group in groups:
+        if key == ch:
+            new_str += ch
+        else:
+            new_str += ''.join(group)
+    return new_str
+
+
+def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> list[dict]:
+    """
+    Iterates through cleaned lines, finds each X-Check block,
+    extracts formula and variables.
+    """
+    results = []
+    remaining_checks = list(x_check_list)
+
+    end_of_block1 = '|-Segment @28@ * |'
+    end_of_block2 = '-|'
+
+    x_check_block = {}
+    counter = 0
+    message_found = False
+    x_check_found = False
+    evaluate_x_check_block = False
+    current_x_check = ''
+
+    for line in clean_lines.keys():
+        if not evaluate_x_check_block:
+            for x_check in remaining_checks:
+                if x_check + ' ' + x_check + ' ' + x_check in clean_lines[line]:
+                    current_x_check = x_check
+                    evaluate_x_check_block = False
+                    x_check_found = True
+                    remaining_checks.remove(x_check)
+                    break
+
+            while x_check_found:
+                try:
+                    x_check_block[counter] = clean_lines[line]
+                except (KeyError, IndexError):
+                    break
+                counter += 1
+
+                if clean_lines[line] == end_of_block1:
+                    message_found = True
+                if clean_lines[line] == end_of_block2 and message_found:
+                    message_found = False
+                    evaluate_x_check_block = True
+                    x_check_found = False
+                    break
+                line += 1
+        else:
+            returned_x_check = _get_x_check_information(x_check_block)
+            counter = 0
+            x_check_block = {}
+            evaluate_x_check_block = False
+
+            str_output = ''
+            for value in returned_x_check['Variables'].values():
+                if value['MovementTypes']:
+                    movement_type = '^'.join(sorted(value['MovementTypes']))
+                else:
+                    movement_type = '<blank>'
+                str_output += (
+                    'Name:' + value['Variable'] +
+                    ';FS Account:' + '^'.join(sorted(value['FSAccounts'])) +
+                    ';Movement Types:' + movement_type + '|'
+                )
+
+            results.append({
+                "X-Check Number": current_x_check,
+                "FIP Formula": returned_x_check['Formula'],
+                "FIP Variables": str_output[:-1]
+            })
+
+    return results
+
+
+def _get_x_check_information(x_check_block: dict) -> dict:
+    """
+    Parses a single X-Check block to extract Formula and Variables
+    (with FS Accounts and Movement Types for each variable).
+    """
+    bool_formula = False
+    bool_variable = False
+    bool_fs_account = False
+    bool_movement_type = False
+    bool_alc = False
+    bool_mat = False
+    str_formula = ''
+    str_variables = ''
+    arr_fs_accounts = []
+    arr_movement_types = []
+
+    dict_all_data = {'Formula': '', 'Variables': {}}
+    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+    counter = 0
+
+    for line in x_check_block:
+        if x_check_block[line] == '|Formula String |':
+            bool_formula = True
+            continue
+        elif x_check_block[line] == '|-Characteristic Sel Opt Attributes Node Characteristic From To |':
+            bool_variable = True
+            continue
+
+        if bool_formula:
+            if x_check_block[line] != '|-|':
+                if x_check_block[line] == '-|':
+                    bool_formula = False
+                    str_formula = str_formula.replace(' ', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                    continue
+                str_formula += x_check_block[line].replace('|', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+
+        if bool_variable:
+            if x_check_block[line] != '|-|':
+                if x_check_block[line] == '|':
+                    bool_variable = False
+                    bool_fs_account = True
+                    continue
+                else:
+                    x_check_block[line] = x_check_block[line].replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                    str_variables = x_check_block[line].replace(' |', '').replace(' ', '')
+
+        if bool_fs_account:
+            if x_check_block[line].__contains__('Ass. / liab.category'):
+                bool_movement_type = True
+                bool_alc = True
+            elif x_check_block[line].split()[0].__contains__('Maturity'):
+                bool_movement_type = True
+                bool_mat = True
+            elif x_check_block[line] == '|-FS Account |':
+                break
+            elif x_check_block[line] == '-|':
+                dict_information['Variable'] = str_variables
+                dict_information['FSAccounts'] = arr_fs_accounts
+                dict_information['MovementTypes'] = arr_movement_types
+                dict_all_data['Variables'][counter] = dict_information
+                counter += 1
+                arr_fs_accounts = []
+                arr_movement_types = []
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                break
+            elif not x_check_block[line].__contains__('Movement Type'):
+                if x_check_block[line] == '|':
+                    bool_fs_account = False
+                    bool_variable = True
+                    dict_information['Variable'] = str_variables
+                    dict_information['FSAccounts'] = arr_fs_accounts
+                    dict_information['MovementTypes'] = arr_movement_types
+                    dict_all_data['Variables'][counter] = dict_information
+                    counter += 1
+                    arr_fs_accounts = []
+                    arr_movement_types = []
+                    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                    continue
+                else:
+                    if (_should_skip_line(x_check_block[line])):
+                        continue
+                    if x_check_block[line] != '|-Segment @28@ * |':
+                        if x_check_block[line].split()[3] == 'FS' or x_check_block[line].split()[3] == 'Business':
+                            arr_fs_accounts.append(x_check_block[line].split()[5])
+                        elif x_check_block[line].split()[3] == 'Account' or x_check_block[line].split()[3].__contains__('@'):
+                            continue
+                        elif x_check_block[line].split()[0].__contains__('Rev./Exp.'):
+                            arr_fs_accounts.append(x_check_block[line].split()[2])
+                        else:
+                            arr_fs_accounts.append(
+                                x_check_block[line].split()[3].replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                            )
+            else:
+                bool_fs_account = False
+                bool_movement_type = True
+
+        if bool_movement_type:
+            if _should_skip_line(x_check_block[line]):
+                continue
+
+            if bool_alc:
+                arr_movement_types.append(x_check_block[line].split()[4])
+                bool_movement_type = False
+            elif bool_mat:
+                arr_movement_types.append(x_check_block[line].split()[2])
+                bool_movement_type = False
+            elif x_check_block[line] == '-|':
+                dict_information['Variable'] = str_variables
+                dict_information['FSAccounts'] = arr_fs_accounts
+                dict_information['MovementTypes'] = arr_movement_types
+                dict_all_data['Variables'][counter] = dict_information
+                counter += 1
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                arr_fs_accounts = []
+                arr_movement_types = []
+                break
+            elif x_check_block[line] == '|':
+                bool_movement_type = False
+                bool_variable = True
+                dict_information['Variable'] = str_variables
+                dict_information['FSAccounts'] = arr_fs_accounts
+                dict_information['MovementTypes'] = arr_movement_types
+                dict_all_data['Variables'][counter] = dict_information
+                counter += 1
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                arr_fs_accounts = []
+                arr_movement_types = []
+                continue
+            else:
+                if x_check_block[line] != '|-Segment @28@ * |':
+                    arr_movement_types.append(str(x_check_block[line]).split()[3])
+
+    dict_all_data['Formula'] = str_formula
+    return dict_all_data
+
+
+def _should_skip_line(line: str) -> bool:
+    """Returns True if the line contains metadata that should be ignored."""
+    return (
+        'Partner Unit' in line or
+        'ConsGroup' in line or
+        ('*' in line and 'Segment' not in line) or
+        line.split()[0].__contains__('Version') or
+        line.split()[0].__contains__('GAAP') or
+        'Posting Level' in line or
+        'Doc Type' in line or
+        'Line of Business' in line
+    )
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\x_checks\x_checks.py =====
+import os
+import tkinter as tk
+from tkinter import ttk
+import pandas as pd
+from strategies.base_strategy import BaseStrategy, UploadTaskConfig
+
+class XChecks(BaseStrategy):
+
+    def __init__(self, config: UploadTaskConfig):  # Accept config
+        super().__init__(config)                   # Pass up to BaseStrategy
+
+    def process(self, loaded_files: dict, files: dict):
+        lines = ["=== X-Checks: Processing ===\n"]
+
+        for label, data in loaded_files.items():
+            filename = os.path.basename(files["files"][label])
+            if isinstance(data, pd.DataFrame):
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Rows    : {len(data)}")
+                lines.append(f"  Columns : {len(data.columns)}")
+                lines.append(f"  Columns : {list(data.columns)}\n")
+            else:
+                lines.append(f"{label}:")
+                lines.append(f"  File    : {filename}")
+                lines.append(f"  Content : loaded OK (text file)\n")
+
+        output = "\n".join(lines)
+        print(output)
+        self._show_output(output)
+
+    def _show_output(self, output: str):
+        """Display output in a resizable window with a Text widget."""
+        window = tk.Toplevel()
+        window.title("X-Checks â€” Processing Summary")
+        window.resizable(True, True)
+
+        # --- Text widget with scrollbar ---
+        frame = ttk.Frame(window, padding="10")
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(frame, orient="vertical")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        text = tk.Text(
+            frame,
+            width=120,
+            height=20,
+            font=("Courier New", 10),
+            yscrollcommand=scrollbar.set,
+            wrap="none"
+        )
+        text.grid(row=0, column=0, sticky="nsew")
+        scrollbar.config(command=text.yview)
+
+        # --- Horizontal scrollbar ---
+        h_scrollbar = ttk.Scrollbar(frame, orient="horizontal", command=text.xview)
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        text.config(xscrollcommand=h_scrollbar.set)
+
+        # --- Insert output and lock editing ---
+        text.insert("1.0", output)
+        text.config(state="disabled")
+
+        # --- OK button ---
+        ttk.Button(
+            window,
+            text="OK",
+            command=window.destroy
+        ).grid(row=1, column=0, pady=10)
+
+        # --- Make window and frame resizable ---
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        window.wait_window()
+
+===== C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\strategies\x_checks\__init__.py =====
+from .x_checks import XChecks
+

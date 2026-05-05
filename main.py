@@ -16,18 +16,29 @@ DEBUG_MODE = False
 # Clears terminal on every run (cross-platform)
 os.system('cls' if os.name == 'nt' else 'clear')
 
+def _get_base_path() -> str:
+    """Returns the base path for test data — works both in dev and bundled exe."""
+    if getattr(sys, 'frozen', False):
+        # Running as bundled exe
+        return sys._MEIPASS
+    else:
+        # Running in development
+        return os.path.dirname(os.path.abspath(__file__))
+
+_BASE = _get_base_path()
+
 DEBUG_FILES = {
     "files": {
-        "FIP File (ZQ9_VALFLDGR)": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\20260416_162629_FIP File _ZQ9_VALFLDGR_.xlsx",
-        "X-Checks Publication File": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx",
-        "Mapping File":            r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\Mapping Table with 20 rows.txt",
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
+        "X-Checks Publication File":   os.path.join(_BASE, "test_data", "EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx"),
+        "Mapping File":                os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
     },
     "sheet_names": {
-        "FIP File (ZQ9_VALFLDGR)": "Sheet1",
-        "X-Checks Publication File": "cross checks all",
-        "Mapping File":            "Sheet1",
+        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "X-Checks Publication File":   "cross checks all",
+        "Mapping File":                "Sheet1",
     },
-    "output_directory": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\X-Checks Testing v0.1 Python Testing\Output",
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
     "process_only_differences": False
 }
 
@@ -105,12 +116,27 @@ class TaskSelectorUI:
 
         config, strategy_class = TASK_REGISTRY[task_name]
 
+        from progress_dialog import ProgressDialog
+        import threading
+
+        def run_processing(strategy, dialog, files):
+            try:
+                strategy.execute(files)
+                if not dialog.is_stopped():
+                    dialog.append_entry("System", "Processing complete. You may close this window.")
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+            except Exception as e:
+                import traceback
+                error_msg = traceback.format_exc()
+                print(f"  [ERROR] Unhandled exception in processing thread:\n{error_msg}")
+                dialog.append_entry("ERROR", f"Unhandled exception: {e}")
+                self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+
         if DEBUG_MODE:
-            # Skip UI entirely — use hardcoded values
-            #import app_state
             from datetime import datetime
 
-            # Validate that DEBUG_FILES keys match the config labels
             required_labels = {f.label for f in config.file_fields if f.required}
             provided_labels = set(DEBUG_FILES["files"].keys())
             missing = required_labels - provided_labels
@@ -119,48 +145,52 @@ class TaskSelectorUI:
             if missing:
                 print(f"  [ERROR] DEBUG_FILES is missing required file(s):")
                 for label in missing:
-                    print(f"    • {label}")
-                print(f"  Please update DEBUG_FILES in main.py to match {config.task_name} config.")
+                    print(f"    - {label}")
                 self.root.destroy()
                 return
 
             if extra:
                 print(f"  [WARNING] DEBUG_FILES contains unrecognised file(s):")
                 for label in extra:
-                    print(f"    • {label}")
-                print(f"  These will be ignored.")
+                    print(f"    - {label}")
 
             DEBUG_FILES["timestamp"] = datetime.now().strftime("%Y%m%d_%H%M%S")
-            #app_state.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") 
-            #app_state.process_only_differences = DEBUG_FILES["process_only_differences"]
-            strategy = strategy_class(config)
-            strategy.execute(DEBUG_FILES)
-            self.root.destroy()
-            return
-    
-        # Hide launcher while upload dialog is open
-        self.root.withdraw()
+            os.makedirs(DEBUG_FILES["output_directory"], exist_ok=True)
 
+            strategy = strategy_class(config)
+            dialog = ProgressDialog(self.root)
+            self.root.withdraw()
+            strategy.set_progress_dialog(dialog)
+
+            thread = threading.Thread(target=run_processing, args=(strategy, dialog, DEBUG_FILES), daemon=True)
+            thread.start()
+            return
+
+        # --- Normal (non-debug) mode ---
+        self.root.withdraw()
         files = FileUploadUI(config, self.root).run()
 
         if files:
             strategy = strategy_class(config)
-            strategy.execute(files)  # ← Pass full files dict
+            dialog = ProgressDialog(self.root)
+            self.root.withdraw()
+            strategy.set_progress_dialog(dialog)
 
-        self.root.destroy()  # ← Closes launcher and exits
-        # Return to launcher after task completes
-        #self.root.deiconify()
+            thread = threading.Thread(target=run_processing, args=(strategy, dialog, files), daemon=True)
+            thread.start()
+        else:
+            # User closed the upload dialog without submitting
+            self.root.destroy()
 
     def run(self):
         if DEBUG_MODE:
             # Hide the launcher window in debug mode
-            self.root.withdraw()
+            #self.root.withdraw()
             # Set task directly and start without showing launcher
             self.task_var.set(DEBUG_TASK)
             self.root.after(0, self._on_start)  # ← Call _on_start immediately after mainloop starts
 
         self.root.mainloop()
-
 
 if __name__ == "__main__":
     TaskSelectorUI().run()
