@@ -363,11 +363,16 @@ class BaseStrategy(ABC):
         self.log_step(self.log, "Formatting",
                     f"Applying to '{worksheet.title}', column '{column_name}'", 0)
 
-        # Find the column letter by matching the header value
+        # Find the column letter by scanning all rows for the header
         target_col = None
-        for cell in worksheet[1]:
-            if cell.value == column_name:
-                target_col = cell.column_letter
+        header_row = None
+        for row in worksheet.iter_rows():
+            for cell in row:
+                if cell.value == column_name:
+                    target_col = cell.column_letter
+                    header_row = cell.row
+                    break
+            if target_col:
                 break
 
         if target_col is None:
@@ -376,7 +381,8 @@ class BaseStrategy(ABC):
             return
 
         last_row = worksheet.max_row
-        target_range = f"{target_col}2:{target_col}{last_row}"
+        data_start = header_row + 1
+        target_range = f"{target_col}{data_start}:{target_col}{last_row}"
 
         for value, formatting in rules.items():
             # Accept either a plain fill or a (fill, font) tuple

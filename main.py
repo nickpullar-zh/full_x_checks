@@ -42,6 +42,18 @@ DEBUG_FILES = {
     "process_only_differences": False
 }
 
+DEBUG_FILES_X_CHECKS = {
+    "files": {
+        "FIP file":                  os.path.join(_BASE, "test_data", "<YOUR_FIP_FILE.txt>"),
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx"),
+    },
+    "sheet_names": {
+        "X-Checks Publication File": "cross checks all",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
 DEBUG_TASK = "X-Checks Grouping By"  # ← Must match a key in TASK_REGISTRY
 
 class TaskSelectorUI:

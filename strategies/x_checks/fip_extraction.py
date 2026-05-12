@@ -10,6 +10,8 @@ Parses the raw FIP Validation Rule text output and extracts:
 from itertools import groupby
 import re
 
+from .variable_builder import build_variables_string
+
 
 def extract_fip(fip_text: str, x_check_list: list[str]) -> list[dict]:
     """
@@ -115,6 +117,7 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
             evaluate_x_check_block = False
 
             str_output = ''
+            raw_variables = []
             for value in returned_x_check['Variables'].values():
                 if value['MovementTypes']:
                     movement_type = '^'.join(sorted(value['MovementTypes']))
@@ -125,11 +128,16 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
                     ';FS Account:' + '^'.join(sorted(value['FSAccounts'])) +
                     ';Movement Types:' + movement_type + '|'
                 )
+                raw_variables.append({
+                    "fs_accounts": value['FSAccounts'],
+                    "movement_types": value['MovementTypes'],
+                })
 
             results.append({
                 "X-Check Number": current_x_check,
                 "FIP Formula": returned_x_check['Formula'],
-                "FIP Variables": str_output[:-1]
+                "FIP Variables": str_output[:-1],
+                "FIP Variable (Builder)": build_variables_string(raw_variables),
             })
 
     return results
