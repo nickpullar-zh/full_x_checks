@@ -127,8 +127,9 @@ def _compare_formulas(fip_formula: str, ebx_formula: str) -> tuple[bool, str]:
         bracket_vars = re.findall(r'\(VAL_YTD\((.*?)\)\)', fip_formula)
         if not bracket_vars:
             bracket_vars = re.findall(r'VAL_YTD\((.*?)\)', fip_formula)
-        new_fip = '+'.join(f'VAL_YTD({v})' for v in ebx_vars)
-        fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
+        if bracket_vars:
+            new_fip = '+'.join(f'VAL_YTD({v})' for v in ebx_vars)
+            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
 
     # Single-minus formula: reorder FIP variables to match EBX order
     elif fip_formula.count(')-V') == 1 and sorted(fip_vars) == sorted(ebx_vars):
@@ -136,8 +137,9 @@ def _compare_formulas(fip_formula: str, ebx_formula: str) -> tuple[bool, str]:
             r'(VAL_YTD\((.*?)\))',
             fip_formula.replace('P_VAL_PER', 'VAL_YTD').replace(",'0','1'", '')
         )
-        new_fip = f'VAL_YTD({ebx_vars[0]})-VAL_YTD({ebx_vars[1]})'
-        fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
+        if bracket_vars and len(ebx_vars) >= 2:
+            new_fip = f'VAL_YTD({ebx_vars[0]})-VAL_YTD({ebx_vars[1]})'
+            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
 
     return fip_formula.lower() == ebx_formula.lower(), fip_formula
 

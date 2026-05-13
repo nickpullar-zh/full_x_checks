@@ -20,6 +20,14 @@
 
 ## Change Log
 
+### v0.3.1 — Post-Parity Improvements (in progress)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `compare.py`: guard against empty `bracket_vars` before `[0]` access in `_compare_formulas` | DONE | Both reorder paths (addition-only and single-minus) can crash with IndexError if neither regex matches. Added `if bracket_vars:` and `if bracket_vars and len(ebx_vars) >= 2:` guards. Parity confirmed on both test pairs. |
+
+---
+
 ### v0.3 — Parity with Original X-Checks (completed 2026-05-12)
 
 | # | Change | Status | Notes |
