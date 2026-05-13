@@ -23,10 +23,10 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
     Returns:
         List of dicts, one per X-Check number found in the EBX file
     """
-    # Normalise — match original preprocessing
+    # Normalise — fillna before astype so NaN becomes '' not the string 'nan'
+    df = df.fillna('')
     df = df.astype(str)
     df = df.reset_index()
-    df = df.fillna('')
 
     results = []
     str_name = ''
@@ -36,7 +36,7 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
 
     for index, row in df.iterrows():
         # Skip rows without an account number
-        if row['Account No.'] == 'nan':
+        if row['Account No.'] == '':
             continue
 
         # New X-Check number detected
@@ -106,16 +106,16 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row) ->
             str_left_side += operator + 'VAL_YTD(' + variable_name + ')'
 
     # Build right hand side
-    if row['Operator 2'] == 'nan':
+    if row['Operator 2'] == '':
         str_comparator = row['Operator 1']
     else:
         str_comparator = row['Operator 2']
         log_left_side_abs = True
 
-    if row['Limit 2'] != 'nan':
+    if row['Limit 2'] != '':
         str_right_side = str(int(float(row['Limit 2'])))
     else:
-        if row['Limit 1'] == 'nan':
+        if row['Limit 1'] == '':
             str_right_side = '0'
         else:
             str_right_side = str(int(float(row['Limit 1'])))
@@ -143,13 +143,13 @@ def _group_accounts(dict_account: dict) -> dict:
     bool_two_operators = False
 
     # Handle empty subassignment with +
-    if any(['nan', '+'] in value['SubAccounts'] for value in list(dict_account.values())):
+    if any(['', '+'] in value['SubAccounts'] for value in list(dict_account.values())):
         for key, value in dict_account.items():
-            if value['SubAccounts'].__contains__(['nan', '+']):
+            if value['SubAccounts'].__contains__(['', '+']):
                 dict_one_group['Accounts'].append(key)
                 dict_one_group['SubAccounts'] = []
                 dict_one_group['Operators'].append('+')
-                value['SubAccounts'].remove(['nan', '+'])
+                value['SubAccounts'].remove(['', '+'])
                 if not any('+' in x for x in value['SubAccounts']):
                     value['Operators'].remove('+')
         dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
@@ -159,13 +159,13 @@ def _group_accounts(dict_account: dict) -> dict:
         counter += 1
 
     # Handle empty subassignment with -
-    if any(['nan', '-'] in value['SubAccounts'] for value in list(dict_account.values())):
+    if any(['', '-'] in value['SubAccounts'] for value in list(dict_account.values())):
         for key, value in dict_account.items():
-            if value['SubAccounts'].__contains__(['nan', '-']):
+            if value['SubAccounts'].__contains__(['', '-']):
                 dict_one_group['Accounts'].append(key)
                 dict_one_group['SubAccounts'] = []
                 dict_one_group['Operators'].append('-')
-                value['SubAccounts'].remove(['nan', '-'])
+                value['SubAccounts'].remove(['', '-'])
                 if not any('-' in x for x in value['SubAccounts']):
                     value['Operators'].remove('-')
         dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
@@ -269,7 +269,7 @@ def _create_variable(dict_groups: dict) -> dict:
             str_variable_name = str_variable_name + 'ff'
 
         # Add ToM if subassignment exists
-        if item['SubAccounts'] != ['nan']:
+        if item['SubAccounts'] != ['']:
             if item['SubAccounts'] != []:
                 str_variable_name = str_variable_name + 'ToM' + sorted(item['SubAccounts'])[0].replace('.0', '')
             if len(item['SubAccounts']) > 1:

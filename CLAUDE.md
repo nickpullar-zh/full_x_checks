@@ -25,7 +25,8 @@
 | # | Change | Status | Notes |
 |---|--------|--------|-------|
 | 1 | `compare.py`: guard against empty `bracket_vars` before `[0]` access in `_compare_formulas` | DONE |
-| 2 | `fip_extraction.py`: add `_safe_split` helper and replace all unsafe `.split()[N]` calls | DONE | Replaced 11 bare `.split()[N]` accesses (lines 196, 228–236, 247, 250, 276, 288–289) with `_safe_split(line, N)`. Parity confirmed on both test pairs. | Both reorder paths (addition-only and single-minus) can crash with IndexError if neither regex matches. Added `if bracket_vars:` and `if bracket_vars and len(ebx_vars) >= 2:` guards. Parity confirmed on both test pairs. |
+| 2 | `fip_extraction.py`: add `_safe_split` helper and replace all unsafe `.split()[N]` calls | DONE |
+| 3 | `ebx_extraction.py`: robust null handling — `fillna('')` before `astype(str)`, replace all `'nan'` string comparisons with `''` | DONE | 11 sites updated. Side-effect: LR048_17 (all-null operator/limit record) no longer produces `nan` in formula string or `Movement Types:nan` — these were bugs in the original. Test pair 2: 0 differences. Test pair 1: 2 intentional improvements on LR048_17. | Replaced 11 bare `.split()[N]` accesses (lines 196, 228–236, 247, 250, 276, 288–289) with `_safe_split(line, N)`. Parity confirmed on both test pairs. | Both reorder paths (addition-only and single-minus) can crash with IndexError if neither regex matches. Added `if bracket_vars:` and `if bracket_vars and len(ebx_vars) >= 2:` guards. Parity confirmed on both test pairs. |
 
 ---
 
