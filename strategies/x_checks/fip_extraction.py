@@ -193,7 +193,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
             if x_check_block[line].__contains__('Ass. / liab.category'):
                 bool_movement_type = True
                 bool_alc = True
-            elif x_check_block[line].split()[0].__contains__('Maturity'):
+            elif _safe_split(x_check_block[line], 0).__contains__('Maturity'):
                 bool_movement_type = True
                 bool_mat = True
             elif x_check_block[line] == '|-FS Account |':
@@ -225,15 +225,15 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                     if (_should_skip_line(x_check_block[line])):
                         continue
                     if x_check_block[line] != '|-Segment @28@ * |':
-                        if x_check_block[line].split()[3] == 'FS' or x_check_block[line].split()[3] == 'Business':
-                            arr_fs_accounts.append(x_check_block[line].split()[5])
-                        elif x_check_block[line].split()[3] == 'Account' or x_check_block[line].split()[3].__contains__('@'):
+                        if _safe_split(x_check_block[line], 3) == 'FS' or _safe_split(x_check_block[line], 3) == 'Business':
+                            arr_fs_accounts.append(_safe_split(x_check_block[line], 5))
+                        elif _safe_split(x_check_block[line], 3) == 'Account' or _safe_split(x_check_block[line], 3).__contains__('@'):
                             continue
-                        elif x_check_block[line].split()[0].__contains__('Rev./Exp.'):
-                            arr_fs_accounts.append(x_check_block[line].split()[2])
+                        elif _safe_split(x_check_block[line], 0).__contains__('Rev./Exp.'):
+                            arr_fs_accounts.append(_safe_split(x_check_block[line], 2))
                         else:
                             arr_fs_accounts.append(
-                                x_check_block[line].split()[3].replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                                _safe_split(x_check_block[line], 3).replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
                             )
             else:
                 bool_fs_account = False
@@ -244,10 +244,10 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 continue
 
             if bool_alc:
-                arr_movement_types.append(x_check_block[line].split()[4])
+                arr_movement_types.append(_safe_split(x_check_block[line], 4))
                 bool_movement_type = False
             elif bool_mat:
-                arr_movement_types.append(x_check_block[line].split()[2])
+                arr_movement_types.append(_safe_split(x_check_block[line], 2))
                 bool_movement_type = False
             elif x_check_block[line] == '-|':
                 dict_information['Variable'] = str_variables
@@ -273,7 +273,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 continue
             else:
                 if x_check_block[line] != '|-Segment @28@ * |':
-                    arr_movement_types.append(str(x_check_block[line]).split()[3])
+                    arr_movement_types.append(_safe_split(x_check_block[line], 3))
 
     dict_all_data['Formula'] = str_formula
     return dict_all_data
@@ -285,9 +285,15 @@ def _should_skip_line(line: str) -> bool:
         'Partner Unit' in line or
         'ConsGroup' in line or
         ('*' in line and 'Segment' not in line) or
-        line.split()[0].__contains__('Version') or
-        line.split()[0].__contains__('GAAP') or
+        _safe_split(line, 0).__contains__('Version') or
+        _safe_split(line, 0).__contains__('GAAP') or
         'Posting Level' in line or
         'Doc Type' in line or
         'Line of Business' in line
     )
+
+
+def _safe_split(line: str, index: int, default: str = '') -> str:
+    """Returns token at position index, or default if the line has fewer tokens."""
+    tokens = line.split()
+    return tokens[index] if len(tokens) > index else default
