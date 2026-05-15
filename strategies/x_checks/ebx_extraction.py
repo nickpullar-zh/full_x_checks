@@ -58,35 +58,34 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
             dict_account[row['Account No.']] = dict_sub_accounts
 
         # Process when we reach the last row of the current X-Check
-        if len(df) - 1 >= index:
-            if len(df) - 1 == index or str_name != str(df['X-Check No.'][index + 1]):
-                # Group accounts into variables
-                dict_variables = _group_accounts(dict_account)
-                # Create variable definitions from groups
-                dict_variables_output = _create_variable(dict_variables)
+        if len(df) - 1 == index or str_name != str(df['X-Check No.'][index + 1]):
+            # Group accounts into variables
+            dict_variables = _group_accounts(dict_account)
+            # Create variable definitions from groups
+            dict_variables_output = _create_variable(dict_variables)
 
-                dict_formula_variables = []
+            dict_formula_variables = []
 
-                for value in dict_variables_output.values():
-                    dict_formula_variables.append({
-                        'Name':          str_name,
-                        'Variable-Name': value['Variable-Name'],
-                        'Operator':      value['Operator']
-                    })
-
-                str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row)
-
-                raw_variables = [
-                    {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
-                    for item in dict_variables.values()
-                ]
-                str_output_string = build_variables_string(raw_variables)
-
-                results.append({
-                    "X-Check Number": str_name,
-                    "EBX Formula":    str_formula,
-                    "EBX Variables":  str_output_string,
+            for value in dict_variables_output.values():
+                dict_formula_variables.append({
+                    'Name':          str_name,
+                    'Variable-Name': value['Variable-Name'],
+                    'Operator':      value['Operator']
                 })
+
+            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row)
+
+            raw_variables = [
+                {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
+                for item in dict_variables.values()
+            ]
+            str_output_string = build_variables_string(raw_variables)
+
+            results.append({
+                "X-Check Number": str_name,
+                "EBX Formula":    str_formula,
+                "EBX Variables":  str_output_string,
+            })
 
     return results
 
