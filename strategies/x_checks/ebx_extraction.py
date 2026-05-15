@@ -9,7 +9,7 @@ Reads the EBX 'cross checks all' sheet and extracts:
 
 import pandas as pd
 
-# from .variable_builder import build_variables_string
+from .variable_builder import build_variables_string
 
 
 def extract_ebx(df: pd.DataFrame) -> list[dict]:
@@ -74,8 +74,13 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
                         'Operator':      value['Operator']
                     })
 
-                str_formula    = _create_formula(dict_formula_variables, bool_absolute_x, row)
-                str_output_string = '|'.join(v['Variable'] for v in dict_variables_output.values())
+                str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row)
+
+                raw_variables = [
+                    {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
+                    for item in dict_variables.values()
+                ]
+                str_output_string = build_variables_string(raw_variables)
 
                 results.append({
                     "X-Check Number": str_name,

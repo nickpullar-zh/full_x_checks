@@ -57,7 +57,7 @@ class XChecks(BaseStrategy):
         orange_font = Font(color="9C6500")
 
         ws = workbook["X-Checks Comparison"]
-        for col in ("Formula Match", "Variables Match"):  # "Variables Match (Builder)" temporarily disabled
+        for col in ("Formula Match", "Variables Match", "Variables Match (Builder)"):
             self.apply_conditional_formatting(
                 worksheet=ws,
                 column_name=col,

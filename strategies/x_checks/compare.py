@@ -69,8 +69,8 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
             'Variables Match':           'Match' if _compare_variables(fip_vars, ebx_vars) else 'MisMatch',
             'EBX Variables':             ebx_vars,
             'FIP Variables':             fip_vars,
-            # 'Variables Match (Builder)': 'Match' if _compare_variables(fip_builder, ebx_vars) else 'MisMatch',
-            # 'FIP Variable (Builder)':    fip_builder,
+            'Variables Match (Builder)': 'Match' if _compare_variables(fip_builder, ebx_vars) else 'MisMatch',
+            'FIP Variable (Builder)':    fip_builder,
         })
 
     for ebx in ebx_results:
@@ -102,8 +102,8 @@ def _not_found_row(
         'Variables Match':           'Not Found',
         'EBX Variables':             ebx_vars,
         'FIP Variables':             fip_vars,
-        # 'Variables Match (Builder)': 'Not Found',
-        # 'FIP Variable (Builder)':    fip_builder,
+        'Variables Match (Builder)': 'Not Found',
+        'FIP Variable (Builder)':    fip_builder,
     }
 
 
