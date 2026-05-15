@@ -21,8 +21,12 @@ class XChecks(BaseStrategy):
         # 2. Extract FIP — x_check_list from all unique X-Check No. values in the raw file,
         #    matching old FIPExtraction.py which used the EBX file directly rather than
         #    extraction results (ensures X-Checks with no Account No. rows are still searched in FIP)
+        ebx_df = loaded_files["X-Checks Publication File"]
+        if "X-Check No." not in ebx_df.columns:
+            self.log_step(self.log, "EBX", "Required column 'X-Check No.' not found — aborting", 0)
+            return
         x_check_list = sorted(set(
-            str(x) for x in loaded_files["X-Checks Publication File"]["X-Check No."].tolist()
+            str(x) for x in ebx_df["X-Check No."].tolist()
             if str(x) not in ("nan", "", "NaN", "None")
         ))
         self.log_step(self.log, "FIP", "Extracting from FIP text...", len(x_check_list))
@@ -31,7 +35,11 @@ class XChecks(BaseStrategy):
 
         # 3. Compare and sort — matches old Compare_Files.py "All Data" sheet sort order
         self.log_step(self.log, "Compare", "Comparing EBX and FIP...", 0)
-        df_comparison = pd.DataFrame(compare(ebx_results, fip_results))
+        comparison_rows = compare(ebx_results, fip_results)
+        if not comparison_rows:
+            self.log_step(self.log, "Compare", "No X-Checks to compare — aborting output", 0)
+            return
+        df_comparison = pd.DataFrame(comparison_rows)
         df_comparison = df_comparison.sort_values("X-Check Number").reset_index(drop=True)
 
         # 4. Write Excel output — no summary, headers at row 1

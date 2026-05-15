@@ -66,16 +66,20 @@ def _build_variable_name(fs_accounts: list[str], movement_types: list[str]) -> s
         - Append 'ToM' + first sorted movement type if movement types exist
         - Append 'ff' if more than one movement type
     """
-    sorted_accounts = sorted(fs_accounts)
-    name = sorted_accounts[0].replace('.0', '')
+    clean_accounts = [a for a in fs_accounts if a]
+    if not clean_accounts:
+        return '<blank>'
+    sorted_accounts = sorted(clean_accounts)
+    name = sorted_accounts[0][:-2] if sorted_accounts[0].endswith('.0') else sorted_accounts[0]
 
-    if len(fs_accounts) > 1:
+    if len(clean_accounts) > 1:
         name += 'ff'
 
     clean_types = [t for t in movement_types if t and t != 'nan']
     if clean_types:
         sorted_types = sorted(clean_types)
-        name += 'ToM' + sorted_types[0].replace('.0', '')
+        t = sorted_types[0]
+        name += 'ToM' + (t[:-2] if t.endswith('.0') else t)
         if len(sorted_types) > 1:
             name += 'ff'
 

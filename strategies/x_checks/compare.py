@@ -129,7 +129,7 @@ def _compare_formulas(fip_formula: str, ebx_formula: str) -> tuple[bool, str]:
             bracket_vars = re.findall(r'VAL_YTD\((.*?)\)', fip_formula)
         if bracket_vars:
             new_fip = '+'.join(f'VAL_YTD({v})' for v in ebx_vars)
-            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
+            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip, 1)
 
     # Single-minus formula: reorder FIP variables to match EBX order
     elif fip_formula.count(')-V') == 1 and sorted(fip_vars) == sorted(ebx_vars):
@@ -139,11 +139,13 @@ def _compare_formulas(fip_formula: str, ebx_formula: str) -> tuple[bool, str]:
         )
         if bracket_vars and len(ebx_vars) >= 2:
             new_fip = f'VAL_YTD({ebx_vars[0]})-VAL_YTD({ebx_vars[1]})'
-            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip)
+            fip_formula = fip_formula.replace('VAL_YTD(' + str(bracket_vars[0]) + ')', new_fip, 1)
 
     return fip_formula.lower() == ebx_formula.lower(), fip_formula
 
 
 def _compare_variables(fip_vars: str, ebx_vars: str) -> bool:
     """Returns True if the variable sets match (order-insensitive, case-insensitive)."""
-    return sorted(fip_vars.lower().split('|')) == sorted(ebx_vars.lower().split('|'))
+    fip_parts = [v for v in fip_vars.lower().split('|') if v]
+    ebx_parts = [v for v in ebx_vars.lower().split('|') if v]
+    return sorted(fip_parts) == sorted(ebx_parts)

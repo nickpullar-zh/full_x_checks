@@ -91,7 +91,7 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
     extracts formula and variables.
     """
     results = []
-    remaining_checks = list(x_check_list)
+    remaining_checks = set(x_check_list)
 
     x_check_block = {}
     counter = 0
@@ -107,7 +107,7 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
                     current_x_check = x_check
                     evaluate_x_check_block = False
                     x_check_found = True
-                    remaining_checks.remove(x_check)
+                    remaining_checks.discard(x_check)
                     break
 
             while x_check_found:
@@ -273,6 +273,13 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 state = _ParseState.VARIABLE
             elif current != _SEGMENT_END:
                 arr_movement_types.append(_safe_split(current, 3))
+
+    # Save any variable still in progress if the block ended without an explicit break
+    if state in (_ParseState.FS_ACCOUNT, _ParseState.MOV_GENERAL) and arr_fs_accounts:
+        dict_information['Variable'] = str_variables
+        dict_information['FSAccounts'] = arr_fs_accounts
+        dict_information['MovementTypes'] = arr_movement_types
+        dict_all_data['Variables'][counter] = dict_information
 
     dict_all_data['Formula'] = str_formula
     return dict_all_data
