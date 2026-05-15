@@ -27,9 +27,9 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
         FileFieldConfig(
             label="Known Exception List",
             file_types=[("Excel Files", "*.xlsx")],
-            required=False,  # If the file is not uploaded, no known exception values can be returned
-            description="The spreadsheet containing a list of x-check numbers and the known exception for that x-check in the 'Known Exception' sheet\n  If the file is not uploaded, no known exception values can be returned",
-            default_sheet="Sheet1"
+            required=False,
+            description="Spreadsheet with a 'Known Exceptions' sheet listing X-Check Numbers where EBX/FIP differences are expected and documented. If not uploaded, no exception flagging is applied.",
+            default_sheet="Known Exceptions"
         ),
     ]
 )

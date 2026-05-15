@@ -42,7 +42,18 @@ class XChecks(BaseStrategy):
         df_comparison = pd.DataFrame(comparison_rows)
         df_comparison = df_comparison.sort_values("X-Check Number").reset_index(drop=True)
 
-        # 4. Write Excel output — no summary, headers at row 1
+        # 4. Apply known exceptions if file was provided
+        exc_path = files["files"].get("Known Exception List")
+        if exc_path:
+            known_exceptions = self._load_known_exceptions(exc_path)
+            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
+            df_comparison["Known Exception"] = df_comparison["X-Check Number"].map(
+                lambda x: known_exceptions.get(x, "")
+            )
+        else:
+            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+
+        # 5. Write Excel output — no summary, headers at row 1
         self.write_excel_output(
             output_path=self.build_output_path(
                 files["output_directory"], "X-Checks Comparison", files["timestamp"]
@@ -50,6 +61,30 @@ class XChecks(BaseStrategy):
             sheets={"X-Checks Comparison": df_comparison},
             log=self.log,
         )
+
+    def _load_known_exceptions(self, path: str) -> dict:
+        """
+        Reads the 'Known Exceptions' sheet from the given file.
+        Returns a dict of {X-Check Number: Exception Type}.
+        Row 2 of the sheet is a guidance row and is skipped.
+        """
+        try:
+            df = pd.read_excel(path, sheet_name="Known Exceptions", skiprows=[1])
+        except Exception as e:
+            self.log_step(self.log, "Exceptions", f"Could not read Known Exceptions sheet: {e}", 0)
+            return {}
+
+        if "X-Check Number" not in df.columns:
+            self.log_step(self.log, "Exceptions", "Column 'X-Check Number' not found in Known Exceptions sheet", 0)
+            return {}
+
+        exceptions = {}
+        for _, row in df.dropna(subset=["X-Check Number"]).iterrows():
+            xc = str(row["X-Check Number"]).strip()
+            if xc and xc not in ("nan", ""):
+                exc_type = str(row.get("Exception Type", "")) if "Exception Type" in df.columns else ""
+                exceptions[xc] = exc_type if exc_type not in ("nan", "") else "Known Exception"
+        return exceptions
 
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font
@@ -64,6 +99,9 @@ class XChecks(BaseStrategy):
         orange_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
         orange_font = Font(color="9C6500")
 
+        blue_fill = PatternFill(start_color="DDEEFF", end_color="DDEEFF", fill_type="solid")
+        blue_font = Font(color="003399")
+
         ws = workbook["X-Checks Comparison"]
         for col in ("Formula Match", "Variables Match", "Variables Match (Builder)"):
             self.apply_conditional_formatting(
@@ -75,3 +113,12 @@ class XChecks(BaseStrategy):
                     "Not Found": (orange_fill, orange_font),
                 }
             )
+
+        # Highlight known exceptions in blue — applied to every non-blank exception type
+        if "Known Exception" in [cell.value for cell in ws[1]]:
+            for exc_type in ("LC_YTD", "Notation", "Structural", "Other", "Known Exception"):
+                self.apply_conditional_formatting(
+                    worksheet=ws,
+                    column_name="Known Exception",
+                    rules={exc_type: (blue_fill, blue_font)}
+                )
