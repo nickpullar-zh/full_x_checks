@@ -12,6 +12,15 @@ import re
 
 from .variable_builder import build_variables_string
 
+# FIP block delimiter constants — if the FIP export format changes, update here
+_SEGMENT_END     = '|-Segment @28@ * |'      # marks end of X-Check data block
+_BLOCK_END       = '-|'                       # marks end of a sub-block
+_SEPARATOR       = '|-|'                       # horizontal separator row
+_BLANK_LINE      = '|'                        # blank / transition line
+_FORMULA_HEADER  = '|Formula String |'        # start of formula section
+_VAR_HEADER      = '|-Characteristic Sel Opt Attributes Node Characteristic From To |'  # start of variable section
+_FS_ACCT_BREAK   = '|-FS Account |'           # break between variable groups
+
 
 def extract_fip(fip_text: str, x_check_list: list[str]) -> list[dict]:
     """
@@ -75,9 +84,6 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
     results = []
     remaining_checks = list(x_check_list)
 
-    end_of_block1 = '|-Segment @28@ * |'
-    end_of_block2 = '-|'
-
     x_check_block = {}
     counter = 0
     message_found = False
@@ -102,9 +108,9 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
                     break
                 counter += 1
 
-                if clean_lines[line] == end_of_block1:
+                if clean_lines[line] == _SEGMENT_END:
                     message_found = True
-                if clean_lines[line] == end_of_block2 and message_found:
+                if clean_lines[line] == _BLOCK_END and message_found:
                     message_found = False
                     evaluate_x_check_block = True
                     x_check_found = False
@@ -164,24 +170,24 @@ def _get_x_check_information(x_check_block: dict) -> dict:
     counter = 0
 
     for line in x_check_block:
-        if x_check_block[line] == '|Formula String |':
+        if x_check_block[line] == _FORMULA_HEADER:
             bool_formula = True
             continue
-        elif x_check_block[line] == '|-Characteristic Sel Opt Attributes Node Characteristic From To |':
+        elif x_check_block[line] == _VAR_HEADER:
             bool_variable = True
             continue
 
         if bool_formula:
-            if x_check_block[line] != '|-|':
-                if x_check_block[line] == '-|':
+            if x_check_block[line] != _SEPARATOR:
+                if x_check_block[line] == _BLOCK_END:
                     bool_formula = False
                     str_formula = str_formula.replace(' ', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
                     continue
                 str_formula += x_check_block[line].replace('|', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
 
         if bool_variable:
-            if x_check_block[line] != '|-|':
-                if x_check_block[line] == '|':
+            if x_check_block[line] != _SEPARATOR:
+                if x_check_block[line] == _BLANK_LINE:
                     bool_variable = False
                     bool_fs_account = True
                     continue
@@ -196,9 +202,9 @@ def _get_x_check_information(x_check_block: dict) -> dict:
             elif _safe_split(x_check_block[line], 0).__contains__('Maturity'):
                 bool_movement_type = True
                 bool_mat = True
-            elif x_check_block[line] == '|-FS Account |':
+            elif x_check_block[line] == _FS_ACCT_BREAK:
                 break
-            elif x_check_block[line] == '-|':
+            elif x_check_block[line] == _BLOCK_END:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
@@ -209,7 +215,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
                 break
             elif not x_check_block[line].__contains__('Movement Type'):
-                if x_check_block[line] == '|':
+                if x_check_block[line] == _BLANK_LINE:
                     bool_fs_account = False
                     bool_variable = True
                     dict_information['Variable'] = str_variables
@@ -224,7 +230,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 else:
                     if (_should_skip_line(x_check_block[line])):
                         continue
-                    if x_check_block[line] != '|-Segment @28@ * |':
+                    if x_check_block[line] != _SEGMENT_END:
                         if _safe_split(x_check_block[line], 3) == 'FS' or _safe_split(x_check_block[line], 3) == 'Business':
                             arr_fs_accounts.append(_safe_split(x_check_block[line], 5))
                         elif _safe_split(x_check_block[line], 3) == 'Account' or _safe_split(x_check_block[line], 3).__contains__('@'):
@@ -249,7 +255,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
             elif bool_mat:
                 arr_movement_types.append(_safe_split(x_check_block[line], 2))
                 bool_movement_type = False
-            elif x_check_block[line] == '-|':
+            elif x_check_block[line] == _BLOCK_END:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
@@ -259,7 +265,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 arr_fs_accounts = []
                 arr_movement_types = []
                 break
-            elif x_check_block[line] == '|':
+            elif x_check_block[line] == _BLANK_LINE:
                 bool_movement_type = False
                 bool_variable = True
                 dict_information['Variable'] = str_variables
@@ -272,7 +278,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 arr_movement_types = []
                 continue
             else:
-                if x_check_block[line] != '|-Segment @28@ * |':
+                if x_check_block[line] != _SEGMENT_END:
                     arr_movement_types.append(_safe_split(x_check_block[line], 3))
 
     dict_all_data['Formula'] = str_formula
