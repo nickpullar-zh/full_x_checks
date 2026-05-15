@@ -11,8 +11,8 @@ os.makedirs(output_dir, exist_ok=True)
 
 files = {
     "files": {
-        "FIP file":                  r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20260318 FIP X-Checks.txt",
-        "X-Checks Publication File": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20260313 Cross Checks All.xlsx",
+        "FIP file":                  r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20251205 FIP X-Checks - Original.txt",
+        "X-Checks Publication File": r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20251205 EPM X-Checks - Original - Copy.xlsx",
     },
     "sheet_names": {
         "X-Checks Publication File": "cross checks all",

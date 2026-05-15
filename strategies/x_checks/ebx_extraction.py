@@ -73,7 +73,8 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
                     'Operator':      value['Operator']
                 })
 
-            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row)
+            use_lc      = _should_use_lc(row)
+            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc)
 
             raw_variables = [
                 {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
@@ -90,11 +91,27 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
     return results
 
 
-def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row) -> str:
+def _should_use_lc(row) -> bool:
+    """
+    Returns True when the formula should use LC_YTD/CONST_LC instead of VAL_YTD/CONST.
+    Triggered by Category = "Shareholders' Equity".
+
+    Note: Version Spanning Validation is NOT a reliable trigger — it is populated for
+    Reinsurance Asset Check and SST-only categories that correctly use VAL_YTD in FIP.
+    """
+    category = str(row.get('Category', '')).strip()
+    return category == "Shareholders' Equity"
+
+
+def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
+                    use_lc: bool = False) -> str:
     """
     Builds the formula string from the variable list and row operators/limits.
-    Preserves original logic from createFormula() exactly.
+    When use_lc is True, uses LC_YTD and CONST_LC instead of VAL_YTD and CONST.
     """
+    val_fn   = 'LC_YTD'   if use_lc else 'VAL_YTD'
+    const_fn = 'CONST_LC' if use_lc else 'CONST'
+
     str_left_side = ''
     str_right_side = ''
     str_comparator = ''
@@ -105,9 +122,9 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row) ->
         operator = item.get('Operator', '+')
         variable_name = item.get('Variable-Name', '')
         if str_left_side == '':
-            str_left_side = 'VAL_YTD(' + variable_name + ')'
+            str_left_side = val_fn + '(' + variable_name + ')'
         else:
-            str_left_side += operator + 'VAL_YTD(' + variable_name + ')'
+            str_left_side += operator + val_fn + '(' + variable_name + ')'
 
     # Build right hand side
     if row['Operator 2'] == '':
@@ -127,7 +144,7 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row) ->
     str_right_side = str_right_side.replace(',', '')
 
     if str_right_side != '0':
-        str_right_side = "CONST(" + str_right_side + ",'USD','E')"
+        str_right_side = const_fn + "(" + str_right_side + ",'USD','E')"
 
     if log_left_side_abs:
         str_left_side = 'ABS(' + str_left_side + ')'
