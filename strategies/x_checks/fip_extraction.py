@@ -7,10 +7,19 @@ Parses the raw FIP Validation Rule text output and extracts:
 - FIP Variables (pipe-delimited string of variable definitions)
 """
 
+from enum import Enum, auto
 from itertools import groupby
 import re
 
 from .variable_builder import build_variables_string
+
+
+class _ParseState(Enum):
+    SEARCHING   = auto()
+    FORMULA     = auto()
+    VARIABLE    = auto()
+    FS_ACCOUNT  = auto()
+    MOV_GENERAL = auto()
 
 # FIP block delimiter constants — if the FIP export format changes, update here
 _SEGMENT_END     = '|-Segment @28@ * |'      # marks end of X-Check data block
@@ -154,57 +163,51 @@ def _get_x_check_information(x_check_block: dict) -> dict:
     Parses a single X-Check block to extract Formula and Variables
     (with FS Accounts and Movement Types for each variable).
     """
-    bool_formula = False
-    bool_variable = False
-    bool_fs_account = False
-    bool_movement_type = False
-    bool_alc = False
-    bool_mat = False
-    str_formula = ''
-    str_variables = ''
-    arr_fs_accounts = []
+    state            = _ParseState.SEARCHING
+    str_formula      = ''
+    str_variables    = ''
+    arr_fs_accounts  = []
     arr_movement_types = []
 
-    dict_all_data = {'Formula': '', 'Variables': {}}
+    dict_all_data    = {'Formula': '', 'Variables': {}}
     dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
     counter = 0
 
     for line in x_check_block:
-        if x_check_block[line] == _FORMULA_HEADER:
-            bool_formula = True
+        current = x_check_block[line]
+
+        # Section headers reset the parse state regardless of where we are
+        if current == _FORMULA_HEADER:
+            state = _ParseState.FORMULA
             continue
-        elif x_check_block[line] == _VAR_HEADER:
-            bool_variable = True
+        if current == _VAR_HEADER:
+            state = _ParseState.VARIABLE
             continue
 
-        if bool_formula:
-            if x_check_block[line] != _SEPARATOR:
-                if x_check_block[line] == _BLOCK_END:
-                    bool_formula = False
-                    str_formula = str_formula.replace(' ', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
-                    continue
-                str_formula += x_check_block[line].replace('|', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+        if state == _ParseState.FORMULA:
+            if current == _BLOCK_END:
+                str_formula = str_formula.replace(' ', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                state = _ParseState.SEARCHING
+            elif current != _SEPARATOR:
+                str_formula += current.replace('|', '').replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
 
-        if bool_variable:
-            if x_check_block[line] != _SEPARATOR:
-                if x_check_block[line] == _BLANK_LINE:
-                    bool_variable = False
-                    bool_fs_account = True
-                    continue
-                else:
-                    x_check_block[line] = x_check_block[line].replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
-                    str_variables = x_check_block[line].replace(' |', '').replace(' ', '')
+        elif state == _ParseState.VARIABLE:
+            if current == _BLANK_LINE:
+                state = _ParseState.FS_ACCOUNT
+            elif current != _SEPARATOR:
+                current = current.replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                str_variables = current.replace(' |', '').replace(' ', '')
 
-        if bool_fs_account:
-            if x_check_block[line].__contains__('Ass. / liab.category'):
-                bool_movement_type = True
-                bool_alc = True
-            elif _safe_split(x_check_block[line], 0).__contains__('Maturity'):
-                bool_movement_type = True
-                bool_mat = True
-            elif x_check_block[line] == _FS_ACCT_BREAK:
+        elif state == _ParseState.FS_ACCOUNT:
+            if 'Ass. / liab.category' in current:
+                # Value is on this same line at token[4]
+                arr_movement_types.append(_safe_split(current, 4))
+            elif 'Maturity' in _safe_split(current, 0):
+                # Value is on this same line at token[2]
+                arr_movement_types.append(_safe_split(current, 2))
+            elif current == _FS_ACCT_BREAK:
                 break
-            elif x_check_block[line] == _BLOCK_END:
+            elif current == _BLOCK_END:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
@@ -214,10 +217,8 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 arr_movement_types = []
                 dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
                 break
-            elif not x_check_block[line].__contains__('Movement Type'):
-                if x_check_block[line] == _BLANK_LINE:
-                    bool_fs_account = False
-                    bool_variable = True
+            elif 'Movement Type' not in current:
+                if current == _BLANK_LINE:
                     dict_information['Variable'] = str_variables
                     dict_information['FSAccounts'] = arr_fs_accounts
                     dict_information['MovementTypes'] = arr_movement_types
@@ -226,36 +227,31 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                     arr_fs_accounts = []
                     arr_movement_types = []
                     dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
-                    continue
+                    state = _ParseState.VARIABLE
                 else:
-                    if (_should_skip_line(x_check_block[line])):
+                    if _should_skip_line(current):
                         continue
-                    if x_check_block[line] != _SEGMENT_END:
-                        if _safe_split(x_check_block[line], 3) == 'FS' or _safe_split(x_check_block[line], 3) == 'Business':
-                            arr_fs_accounts.append(_safe_split(x_check_block[line], 5))
-                        elif _safe_split(x_check_block[line], 3) == 'Account' or _safe_split(x_check_block[line], 3).__contains__('@'):
+                    if current != _SEGMENT_END:
+                        if _safe_split(current, 3) == 'FS' or _safe_split(current, 3) == 'Business':
+                            arr_fs_accounts.append(_safe_split(current, 5))
+                        elif _safe_split(current, 3) == 'Account' or '@' in _safe_split(current, 3):
                             continue
-                        elif _safe_split(x_check_block[line], 0).__contains__('Rev./Exp.'):
-                            arr_fs_accounts.append(_safe_split(x_check_block[line], 2))
+                        elif 'Rev./Exp.' in _safe_split(current, 0):
+                            arr_fs_accounts.append(_safe_split(current, 2))
                         else:
                             arr_fs_accounts.append(
-                                _safe_split(x_check_block[line], 3).replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
+                                _safe_split(current, 3).replace('MAT', 'ToM').replace('ALC', 'ToM').replace('REX', 'ToM')
                             )
             else:
-                bool_fs_account = False
-                bool_movement_type = True
+                # The 'Movement Type' header line itself contains the first value at token[3]
+                if not _should_skip_line(current) and current != _SEGMENT_END:
+                    arr_movement_types.append(_safe_split(current, 3))
+                state = _ParseState.MOV_GENERAL
 
-        if bool_movement_type:
-            if _should_skip_line(x_check_block[line]):
+        elif state == _ParseState.MOV_GENERAL:
+            if _should_skip_line(current):
                 continue
-
-            if bool_alc:
-                arr_movement_types.append(_safe_split(x_check_block[line], 4))
-                bool_movement_type = False
-            elif bool_mat:
-                arr_movement_types.append(_safe_split(x_check_block[line], 2))
-                bool_movement_type = False
-            elif x_check_block[line] == _BLOCK_END:
+            elif current == _BLOCK_END:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
@@ -265,9 +261,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 arr_fs_accounts = []
                 arr_movement_types = []
                 break
-            elif x_check_block[line] == _BLANK_LINE:
-                bool_movement_type = False
-                bool_variable = True
+            elif current == _BLANK_LINE:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
@@ -276,10 +270,9 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
                 arr_fs_accounts = []
                 arr_movement_types = []
-                continue
-            else:
-                if x_check_block[line] != _SEGMENT_END:
-                    arr_movement_types.append(_safe_split(x_check_block[line], 3))
+                state = _ParseState.VARIABLE
+            elif current != _SEGMENT_END:
+                arr_movement_types.append(_safe_split(current, 3))
 
     dict_all_data['Formula'] = str_formula
     return dict_all_data
