@@ -45,11 +45,19 @@ class XChecks(BaseStrategy):
         # 4. Apply known exceptions if file was provided
         exc_path = files["files"].get("Known Exception List")
         if exc_path:
-            known_exceptions = self._load_known_exceptions(exc_path)
+            try:
+                known_exceptions = self._load_known_exceptions(exc_path)
+            except (ValueError, KeyError) as e:
+                self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+                return
             self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
             df_comparison["Known Exception"] = df_comparison["X-Check Number"].map(
                 lambda x: known_exceptions.get(x, "")
             )
+            known_mask = df_comparison["Known Exception"].str.strip() != ""
+            for col in ("Formula Match", "Variables Match", "Variables Match (Builder)"):
+                if col in df_comparison.columns:
+                    df_comparison.loc[known_mask & (df_comparison[col] == "MisMatch"), col] = "Mismatch - Known Exception"
         else:
             self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
 
@@ -65,8 +73,9 @@ class XChecks(BaseStrategy):
     def _load_known_exceptions(self, path: str) -> dict:
         """
         Reads the 'Known Exceptions' sheet from the given file.
-        Returns a dict of {X-Check Number: Exception Type}.
+        Returns a dict of {X-Check Number: Reason}.
         Row 2 of the sheet is a guidance row and is skipped.
+        Raises ValueError if any data row is missing X-Check Number or Reason.
         """
         try:
             df = pd.read_excel(path, sheet_name="Known Exceptions", skiprows=[1])
@@ -74,16 +83,40 @@ class XChecks(BaseStrategy):
             self.log_step(self.log, "Exceptions", f"Could not read Known Exceptions sheet: {e}", 0)
             return {}
 
-        if "X-Check Number" not in df.columns:
-            self.log_step(self.log, "Exceptions", "Column 'X-Check Number' not found in Known Exceptions sheet", 0)
+        # Empty sheet is acceptable
+        df = df.dropna(how="all")
+        if df.empty:
             return {}
 
+        missing_cols = [c for c in ("X-Check Number", "Reason") if c not in df.columns]
+        if missing_cols:
+            raise ValueError(f"Known Exception List is missing required columns: {missing_cols}")
+
+        invalid_rows = []
         exceptions = {}
-        for _, row in df.dropna(subset=["X-Check Number"]).iterrows():
+        for i, row in df.iterrows():
             xc = str(row["X-Check Number"]).strip()
-            if xc and xc not in ("nan", ""):
-                exc_type = str(row.get("Exception Type", "")) if "Exception Type" in df.columns else ""
-                exceptions[xc] = exc_type if exc_type not in ("nan", "") else "Known Exception"
+            reason = str(row["Reason"]).strip()
+            xc_missing = xc in ("", "nan", "NaN", "None")
+            reason_missing = reason in ("", "nan", "NaN", "None")
+
+            if xc_missing or reason_missing:
+                label = xc if not xc_missing else f"row {i + 2}"
+                missing = []
+                if xc_missing:
+                    missing.append("X-Check Number")
+                if reason_missing:
+                    missing.append("Reason")
+                invalid_rows.append(f"{label} (missing: {', '.join(missing)})")
+                continue
+
+            exceptions[xc] = reason
+
+        if invalid_rows:
+            raise ValueError(
+                f"Known Exception List has {len(invalid_rows)} incomplete row(s): {'; '.join(invalid_rows)}"
+            )
+
         return exceptions
 
     def apply_output_formatting(self, workbook):
@@ -108,17 +141,19 @@ class XChecks(BaseStrategy):
                 worksheet=ws,
                 column_name=col,
                 rules={
-                    "Match":     (green_fill,  green_font),
-                    "MisMatch":  (red_fill,    red_font),
-                    "Not Found": (orange_fill, orange_font),
+                    "Match":                      (green_fill,  green_font),
+                    "MisMatch":                   (red_fill,    red_font),
+                    "Not Found":                  (orange_fill, orange_font),
+                    "Mismatch - Known Exception": (blue_fill,   blue_font),
                 }
             )
 
-        # Highlight known exceptions in blue — applied to every non-blank exception type
-        if "Known Exception" in [cell.value for cell in ws[1]]:
-            for exc_type in ("LC_YTD", "Notation", "Structural", "Other", "Known Exception"):
-                self.apply_conditional_formatting(
-                    worksheet=ws,
-                    column_name="Known Exception",
-                    rules={exc_type: (blue_fill, blue_font)}
-                )
+        # Highlight known exceptions in blue — applied to every non-blank cell in the column
+        header_values = [cell.value for cell in ws[1]]
+        if "Known Exception" in header_values:
+            col_idx = header_values.index("Known Exception") + 1
+            for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
+                cell = row[0]
+                if cell.value and str(cell.value).strip() not in ("", "nan"):
+                    cell.fill = blue_fill
+                    cell.font = blue_font

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Select-Object FullName)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Out-String)",
+      "WebFetch(domain:www.legacy.com)",
+      "WebFetch(domain:www.digitec.ch)",
+      "Bash(Select-Object Name)",
+      "mcp__ide__executeCode",
+      "Bash(claude mcp *)",
+      "Bash(gh *)",
+      "Bash(Select-Object -ExpandProperty FullName)"
+    ]
+  }
+}

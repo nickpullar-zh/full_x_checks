@@ -96,6 +96,9 @@ The new X-Checks strategy produces output **identical** to the original applicat
 
 ## Development Notes
 
+- **Run `pytest` after every code change.** All 51 tests must pass before a change is marked DONE.
+- If the integration test fails after an intentional improvement, re-run `python tests/generate_golden_fixtures.py` to advance the baseline, then commit the updated CSVs alongside the code change.
+- Unit tests run in ~2s; full suite (including integration) runs in ~12s. Run the full suite before committing.
 - Always run both `run_original.py` and `run_new.py` against the same test files before confirming any change
 - Use `run_compare_outputs.py` to verify zero differences after each change
 - Test scripts live in `test_data/`; update file paths before each run
