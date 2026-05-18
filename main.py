@@ -50,7 +50,9 @@ DEBUG_FILES_X_CHECKS = {
         "X-Checks Publication File": "cross checks all",
     },
     "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
-    "process_only_differences": False,
+    "process_only_differences":   False,
+    "apply_version_spanning":     False,
+    "apply_prior_year_balance":   False,
 }
 
 DEBUG_TASK = "X-Checks Grouping By"  # ← Must match a key in TASK_REGISTRY

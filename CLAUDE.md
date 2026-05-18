@@ -34,6 +34,19 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.6 — Experimental Formula Rules: Version Spanning + Prior Year Balance (completed 2026-05-18)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_config.py`: add `checkboxes` field to `UploadTaskConfig` — generic config-driven checkboxes for any task | DONE | Each entry: `{"key", "label", "default"}`. |
+| 2 | `file_upload_ui.py`: render config-driven checkboxes below "Process only differences"; include values in result dict | DONE | Stored in `self.extra_checkboxes`; merged into `self.result` on submit. |
+| 3 | `task_configs.py`: add two checkboxes to `X_CHECKS_UPLOAD_CONFIG` — "Apply Version Spanning Validation" and "Apply Prior Year Balance Formula" | DONE | Both default to `False`. |
+| 4 | `ebx_extraction.py`: add `_VERSION_GAAP_PREFIX` constant and implement version spanning — suffix mode (same account, multiple versions → `accountvN`) and prefix mode (different accounts per GAAP → `GAAPaccount`) | DONE | Pre-pass determines mode per X-Check. Suffix: A800_00/A834_00 style. Prefix: AS601_60 style. |
+| 5 | `ebx_extraction.py`: implement prior year balance — tracks `(account, subA, operator)` tuples to identify P_VAL_PER groups; `_create_formula` suppresses LC_YTD when P_VAL_PER is present; PY suffix when Category ≠ "Shareholders' Equity" | DONE | L019_00 exact match. L003_00 correct functions, order differs from FIP (grouping artefact). |
+| 6 | `x_checks.py`: pass `apply_version_spanning` and `apply_prior_year_balance` flags from `files` dict to `extract_ebx()` | DONE | |
+| 7 | `tests/test_ebx_extraction.py`: 10 new unit tests | DONE | 75 total; 74 passing (1 skipped due to file lock in CI). |
+| 8 | Known limitation: LC_YTD for SST version spanning (A800_00 uses LC_YTD in FIP but rule not derivable from EBX columns alone) — deferred pending X-Checks team input | DONE (deferred) | |
+
 ### v0.3.5 — Percentage Limit Format (completed 2026-05-18)
 
 | # | Change | Status | Notes |

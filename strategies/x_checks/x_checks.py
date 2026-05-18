@@ -25,7 +25,12 @@ class XChecks(BaseStrategy):
 
         # 2. Extract EBX
         self.log_step(self.log, "EBX", "Extracting from publication file...", 0)
-        ebx_results = extract_ebx(loaded_files["X-Checks Publication File"], qu_accounts=qu_accounts)
+        ebx_results = extract_ebx(
+            loaded_files["X-Checks Publication File"],
+            qu_accounts=qu_accounts,
+            apply_version_spanning=files.get("apply_version_spanning", False),
+            apply_prior_year_balance=files.get("apply_prior_year_balance", False),
+        )
         self.log_step(self.log, "EBX", "X-Checks extracted", len(ebx_results))
 
         # 3. Extract FIP — x_check_list from all unique X-Check No. values in the raw file,

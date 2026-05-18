@@ -23,6 +23,7 @@ class FileUploadUI:
         self.result: Optional[Dict] = None
         self.parent = parent
         self.process_only_differences = tk.BooleanVar(value=False)
+        self.extra_checkboxes: dict = {}
 
         self.root = tk.Toplevel(parent)  # ← Toplevel not Tk()
         self.root.title(config.window_title)
@@ -274,6 +275,17 @@ class FileUploadUI:
         ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
         current_row += 1
 
+        # --- Config-driven checkboxes (e.g. experimental options) ---
+        for cb in self.config.checkboxes:
+            var = tk.BooleanVar(value=cb.get("default", False))
+            self.extra_checkboxes[cb["key"]] = var
+            ttk.Checkbutton(
+                main_frame,
+                text=cb["label"],
+                variable=var
+            ).grid(row=current_row, column=0, columnspan=3, pady=(2, 2))
+            current_row += 1
+
         ttk.Separator(main_frame, orient="horizontal").grid(
             row=current_row, column=0, columnspan=3, sticky="ew", pady=5
         )
@@ -369,6 +381,8 @@ class FileUploadUI:
             "timestamp": timestamp,  # Reference the local timestamp here
             "process_only_differences": self.process_only_differences.get()
         }
+        for key, var in self.extra_checkboxes.items():
+            self.result[key] = var.get()
         self.root.destroy()
 
     # ==========================================

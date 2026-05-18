@@ -11,8 +11,13 @@ import pandas as pd
 
 from .variable_builder import build_variables_string
 
+# Maps Version Spanning Validation version number → GAAP prefix used in FIP variable names
+_VERSION_GAAP_PREFIX = {'100': 'IFRSN', '190': 'IFRSN', '600': 'SLST', '800': 'SST'}
 
-def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None) -> list[dict]:
+
+def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
+                apply_version_spanning: bool = False,
+                apply_prior_year_balance: bool = False) -> list[dict]:
     """
     Main entry point. Processes the EBX DataFrame and returns a list of dicts:
     [{"X-Check Number": ..., "EBX Formula": ..., "EBX Variables": ...}, ...]
@@ -28,34 +33,75 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None) -> list[dict]:
     df = df.astype(str)
     df = df.reset_index()
 
+    # Pre-pass: determine suffix vs prefix mode per X-Check for version spanning.
+    # suffix mode: same base account appears with multiple different versions (e.g. A800_00)
+    #              → account name gets 'v{N}' appended
+    # prefix mode: each base account appears with only one version (e.g. AS601_60)
+    #              → account name gets GAAP prefix prepended
+    xcheck_version_mode: dict = {}
+    if apply_version_spanning:
+        for xcheck_no, group in df.groupby('X-Check No.', sort=False):
+            vsv = group['Version Spanning Validation'].astype(str).str.strip()
+            vsv_rows = group[~vsv.isin(['', 'nan'])]
+            if vsv_rows.empty:
+                continue
+            base_versions: dict = {}
+            for _, r in vsv_rows.iterrows():
+                ba = str(r['Account No.']).strip()
+                base_versions.setdefault(ba, set()).add(vsv[r.name])
+            mode = 'suffix' if any(len(v) > 1 for v in base_versions.values()) else 'prefix'
+            xcheck_version_mode[xcheck_no] = mode
+
     results = []
     str_name = ''
     dict_account = {}
     dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
     bool_absolute_x = False
+    # Tracks (acct_no, subA_no, operator) tuples where Ending Balance Prior Year = X.
+    # Using a fine-grained key avoids false positives when the same account appears
+    # in both X-flagged rows (no SubA) and non-X rows (with SubA).
+    py_subaccount_keys: set = set()
 
     for index, row in df.iterrows():
         # Skip rows without an account number
         if row['Account No.'] == '':
             continue
 
+        # Determine the effective account key (may be modified by version spanning)
+        acct_no = str(row['Account No.']).strip()
+        if apply_version_spanning:
+            vsv = str(row.get('Version Spanning Validation', '')).strip()
+            if vsv and vsv not in ('', 'nan'):
+                version_int = str(int(float(vsv)))
+                mode = xcheck_version_mode.get(str(row['X-Check No.']).strip(), 'suffix')
+                acct_no = (acct_no + 'v' + version_int) if mode == 'suffix' else (_VERSION_GAAP_PREFIX.get(version_int, '') + acct_no)
+
         # New X-Check number detected
         if str_name != row['X-Check No.']:
             bool_absolute_x = row['Absolute (result)'] == 'X'
             dict_account = {}
             dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
+            py_subaccount_keys = set()
             str_name = row['X-Check No.']
             dict_sub_accounts['SubAccounts'] = [[row['SubA No.'], row['Operator (X-Check Term)']]]
             dict_sub_accounts['Operators'] = [row['Operator (X-Check Term)']]
-            dict_account[row['Account No.']] = dict_sub_accounts
+            dict_account[acct_no] = dict_sub_accounts
         else:
             # New account number within same X-Check
-            if row['Account No.'] not in dict_account:
+            if acct_no not in dict_account:
                 dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
             dict_sub_accounts['SubAccounts'].append([row['SubA No.'], row['Operator (X-Check Term)']])
             if row['Operator (X-Check Term)'] not in dict_sub_accounts['Operators']:
                 dict_sub_accounts['Operators'].append(row['Operator (X-Check Term)'])
-            dict_account[row['Account No.']] = dict_sub_accounts
+            dict_account[acct_no] = dict_sub_accounts
+
+        # Track prior year balance at the (account, subA, operator) level
+        if apply_prior_year_balance and str(row.get('Ending Balance Prior Year', '')).strip() == 'X':
+            py_subaccount_keys.add((
+                acct_no,
+                str(row.get('SubA No.', '')).strip(),
+                str(row.get('Operator (X-Check Term)', '')).strip(),
+            ))
 
         # Process when we reach the last row of the current X-Check
         if len(df) - 1 == index or str_name != str(df['X-Check No.'][index + 1]):
@@ -67,10 +113,31 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None) -> list[dict]:
             dict_formula_variables = []
 
             for value in dict_variables_output.values():
+                accts = value.get('Accounts', [])
+                group_sub_accounts = value.get('SubAccounts', []) or ['']
+                group_operator = str(value.get('Operator', ''))
+                # A group uses P_VAL_PER only if every (account, subA, operator)
+                # combination in the group was flagged as Ending Balance Prior Year = X
+                is_py_group = (
+                    apply_prior_year_balance
+                    and bool(accts)
+                    and all(
+                        (acct, subA, group_operator) in py_subaccount_keys
+                        for acct in accts
+                        for subA in group_sub_accounts
+                    )
+                )
+                # PY suffix: appended when not a Shareholders' Equity check
+                needs_py_suffix = (
+                    is_py_group
+                    and str(row.get('Category', '')).strip() != "Shareholders' Equity"
+                )
                 dict_formula_variables.append({
                     'Name':          str_name,
                     'Variable-Name': value['Variable-Name'],
-                    'Operator':      value['Operator']
+                    'Operator':      value['Operator'],
+                    'use_p_val_per': is_py_group,
+                    'py_suffix':     needs_py_suffix,
                 })
 
             use_lc      = _should_use_lc(row)
@@ -126,6 +193,11 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
     use_pct ('%%' column == X): right-hand side formatted as '<limit>,000000%%' instead of CONST().
     Default uses VAL_YTD and CONST.
     """
+    # Prior year balance formulas use VAL_YTD even for Shareholders' Equity,
+    # because P_VAL_PER handles its own function selection.
+    has_p_val_per = any(item.get('use_p_val_per') for item in dict_formula_variables)
+    if has_p_val_per:
+        use_lc = False
     val_fn   = 'QU_YTD'  if use_qu else ('LC_YTD'   if use_lc else 'VAL_YTD')
     const_fn = 'CONST_LC' if use_lc else 'CONST'
 
@@ -138,10 +210,15 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
     for item in dict_formula_variables:
         operator = item.get('Operator', '+')
         variable_name = item.get('Variable-Name', '')
-        if str_left_side == '':
-            str_left_side = val_fn + '(' + variable_name + ')'
+        if item.get('use_p_val_per'):
+            vname = variable_name + ('PY' if item.get('py_suffix') else '')
+            term = f"P_VAL_PER({vname},'0','1')"
         else:
-            str_left_side += operator + val_fn + '(' + variable_name + ')'
+            term = val_fn + '(' + variable_name + ')'
+        if str_left_side == '':
+            str_left_side = term
+        else:
+            str_left_side += operator + term
 
     # Build right hand side
     if row['Operator 2'] == '':

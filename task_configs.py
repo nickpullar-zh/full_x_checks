@@ -31,6 +31,18 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
             description="Spreadsheet with a 'Known Exceptions' sheet listing X-Check Numbers where EBX/FIP differences are expected and documented. If not uploaded, no exception flagging is applied.",
             default_sheet="Known Exceptions"
         ),
+    ],
+    checkboxes=[
+        {
+            "key":     "apply_version_spanning",
+            "label":   "Apply Version Spanning Validation (experimental)",
+            "default": False,
+        },
+        {
+            "key":     "apply_prior_year_balance",
+            "label":   "Apply Prior Year Balance Formula (experimental)",
+            "default": False,
+        },
     ]
 )
 
