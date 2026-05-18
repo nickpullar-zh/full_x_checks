@@ -100,12 +100,20 @@ def test_create_formula_use_pct_zero_limit():
     assert formula == "VAL_YTD(S73101)>'0,000000%'"
 
 
-def test_create_formula_use_pct_nonzero_limit():
+def test_create_formula_use_pct_nonzero_integer_limit():
     # Limit = 5 → '5,000000%'
     variables = [{"Variable-Name": "A246", "Operator": "+"}]
     row = {"Operator 1": ">=", "Operator 2": "", "Limit 1": "5", "Limit 2": "", "%": "X"}
     formula = _create_formula(variables, False, row, use_pct=True)
     assert formula == "VAL_YTD(A246)>='5,000000%'"
+
+
+def test_create_formula_use_pct_decimal_limit():
+    # Limit = 1.5 → '1,500000%'  (would be wrong '1,000000%' if truncated to int first)
+    variables = [{"Variable-Name": "A246", "Operator": "+"}]
+    row = {"Operator 1": ">=", "Operator 2": "", "Limit 1": "1.5", "Limit 2": "", "%": "X"}
+    formula = _create_formula(variables, False, row, use_pct=True)
+    assert formula == "VAL_YTD(A246)>='1,500000%'"
 
 
 def test_create_formula_use_pct_no_const_wrapper():

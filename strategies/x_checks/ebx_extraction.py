@@ -150,20 +150,28 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
         str_comparator = row['Operator 2']
         log_left_side_abs = True
 
-    if row['Limit 2'] != '':
-        str_right_side = str(int(float(row['Limit 2'])))
-    else:
-        if row['Limit 1'] == '':
-            str_right_side = '0'
-        else:
-            str_right_side = str(int(float(row['Limit 1'])))
-
-    str_right_side = str_right_side.replace(',', '')
-
     if use_pct:
-        str_right_side = f"'{str_right_side},000000%'"
-    elif str_right_side != '0':
-        str_right_side = const_fn + "(" + str_right_side + ",'USD','E')"
+        # Read raw float so decimal precision is preserved (e.g. 1.5 → '1,500000%')
+        if row['Limit 2'] != '':
+            raw_limit = float(row['Limit 2'])
+        elif row['Limit 1'] != '':
+            raw_limit = float(row['Limit 1'])
+        else:
+            raw_limit = 0.0
+        str_right_side = f"'{raw_limit:.6f}%'".replace('.', ',')
+    else:
+        if row['Limit 2'] != '':
+            str_right_side = str(int(float(row['Limit 2'])))
+        else:
+            if row['Limit 1'] == '':
+                str_right_side = '0'
+            else:
+                str_right_side = str(int(float(row['Limit 1'])))
+
+        str_right_side = str_right_side.replace(',', '')
+
+        if str_right_side != '0':
+            str_right_side = const_fn + "(" + str_right_side + ",'USD','E')"
 
     if log_left_side_abs:
         str_left_side = 'ABS(' + str_left_side + ')'
