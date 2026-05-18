@@ -75,7 +75,8 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None) -> list[dict]:
 
             use_lc      = _should_use_lc(row)
             use_qu      = _should_use_qu(dict_account, qu_accounts)
-            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu)
+            use_pct     = _should_use_pct(row)
+            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu, use_pct)
 
             raw_variables = [
                 {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
@@ -99,6 +100,11 @@ def _should_use_qu(dict_account: dict, qu_accounts: set | None) -> bool:
     return any(acct in qu_accounts for acct in dict_account)
 
 
+def _should_use_pct(row) -> bool:
+    """Returns True when the '%' column is marked X, meaning the limit is a percentage."""
+    return str(row.get('%', '')).strip() == 'X'
+
+
 def _should_use_lc(row) -> bool:
     """
     Returns True when the formula should use LC_YTD/CONST_LC instead of VAL_YTD/CONST.
@@ -112,11 +118,12 @@ def _should_use_lc(row) -> bool:
 
 
 def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
-                    use_lc: bool = False, use_qu: bool = False) -> str:
+                    use_lc: bool = False, use_qu: bool = False, use_pct: bool = False) -> str:
     """
     Builds the formula string from the variable list and row operators/limits.
     use_qu takes priority: QU accounts use QU_YTD.
     use_lc (Shareholders' Equity) uses LC_YTD and CONST_LC.
+    use_pct ('%%' column == X): right-hand side formatted as '<limit>,000000%%' instead of CONST().
     Default uses VAL_YTD and CONST.
     """
     val_fn   = 'QU_YTD'  if use_qu else ('LC_YTD'   if use_lc else 'VAL_YTD')
@@ -153,7 +160,9 @@ def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
 
     str_right_side = str_right_side.replace(',', '')
 
-    if str_right_side != '0':
+    if use_pct:
+        str_right_side = f"'{str_right_side},000000%'"
+    elif str_right_side != '0':
         str_right_side = const_fn + "(" + str_right_side + ",'USD','E')"
 
     if log_left_side_abs:

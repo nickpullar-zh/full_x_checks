@@ -34,6 +34,14 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.5 — Percentage Limit Format (completed 2026-05-18)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `ebx_extraction.py`: add `_should_use_pct(row)` — returns True when `%` column = `X` | DONE | Mirrors `_should_use_lc` pattern. |
+| 2 | `ebx_extraction.py`: `_create_formula` gains `use_pct` param — formats right-hand side as `'<limit>,000000%'` instead of `CONST(...)` | DONE | Applies to zero and non-zero limits. Does not affect CONST/CONST_LC logic when `use_pct=False`. |
+| 3 | `tests/test_ebx_extraction.py`: 6 new tests for `_should_use_pct` and `use_pct` in `_create_formula` | DONE | 65 tests total, all passing. Golden fixtures regenerated — S002_00 EBX formula now `VAL_YTD(S73101)>'0,000000%'`. |
+
 ### v0.3.4 — GCoA QU_YTD Substitution (completed 2026-05-18)
 
 | # | Change | Status | Notes |
