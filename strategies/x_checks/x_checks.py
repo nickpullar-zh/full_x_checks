@@ -13,12 +13,22 @@ class XChecks(BaseStrategy):
     def process(self, loaded_files: dict, files: dict):
         self.log_step(self.log, "System", "Starting X-Checks processing", 0)
 
-        # 1. Extract EBX
+        # 1. Load GCoA QU accounts (optional)
+        qu_accounts: set = set()
+        gcoa_df = loaded_files.get("GCoA Publication File")
+        if gcoa_df is not None:
+            qu_mask = gcoa_df["Data type"].astype(str).str.strip() == "QU"
+            qu_accounts = set(gcoa_df.loc[qu_mask, "Account ID"].astype(str).str.strip())
+            self.log_step(self.log, "GCoA", "QU accounts loaded", len(qu_accounts))
+        else:
+            self.log_step(self.log, "GCoA", "No GCoA file provided — QU_YTD substitution skipped", 0)
+
+        # 2. Extract EBX
         self.log_step(self.log, "EBX", "Extracting from publication file...", 0)
-        ebx_results = extract_ebx(loaded_files["X-Checks Publication File"])
+        ebx_results = extract_ebx(loaded_files["X-Checks Publication File"], qu_accounts=qu_accounts)
         self.log_step(self.log, "EBX", "X-Checks extracted", len(ebx_results))
 
-        # 2. Extract FIP — x_check_list from all unique X-Check No. values in the raw file,
+        # 3. Extract FIP — x_check_list from all unique X-Check No. values in the raw file,
         #    matching old FIPExtraction.py which used the EBX file directly rather than
         #    extraction results (ensures X-Checks with no Account No. rows are still searched in FIP)
         ebx_df = loaded_files["X-Checks Publication File"]
@@ -33,7 +43,7 @@ class XChecks(BaseStrategy):
         fip_results = extract_fip(loaded_files["FIP file"], x_check_list)
         self.log_step(self.log, "FIP", "X-Checks extracted", len(fip_results))
 
-        # 3. Compare and sort — matches old Compare_Files.py "All Data" sheet sort order
+        # 4. Compare and sort — matches old Compare_Files.py "All Data" sheet sort order
         self.log_step(self.log, "Compare", "Comparing EBX and FIP...", 0)
         comparison_rows = compare(ebx_results, fip_results)
         if not comparison_rows:
@@ -42,7 +52,7 @@ class XChecks(BaseStrategy):
         df_comparison = pd.DataFrame(comparison_rows)
         df_comparison = df_comparison.sort_values("X-Check Number").reset_index(drop=True)
 
-        # 4. Apply known exceptions if file was provided
+        # 5. Apply known exceptions if file was provided
         exc_path = files["files"].get("Known Exception List")
         if exc_path:
             try:
@@ -61,7 +71,7 @@ class XChecks(BaseStrategy):
         else:
             self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
 
-        # 5. Write Excel output — no summary, headers at row 1
+        # 6. Write Excel output — no summary, headers at row 1
         self.write_excel_output(
             output_path=self.build_output_path(
                 files["output_directory"], "X-Checks Comparison", files["timestamp"]

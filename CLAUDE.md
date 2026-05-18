@@ -34,6 +34,15 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.4 — GCoA QU_YTD Substitution (completed 2026-05-18)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `ebx_extraction.py`: add `_should_use_qu(dict_account, qu_accounts)` — returns True if any account for the X-Check has `Data type == QU` in the GCoA file | DONE | Mirrors `_should_use_lc` pattern. `use_qu` takes priority over `use_lc`. |
+| 2 | `ebx_extraction.py`: `_create_formula` gains `use_qu` param — uses `QU_YTD` instead of `VAL_YTD`; `CONST` unchanged | DONE | `extract_ebx` signature gains `qu_accounts: set | None = None` — backwards-compatible. |
+| 3 | `x_checks.py`: load GCoA file if provided, extract QU account IDs from `Data type == QU` rows, pass to `extract_ebx` | DONE | GCoA column: `Account ID` (account number), `Data type` (QU/AM/RT). Logged: QU count or skip message. |
+| 4 | `tests/test_ebx_extraction.py`: 8 unit tests for `_should_use_qu` and `_create_formula` with `use_qu` | DONE | 59 tests total, all passing. |
+
 ### v0.3.3 — Test Infrastructure (completed 2026-05-18)
 
 | # | Change | Status | Notes |

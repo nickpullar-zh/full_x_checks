@@ -12,7 +12,7 @@ import pandas as pd
 from .variable_builder import build_variables_string
 
 
-def extract_ebx(df: pd.DataFrame) -> list[dict]:
+def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None) -> list[dict]:
     """
     Main entry point. Processes the EBX DataFrame and returns a list of dicts:
     [{"X-Check Number": ..., "EBX Formula": ..., "EBX Variables": ...}, ...]
@@ -74,7 +74,8 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
                 })
 
             use_lc      = _should_use_lc(row)
-            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc)
+            use_qu      = _should_use_qu(dict_account, qu_accounts)
+            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu)
 
             raw_variables = [
                 {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
@@ -91,6 +92,13 @@ def extract_ebx(df: pd.DataFrame) -> list[dict]:
     return results
 
 
+def _should_use_qu(dict_account: dict, qu_accounts: set | None) -> bool:
+    """Returns True if any account for this X-Check has Data type QU in the GCoA file."""
+    if not qu_accounts:
+        return False
+    return any(acct in qu_accounts for acct in dict_account)
+
+
 def _should_use_lc(row) -> bool:
     """
     Returns True when the formula should use LC_YTD/CONST_LC instead of VAL_YTD/CONST.
@@ -104,12 +112,14 @@ def _should_use_lc(row) -> bool:
 
 
 def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
-                    use_lc: bool = False) -> str:
+                    use_lc: bool = False, use_qu: bool = False) -> str:
     """
     Builds the formula string from the variable list and row operators/limits.
-    When use_lc is True, uses LC_YTD and CONST_LC instead of VAL_YTD and CONST.
+    use_qu takes priority: QU accounts use QU_YTD.
+    use_lc (Shareholders' Equity) uses LC_YTD and CONST_LC.
+    Default uses VAL_YTD and CONST.
     """
-    val_fn   = 'LC_YTD'   if use_lc else 'VAL_YTD'
+    val_fn   = 'QU_YTD'  if use_qu else ('LC_YTD'   if use_lc else 'VAL_YTD')
     const_fn = 'CONST_LC' if use_lc else 'CONST'
 
     str_left_side = ''
