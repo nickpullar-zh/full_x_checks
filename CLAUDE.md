@@ -10,11 +10,12 @@
 
 ## Change Log Policy
 
-**Every change, no matter how small, must be logged here.**
+**Every change, no matter how small, must be logged here. This is not optional and must never be skipped.**
 
 - When a change is **proposed**, add it to the change log immediately with status `PROPOSED`.
 - When a change is **implemented and confirmed**, update the entry to `DONE`.
 - No change may be silently applied. If a change is rejected or abandoned, mark it `REJECTED` with a reason.
+- **Claude must update the change log as part of implementing the change — not as an afterthought, and not only when reminded.** Updating the log is the final step before marking any task complete.
 
 ---
 
@@ -32,6 +33,14 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.3 — Test Infrastructure (completed 2026-05-18)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | Add pytest suite — 49 unit tests across `compare.py`, `variable_builder.py`, `fip_extraction.py`, `x_checks.py` | DONE | Each known bug from v0.3.1/v0.3.2 has a dedicated regression test. `conftest.py` + `pytest.ini` at project root. |
+| 2 | Add integration parity tests — 2 tests (pair1: 653 rows, pair2: 189 rows) against committed golden CSV fixtures | DONE | Runs core pipeline (`extract_ebx` → `extract_fip` → `compare`) directly, without exception-list logic. Golden fixtures in `tests/fixtures/`. |
+| 3 | Add `tests/generate_golden_fixtures.py` — standalone script to advance the golden baseline after intentional improvements | DONE | Re-run and commit updated CSVs whenever pipeline output intentionally changes. |
+
 ### v0.3.2 — Investigation Fixes (in progress)
 
 | # | Change | Status | Notes |
@@ -47,6 +56,9 @@
 | 9 | `x_checks.py`: guard against missing `X-Check No.` column with clear error | DONE |
 | 10 | `ebx_extraction.py`: use `LC_YTD` and `CONST_LC` instead of `VAL_YTD` and `CONST` when Category = "Shareholders' Equity" | DONE |
 | 11 | `x_checks.py`: read `Known Exception List` file and add `Known Exception` column to output, flagging mismatches that are documented exceptions | DONE | `_load_known_exceptions()` reads "Known Exceptions" sheet (skips guidance row 2). Column J in output, blue-highlighted. S380_00 correctly flagged as LC_YTD. task_configs.py updated to default_sheet="Known Exceptions". | `_should_use_lc()` helper added. Version Spanning Validation removed as trigger — it fires for Reinsurance Asset Check which correctly uses VAL_YTD. Test pair 1: 3 intentional improvements (L003_00, LA001_09, LA002_09 now correct) + known LR048_17 null fix. | Logs clear message and returns early. | `_ParseState` enum with 5 states (SEARCHING, FORMULA, VARIABLE, FS_ACCOUNT, MOV_GENERAL). Key finding during implementation: ALC/MAT and the 'Movement Type' header line all read values from the same line that triggers the transition. Parity confirmed on both test pairs. | Outer condition removed, inner block de-indented one level. Parity confirmed on both test pairs. | 7 constants defined (`_SEGMENT_END`, `_BLOCK_END`, `_SEPARATOR`, `_BLANK_LINE`, `_FORMULA_HEADER`, `_VAR_HEADER`, `_FS_ACCT_BREAK`). All literal usages replaced. Parity confirmed on both test pairs. | EBX Variables now built via `build_variables_string`. Builder comparison columns live in output (columns H–I). Formatting applied to all 3 match columns. Test pair 2: 0 differences. Test pair 1: same 2 LR048_17 improvements from change 3. | 11 sites updated. Side-effect: LR048_17 (all-null operator/limit record) no longer produces `nan` in formula string or `Movement Types:nan` — these were bugs in the original. Test pair 2: 0 differences. Test pair 1: 2 intentional improvements on LR048_17. | Replaced 11 bare `.split()[N]` accesses (lines 196, 228–236, 247, 250, 276, 288–289) with `_safe_split(line, N)`. Parity confirmed on both test pairs. | Both reorder paths (addition-only and single-minus) can crash with IndexError if neither regex matches. Added `if bracket_vars:` and `if bracket_vars and len(ebx_vars) >= 2:` guards. Parity confirmed on both test pairs. |
+| 12 | `x_checks.py`: output `Reason` to `Known Exception` column instead of `Exception Type` | DONE | Reason is free-text and more informative. Blue formatting updated to non-empty cell check (no longer matches on specific type strings). |
+| 13 | `x_checks.py`: validate Known Exception List on load — raise `ValueError` if any row missing `X-Check Number` or `Reason`; stop run cleanly | DONE | Both columns required for every data row. Empty file or no file remains acceptable. Error message lists all failing rows before aborting. |
+| 14 | `x_checks.py`: relabel `MisMatch` → `"Mismatch - Known Exception"` in all three match columns for rows with a known exception | DONE | Applied after exception mapping. Blue-highlighted (same colour as Known Exception column). |
 
 ---
 
