@@ -4,8 +4,7 @@ import os
 from tkinter import ttk
 from file_upload_ui import FileUploadUI
 from task_registry import TASK_REGISTRY
-
-# This is v0.2-Grouping_by
+from version import __version__
 
 # ==========================================
 # Debug Configuration
@@ -64,7 +63,7 @@ class TaskSelectorUI:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("X_Check Application")
+        self.root.title(f"X-Check Application v{__version__}")
         self.root.resizable(False, False)
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -93,7 +92,7 @@ class TaskSelectorUI:
 
         ttk.Label(
             frame,
-            text="X-Check Application",
+            text=f"X-Check Application v{__version__}",
             font=("Helvetica", 16, "bold")
         ).grid(row=0, column=0, columnspan=2, pady=(0, 20))
 

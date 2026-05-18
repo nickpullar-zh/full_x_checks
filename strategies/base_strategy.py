@@ -31,9 +31,11 @@ class BaseStrategy(ABC):
         Loads all files then hands off to the subclass.
         """
         from exceptions import FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError
+        from version import __version__
 
         self.log = []  # Initialised here — available to all strategies via self.log
         self.process_only_differences = files.get("process_only_differences", False)
+        self.log_step(self.log, "System", f"X-Check Application v{__version__}", 0)
 
         # Store process flag on instance so _load_files can access it
         self.process_only_differences = files.get("process_only_differences", False)
