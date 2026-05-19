@@ -37,11 +37,29 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
             "key":     "apply_version_spanning",
             "label":   "Apply Version Spanning Validation (experimental)",
             "default": False,
+            "tooltip": (
+                "What it does: adds version numbers or GAAP framework prefixes to "
+                "variable names in the EBX formula, matching how FIP expresses "
+                "cross-version comparisons (e.g. 12602v100 vs 12602v800, or "
+                "IFRSNS11930RA vs SLST15541ff).\n\n"
+                "Why it is experimental: this rule has not yet been validated by the "
+                "X-Checks team. Once confirmed correct it will become part of the "
+                "standard output and this option will be removed."
+            ),
         },
         {
             "key":     "apply_prior_year_balance",
             "label":   "Apply Prior Year Balance Formula (experimental)",
             "default": False,
+            "tooltip": (
+                "What it does: accounts flagged 'Ending Balance Prior Year' in the "
+                "EBX file are expressed as P_VAL_PER(variable,'0','1') instead of "
+                "VAL_YTD(variable), matching the FIP formula for prior-year opening "
+                "balance checks. Affects X-Checks L003_00 and L019_00.\n\n"
+                "Why it is experimental: this rule has not yet been validated by the "
+                "X-Checks team. Once confirmed correct it will become part of the "
+                "standard output and this option will be removed."
+            ),
         },
     ]
 )

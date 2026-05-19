@@ -4,6 +4,56 @@ from tkinter import ttk, filedialog, messagebox
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
 
+
+class _Tooltip:
+    """Shows a floating tooltip window when the user hovers over a widget."""
+
+    DELAY_MS = 600   # ms before tooltip appears
+    WRAP_PX  = 320   # max tooltip width before wrapping
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget  = widget
+        self._text    = text
+        self._win: Optional[tk.Toplevel] = None
+        self._after_id = None
+        widget.bind("<Enter>", self._on_enter)
+        widget.bind("<Leave>", self._on_leave)
+
+    def _on_enter(self, event=None):
+        self._after_id = self._widget.after(self.DELAY_MS, self._show)
+
+    def _on_leave(self, event=None):
+        if self._after_id:
+            self._widget.after_cancel(self._after_id)
+            self._after_id = None
+        self._hide()
+
+    def _show(self):
+        if self._win:
+            return
+        x = self._widget.winfo_rootx() + 20
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._win = tk.Toplevel(self._widget)
+        self._win.wm_overrideredirect(True)   # no title bar or borders
+        self._win.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            self._win,
+            text=self._text,
+            justify="left",
+            background="#ffffe0",
+            relief="solid",
+            borderwidth=1,
+            wraplength=self.WRAP_PX,
+            padx=6,
+            pady=4,
+        ).pack()
+
+    def _hide(self):
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+
 class FileUploadUI:
     """
     Dynamically builds a file upload dialog from an UploadTaskConfig.
@@ -279,11 +329,10 @@ class FileUploadUI:
         for cb in self.config.checkboxes:
             var = tk.BooleanVar(value=cb.get("default", False))
             self.extra_checkboxes[cb["key"]] = var
-            ttk.Checkbutton(
-                main_frame,
-                text=cb["label"],
-                variable=var
-            ).grid(row=current_row, column=0, columnspan=3, pady=(2, 2))
+            btn = ttk.Checkbutton(main_frame, text=cb["label"], variable=var)
+            btn.grid(row=current_row, column=0, columnspan=3, pady=(2, 2))
+            if cb.get("tooltip"):
+                _Tooltip(btn, cb["tooltip"])
             current_row += 1
 
         ttk.Separator(main_frame, orient="horizontal").grid(

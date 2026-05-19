@@ -1,12 +1,13 @@
 import os
+import sys
 import shutil
 import subprocess
 import re
 
-# ==========================================
-# Version — update this for each release
-# ==========================================
-VERSION = "v0.2.2"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from version import __version__
+
+VERSION = f"v{__version__}"
 
 # ==========================================
 # Build configuration
@@ -64,8 +65,10 @@ def build(config: dict):
     cmd = [
         "pyinstaller",
         "--onefile",
+        "--noconsole",          # suppress the black console window on Windows
         "--name", config["name"],
         "--add-data", "templates;templates",
+        "--add-data", "version.py;.",
     ]
 
     if config["add_test_data"]:
