@@ -67,8 +67,17 @@ class TaskSelectorUI:
         self.root = tk.Tk()
         self.root.title(f"X-Check Application v{__version__}")
         self.root.resizable(False, False)
+        self.root.config(cursor="watch")   # busy cursor while UI builds
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.root.update_idletasks()
+        self.root.config(cursor="")        # restore normal cursor
+        # Close the PyInstaller splash screen once the window is ready
+        try:
+            import pyi_splash
+            pyi_splash.close()
+        except ImportError:
+            pass
 
     def _on_close(self):
         """

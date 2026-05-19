@@ -66,6 +66,7 @@ def build(config: dict):
         "pyinstaller",
         "--onefile",
         "--noconsole",          # suppress the black console window on Windows
+        "--splash", os.path.join(PROJECT_ROOT, "templates", "splash.png"),
         "--name", config["name"],
         "--add-data", "templates;templates",
         "--add-data", "version.py;.",
