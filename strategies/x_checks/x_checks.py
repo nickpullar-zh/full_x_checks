@@ -70,7 +70,7 @@ class XChecks(BaseStrategy):
                 lambda x: known_exceptions.get(x, "")
             )
             known_mask = df_comparison["Known Exception"].str.strip() != ""
-            for col in ("Formula Match", "Variables Match", "Variables Match (Builder)"):
+            for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
                 if col in df_comparison.columns:
                     df_comparison.loc[known_mask & (df_comparison[col] == "MisMatch"), col] = "Mismatch - Known Exception"
         else:
@@ -147,11 +147,12 @@ class XChecks(BaseStrategy):
         orange_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
         orange_font = Font(color="9C6500")
 
-        blue_fill = PatternFill(start_color="DDEEFF", end_color="DDEEFF", fill_type="solid")
-        blue_font = Font(color="003399")
+        # Zurich brand: Light Blue #91BFE3 fill, Dark Blue #23366F font
+        blue_fill = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
+        blue_font = Font(color="23366F")
 
         ws = workbook["X-Checks Comparison"]
-        for col in ("Formula Match", "Variables Match", "Variables Match (Builder)"):
+        for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
             self.apply_conditional_formatting(
                 worksheet=ws,
                 column_name=col,

@@ -61,11 +61,18 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
 
         formula_match, normalised_fip_formula = _compare_formulas(fip_formula, ebx_formula)
 
+        fip_formula_excl = fip.get('FIP Formula (Excl)', fip_formula).replace('TOM', 'ToM')
+        ebx_formula_excl = ebx.get('EBX Formula (Excl)', ebx_formula)
+        excl_match, _ = _compare_formulas(fip_formula_excl, ebx_formula_excl)
+
         rows.append({
             'X-Check Number':            xcheck,
             'Formula Match':             'Match' if formula_match else 'MisMatch',
             'EBX Formula':               ebx_formula,
             'FIP Formula':               normalised_fip_formula,
+            'Formula Match (Excl)':      'Match' if excl_match else 'MisMatch',
+            'EBX Formula (Excl)':        ebx_formula_excl,
+            'FIP Formula (Excl)':        fip_formula_excl,
             'Variables Match':           'Match' if _compare_variables(fip_vars, ebx_vars) else 'MisMatch',
             'EBX Variables':             ebx_vars,
             'FIP Variables':             fip_vars,
@@ -99,6 +106,9 @@ def _not_found_row(
         'Formula Match':             'Not Found',
         'EBX Formula':               ebx_formula,
         'FIP Formula':               fip_formula,
+        'Formula Match (Excl)':      'Not Found',
+        'EBX Formula (Excl)':        ebx_formula,
+        'FIP Formula (Excl)':        fip_formula,
         'Variables Match':           'Not Found',
         'EBX Variables':             ebx_vars,
         'FIP Variables':             fip_vars,

@@ -7,7 +7,7 @@ import re
 # ==========================================
 # Version â€” update this for each release
 # ==========================================
-VERSION = "v0.2.2"
+VERSION = "v0.3.0"
 
 # ==========================================
 # Build configuration

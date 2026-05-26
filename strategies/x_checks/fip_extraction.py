@@ -30,6 +30,66 @@ _FORMULA_HEADER  = '|Formula String |'        # start of formula section
 _VAR_HEADER      = '|-Characteristic Sel Opt Attributes Node Characteristic From To |'  # start of variable section
 _FS_ACCT_BREAK   = '|-FS Account |'           # break between variable groups
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Exclusion notation pattern registry
+#
+# Each entry: (compiled_regex, replacement)
+#   replacement — plain string, or callable(match) -> str
+#
+# To add a new pattern discovered in FIP output, append one line here.
+# See docs/excl-acc-type-variants.md for the full inventory and source citations.
+#
+# Canonical forms used:
+#   excl.acc.type=N  — exclude account type N  (Family A and Family B "without" variants)
+#   (only.type=N)    — include only account type N  (Family B "only" variants)
+# ─────────────────────────────────────────────────────────────────────────────
+_EXCL_PATTERNS: list[tuple[re.Pattern, object]] = [
+
+    # ── Family A: excl.acc.type suffix ───────────────────────────────────────
+    # Position: end of variable name, after account identifier
+    # All variants → excl.acc.type=N
+    # Handles: excl/exl typo, acc/acct abbreviation, =/:/ /none separators,
+    #          single type (2) and multi-type (1,4)
+    (
+        re.compile(
+            r'exc?l'        # 'excl' or 'exl' (typo — missing 'c')
+            r'\.?\s*'
+            r'acct?'        # 'acc' or 'acct'
+            r'\.?\s*'
+            r'type'
+            r'\s*[:=]?\s*'  # optional separator: =, :, space, or nothing
+            r'([\d,]+)',    # type digit(s)/commas; leading whitespace consumed above
+            re.IGNORECASE,
+        ),
+        lambda m: f'excl.acc.type={m.group(1)}',
+    ),
+
+    # ── Family B: parenthetical annotation ───────────────────────────────────
+    # Position: mid-variable, between account name and ToM suffix
+    # Each variant has its own entry — add new ones below as discovered
+
+    # (only 2-affiliated) — include only type 2 (Affiliated); exclude all others
+    (re.compile(r'\(\s*only\s*2\s*[-–]?\s*affiliated\s*\)', re.IGNORECASE), '(only.type=2)'),
+
+    # (without 3rd party) — exclude type 1 (3rd party)
+    (re.compile(r'\(\s*without\s*3rd\s*party\s*\)',               re.IGNORECASE), '(excl.type=1)'),
+
+    # (without affiliated) — exclude type 2 (Affiliated)
+    (re.compile(r'\(\s*without\s*affiliated\s*\)',                 re.IGNORECASE), '(excl.type=2)'),
+]
+
+
+def _normalise_excl_suffix(formula: str) -> str:
+    """
+    Normalises all known FIP exclusion notation variants to canonical forms.
+    Applies every entry in _EXCL_PATTERNS in order.
+    See docs/excl-acc-type-variants.md for the full pattern inventory.
+    """
+    result = formula
+    for pattern, replacement in _EXCL_PATTERNS:
+        result = pattern.sub(replacement, result)
+    return result
+
 
 def extract_fip(fip_text: str, x_check_list: list[str]) -> list[dict]:
     """
@@ -149,9 +209,10 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
                 })
 
             results.append({
-                "X-Check Number": current_x_check,
-                "FIP Formula": returned_x_check['Formula'],
-                "FIP Variables": str_output[:-1],
+                "X-Check Number":      current_x_check,
+                "FIP Formula":         returned_x_check['Formula'],
+                "FIP Formula (Excl)":  _normalise_excl_suffix(returned_x_check['Formula']),
+                "FIP Variables":       str_output[:-1],
                 "FIP Variable (Builder)": build_variables_string(raw_variables),
             })
 

@@ -10,7 +10,12 @@
       "mcp__ide__executeCode",
       "Bash(claude mcp *)",
       "Bash(gh *)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(git restore *)",
+      "mcp__github__create_pull_request",
+      "Bash(pyinstaller --version)",
+      "Bash(del *)",
+      "WebFetch(domain:blueroom.zurich.com)"
     ]
   }
 }

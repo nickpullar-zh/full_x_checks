@@ -1,10 +1,35 @@
 {
-    "editor.fontSize": 18,
-    "editor.minimap.sectionHeaderFontSize": 18,
-    "chat.editor.fontSize": 18,
-    "chat.fontSize": 18,
-    "debug.console.fontSize": 18,
-    "scm.inputFontSize": 18,
-    "terminal.integrated.fontSize": 18,
-    "markdown.preview.fontSize": 18
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    "chat.instructionsFilesLocations": {
+        ".github/instructions": true
+    },
+    "continue.showInlineTip": false,
+    "claudeCode.environmentVariables": [
+        
+        {
+            "name": "ANTHROPIC_BASE_URL",
+            "value": "https://genai-lounge-nx-litellm-uat-emea.zurich.com"
+        },
+        {
+            "name": "ANTHROPIC_AUTH_TOKEN",
+            "value": "sk-TQBsfn_HRHmDaGUF_P1RHg"
+        },
+        {
+            "name": "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS",
+            "value": "1"
+        },
+        {
+            "name": "ANTHROPIC_MODEL",
+            "value": "eu.anthropic.claude-sonnet-4-6"
+        },
+        {
+            "name": "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS",
+            "value": "1"
+        }     
+    ],
+    "editor.renderWhitespace": "all",
+    "claudeCode.preferredLocation": "panel",
+    "claudeCode.selectedModel": "eu.anthropic.claude-sonnet-4-6",
+    "security.workspace.trust.untrustedFiles": "open"
 }

@@ -7,6 +7,8 @@ Reads the EBX 'cross checks all' sheet and extracts:
 - EBX Variables (pipe-delimited string of variable definitions)
 """
 
+import re
+
 import pandas as pd
 
 from .variable_builder import build_variables_string
@@ -145,6 +147,16 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             use_pct     = _should_use_pct(row)
             str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu, use_pct)
 
+            excl_suffix = _get_excl_acc_type_suffix(row)
+            if excl_suffix:
+                str_formula_excl = re.sub(
+                    r'(VAL_YTD|QU_YTD|LC_YTD)\(([^)]+)\)',
+                    lambda _m, _sfx=excl_suffix: f'{_m.group(1)}({_m.group(2)}{_sfx})',
+                    str_formula
+                )
+            else:
+                str_formula_excl = str_formula
+
             raw_variables = [
                 {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
                 for item in dict_variables.values()
@@ -152,9 +164,10 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             str_output_string = build_variables_string(raw_variables)
 
             results.append({
-                "X-Check Number": str_name,
-                "EBX Formula":    str_formula,
-                "EBX Variables":  str_output_string,
+                "X-Check Number":     str_name,
+                "EBX Formula":        str_formula,
+                "EBX Formula (Excl)": str_formula_excl,
+                "EBX Variables":      str_output_string,
             })
 
     return results
@@ -182,6 +195,15 @@ def _should_use_lc(row) -> bool:
     """
     category = str(row.get('Category', '')).strip()
     return category == "Shareholders' Equity"
+
+
+def _get_excl_acc_type_suffix(row) -> str:
+    """Returns 'excl.acc.type=N' when Exclude Account Type column has a value, else ''."""
+    val = str(row.get('Exclude Account Type', '')).strip()
+    if not val or val == 'nan':
+        return ''
+    m = re.match(r'([\d,]+)', val.replace(' ', ''))
+    return f'excl.acc.type={m.group(1)}' if m else ''
 
 
 def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,

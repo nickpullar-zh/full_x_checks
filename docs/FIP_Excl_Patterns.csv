@@ -1,0 +1,24 @@
+Excl Category,FIP Variable Name,X-Check Number,Test Pair,Current Formula Match,EBX Exclude Account Type,EBX Formula (current),FIP Formula
+GAAP Segment Exclusion,10102 excluding S02,AS806_00,Not in test data,Not tested,,,
+GAAP Segment Exclusion,10102 excluding S31,AS805_00,Not in test data,Not tested,,,
+GAAP Segment Exclusion,14642 excluding S02,AS808_00,Not in test data,Not tested,,,
+GAAP Segment Exclusion,14642 excluding S31,AS807_00,Not in test data,Not tested,,,
+Posting Level Exclusion,23151ff excl PL 10,AL109_70,Pair 1,MisMatch,,VAL_YTD(23151ff)=0,VAL_YTD(23151ffexclPL10)=0
+IC Line-of-Business Exclusion,EAN_11230 excl. 9-IC LOB incl. PL01-PL11,R013_17,Not in test data,Not tested,,,
+Account Type Exclusion,EXN_21220ff excl.acct.type 2,LS235_17,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(EXN_21220ff))>=CONST(1000,'USD','E')","ABS(VAL_YTD(EXN_21220ffexcl.acct.type2))>=CONST(1000,'USD','E')"
+Account Type Exclusion,EXN_21231ff excl. acc. type 2,LS233_17,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(EXN_21231ff))>=CONST(1000,'USD','E')","ABS(VAL_YTD(EXN_21231ffexcl.acc.type2))>=CONST(1.000,'USD','E')"
+Account Type Exclusion,IAN_00051 excl. acc. type = 2,AS447_09,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(IAN_00051)+VAL_YTD(S12301ffToM349))<=CONST(5,'USD','E')","ABS(VAL_YTD(S12301ffToM349)-VAL_YTD(IAN_00051excl.acc.type=2))<=CONST(5,'USD','E')"
+Account Type Exclusion,LIN_00380 excl. acc. type = 1 ToM L07,LE418_09,Not in test data,Not tested,,,
+Account Type Exclusion,LIN_00380 excl. acc. type = 1 ToM L87,LE420_09,Not in test data,Not tested,,,
+Account Type Exclusion,LIN_00380 excl. acc. type = 2 ToM L07,LE417_09,Not in test data,Not tested,,,
+Account Type Exclusion,LIN_00380 excl. acc. type = 2 ToM L87,LE419_09,Not in test data,Not tested,,,
+Account Type Exclusion,"LIN_00380 excl. acc. type:1,4 TOM L08",LE416_09,Not in test data,Not tested,,,
+Account Type Exclusion,"LIN_00380 excl. acc. type:1,4 TOM L09",LE414_09,Not in test data,Not tested,,,
+Account Type Exclusion,LIN_00380 excl.acc.type2 TOM L08,LE415_09,Not in test data,Not tested,,,
+Account Type Exclusion,LIN_00380 excl.acc.type2 TOM L09,LE413_09,Not in test data,Not tested,,,
+Account Type 2 (Affiliated) Exclusion,SLST LSAS_11510 n-life LOBs excl.2- Aff.,AS603_60,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(S11510RA)-VAL_YTD(LSAS_11510))<=CONST(5,'USD','E')","ABS(VAL_YTD(IFRSNS11510RA)-VAL_YTD(SLSTLSAS_11510n-lifeLOBsexcl.2-Aff.))<=CONST(5,'USD','E')"
+Account Type 2 (Affiliated) Exclusion,SLST LSAS_11520 n-life LOBs excl.2 -Aff,AS602_60,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(S11520RA)-VAL_YTD(LSAS_11520))<=CONST(5,'USD','E')","ABS(VAL_YTD(IFRSNS11520RA)-VAL_YTD(SLSTLSAS_11520n-lifeLOBsexcl.2-Aff))<=CONST(5,'USD','E')"
+Account Type 2 (Affiliated) Exclusion,SLST LSOC_00010 n-life LOBs excl.2- Aff.,IR007_60,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(S30010RA)-VAL_YTD(LSOC_00010))<=CONST(5,'USD','E')","ABS(VAL_YTD(IFRSNS30010RA)-VAL_YTD(SLSTLSOC_00010n-lifeLOBsexcl.2-Aff.))<=CONST(5,'USD','E')"
+Account Type Exclusion,SN_13105 excl. acc. type = 2,AS448_09,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(SN_13105)+VAL_YTD(S12301ffToM358))<=CONST(5,'USD','E')","ABS(VAL_YTD(S12301ffToM358)-VAL_YTD(SN_13105excl.acc.type=2))<=CONST(5,'USD','E')"
+Account Type Exclusion,SN_20762 excl. acct. type 2,LS237_17,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(SN_20762))>=CONST(1000,'USD','E')","ABS(VAL_YTD(SN_20762excl.acct.type2))>=CONST(1000,'USD','E')"
+Account Type 2 (Affiliated) Exclusion,SN_27830ff excl. 2 - Aff.,LS001_17,Pair 1,MisMatch,2 - Affiliated,"ABS(VAL_YTD(15541ff)-VAL_YTD(S60070I17))<=CONST(1000,'USD','E')","ABS(VAL_YTD(15541ff)+VAL_YTD(SN_27830ffexcl.2-Aff.)-VAL_YTD(S60070I17))<=CONST(1000,'USD','E')"

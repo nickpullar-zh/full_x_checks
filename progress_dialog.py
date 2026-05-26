@@ -10,18 +10,22 @@ class ProgressDialog:
     Displays log entries in real time as processing occurs.
     Runs on the main thread; processing runs on a background thread.
 
-    Stop behaviour:
-    - "Stop" sets the stop event; processing halts at the next log_step checkpoint.
-    - Button changes to "Close".
-    - "Close" destroys the window and exits the application.
+    Stop / dismiss behaviour:
+    - "Stop"           → sets stop event; button changes to "Return to Form".
+    - "Return to Form" → destroys dialog; calls on_dismiss() to return to the
+                         file-upload form pre-filled with the previous inputs.
+    - On success       → button changes to "Close"; "Close" exits the application.
+    - on_dismiss=None  → always exits (legacy / debug mode behaviour).
     """
 
     WINDOW_SIZE = 550  # Square dimensions in pixels
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, on_dismiss=None):
         self.root = root
+        self.on_dismiss = on_dismiss        # callable() → return to upload form
         self.stop_event = threading.Event()
         self._stopped = False
+        self._completed_successfully = False
 
         self._build_ui()
         self._centre_on_screen()
@@ -46,7 +50,7 @@ class ProgressDialog:
         ttk.Label(
             outer_frame,
             text="Processing Log",
-            font=("Helvetica", 13, "bold")
+            font=("Zurich Sans Semibold", 13)
         ).pack(pady=(0, 8))
 
         # --- Scrollable text area ---
@@ -61,8 +65,8 @@ class ProgressDialog:
             state="disabled",       # Read-only
             wrap="word",
             font=("Courier", 9),
-            bg="#f7f7f7",
-            fg="#222222",
+            bg="#ECEEEF",
+            fg="#23366F",
             relief="sunken",
             borderwidth=1,
             yscrollcommand=scrollbar.set,
@@ -103,14 +107,19 @@ class ProgressDialog:
             # First press — stop processing
             self._stopped = True
             self.stop_event.set()
-            self.action_btn.config(text="Close")
+            self.action_btn.config(text="Return to Form")
             self.append_entry("---", "User requested stop. Waiting for current step to finish...")
         else:
-            # Second press — clean up and exit
+            # Second press — dismiss
             self.window.grab_release()
             self.window.destroy()
-            self.root.destroy()
-            sys.exit(0)
+            if self._completed_successfully or self.on_dismiss is None:
+                # Success or no callback registered → exit the application
+                self.root.destroy()
+                sys.exit(0)
+            else:
+                # Cancel or error → return to the upload form
+                self.on_dismiss()
 
     # =========================================================
     # Public interface — called from background thread
@@ -139,3 +148,7 @@ class ProgressDialog:
 
     def is_stopped(self) -> bool:
         return self.stop_event.is_set()
+
+    def mark_success(self):
+        """Call from the processing thread when the run completes without error."""
+        self._completed_successfully = True

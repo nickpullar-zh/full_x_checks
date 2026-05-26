@@ -40,7 +40,8 @@ class _Tooltip:
             self._win,
             text=self._text,
             justify="left",
-            background="#ffffe0",
+            background="#DDE4E3",   # Dove (brand)
+            foreground="#23366F",   # Dark Blue (accessible on Dove per brand guidelines)
             relief="solid",
             borderwidth=1,
             wraplength=self.WRAP_PX,
@@ -61,7 +62,7 @@ class FileUploadUI:
     output directory picker — all driven by configuration.
     """
 
-    def __init__(self, config: UploadTaskConfig, parent: tk.Tk):
+    def __init__(self, config: UploadTaskConfig, parent: tk.Tk, prefill: Optional[Dict] = None):
         self.config = config
         self.file_paths: Dict[str, tk.StringVar] = {}
         self.sheet_names: Dict[str, tk.StringVar] = {}
@@ -80,6 +81,8 @@ class FileUploadUI:
         self.root.resizable(False, False)
         self.root.grab_set()  # ← Modal
         self._build_ui()
+        if prefill:
+            self._apply_prefill(prefill)
         self._set_position()  # ← Position logic
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -173,7 +176,7 @@ class FileUploadUI:
         ttk.Label(
             main_frame,
             text=self.config.task_name,
-            font=("Helvetica", 14, "bold")
+            font=("Zurich Sans Semibold", 14)
         ).grid(row=current_row, column=0, columnspan=3, pady=(0, 15))
         current_row += 1
 
@@ -233,7 +236,7 @@ class FileUploadUI:
                 sheet_label = ttk.Label(
                     main_frame,
                     text="Sheet name:",
-                    font=("Helvetica", 8),
+                    font=("Zurich Sans", 9),
                     foreground="grey"
                 )
                 sheet_label.grid(row=current_row, column=0, padx=5, pady=(0, 4), sticky="e")
@@ -243,7 +246,7 @@ class FileUploadUI:
                     main_frame,
                     textvariable=sheet_var,
                     width=30,
-                    font=("Helvetica", 8),
+                    font=("Zurich Sans", 9),
                     state="disabled"
                 )
                 sheet_entry.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
@@ -257,7 +260,7 @@ class FileUploadUI:
                 main_frame,
                 text=hint_text,
                 foreground="black",
-                font=("Helvetica", 8),
+                font=("Zurich Sans", 9),
                 wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
                 justify="left"
             )
@@ -303,7 +306,7 @@ class FileUploadUI:
                 main_frame,
                 text="  Folder where output files will be saved",
                 foreground="black",
-                font=("Helvetica", 8),
+                font=("Zurich Sans", 9),
                 wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
                 justify="left"
             )
@@ -370,6 +373,40 @@ class FileUploadUI:
         if self.output_label:
             self.output_label.config(wraplength=max_hint_width)
 
+
+    def _apply_prefill(self, prefill: dict):
+        """Restore a previous run's inputs into the form fields."""
+        # File paths
+        for label, path in (prefill.get("files") or {}).items():
+            if path and label in self.file_paths:
+                self.file_paths[label].set(path)
+                self.path_labels[label].config(
+                    text=os.path.basename(path), foreground="black"
+                )
+                for field in self.config.file_fields:
+                    if field.label == label and field.show_sheet:
+                        self.sheet_labels[label].config(foreground="black")
+                        self.sheet_entries[label].config(state="normal")
+
+        # Sheet names
+        for label, sheet in (prefill.get("sheet_names") or {}).items():
+            if sheet and label in self.sheet_names:
+                self.sheet_names[label].set(sheet)
+
+        # Output directory
+        output_dir = prefill.get("output_directory")
+        if output_dir:
+            self.output_directory = output_dir
+            if self.output_label is not None:
+                self.output_label.config(text=output_dir, foreground="black")
+
+        # Checkboxes
+        self.process_only_differences.set(prefill.get("process_only_differences", False))
+        for key, var in self.extra_checkboxes.items():
+            if key in prefill:
+                var.set(prefill[key])
+
+        self._check_ready()
 
     # ==========================================
     # Event Handlers

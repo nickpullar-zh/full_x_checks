@@ -1,7 +1,7 @@
 import pandas as pd
 from strategies.x_checks.ebx_extraction import (
     _should_use_qu, _should_use_pct, _create_formula,
-    _VERSION_GAAP_PREFIX, extract_ebx,
+    _get_excl_acc_type_suffix, _VERSION_GAAP_PREFIX, extract_ebx,
 )
 
 
@@ -242,3 +242,79 @@ def test_prior_year_balance_disabled_uses_val_ytd():
     formula = _create_formula(variables, False, row)
     assert "VAL_YTD(A246)" in formula
     assert "P_VAL_PER" not in formula
+
+
+# ---------------------------------------------------------------------------
+# _get_excl_acc_type_suffix
+# ---------------------------------------------------------------------------
+
+def test_excl_acc_type_single_affiliated():
+    row = {"Exclude Account Type": "2 - Affiliated"}
+    assert _get_excl_acc_type_suffix(row) == "excl.acc.type=2"
+
+
+def test_excl_acc_type_single_direct():
+    row = {"Exclude Account Type": "1 - Direct"}
+    assert _get_excl_acc_type_suffix(row) == "excl.acc.type=1"
+
+
+def test_excl_acc_type_multi_type():
+    row = {"Exclude Account Type": "1 - 3rd, 4 - Linked"}
+    assert _get_excl_acc_type_suffix(row) == "excl.acc.type=1"
+
+
+def test_excl_acc_type_empty():
+    row = {"Exclude Account Type": ""}
+    assert _get_excl_acc_type_suffix(row) == ""
+
+
+def test_excl_acc_type_nan_string():
+    row = {"Exclude Account Type": "nan"}
+    assert _get_excl_acc_type_suffix(row) == ""
+
+
+def test_excl_acc_type_missing_column():
+    row = {}
+    assert _get_excl_acc_type_suffix(row) == ""
+
+
+# ---------------------------------------------------------------------------
+# EBX Formula (Excl) in extract_ebx output
+# ---------------------------------------------------------------------------
+
+def _make_ebx_df_with_excl(excl_value="2 - Affiliated"):
+    return pd.DataFrame([{
+        "X-Check No.":                  "TEST_01",
+        "Account No.":                  "A246",
+        "SubA No.":                     "",
+        "Operator (X-Check Term)":      "+",
+        "Absolute (result)":            "",
+        "Ending Balance Prior Year":    "",
+        "Category":                     "",
+        "%":                            "",
+        "Operator 1":                   ">=",
+        "Operator 2":                   "",
+        "Limit 1":                      "0",
+        "Limit 2":                      "",
+        "Version Spanning Validation":  "",
+        "Exclude Account Type":         excl_value,
+    }])
+
+
+def test_extract_ebx_excl_column_present():
+    df = _make_ebx_df_with_excl("2 - Affiliated")
+    results = extract_ebx(df)
+    assert len(results) == 1
+    assert "EBX Formula (Excl)" in results[0]
+
+
+def test_extract_ebx_excl_suffix_applied_to_val_ytd():
+    df = _make_ebx_df_with_excl("2 - Affiliated")
+    results = extract_ebx(df)
+    assert results[0]["EBX Formula (Excl)"] == "VAL_YTD(A246excl.acc.type=2)>=0"
+
+
+def test_extract_ebx_excl_suffix_absent_when_no_value():
+    df = _make_ebx_df_with_excl("")
+    results = extract_ebx(df)
+    assert results[0]["EBX Formula (Excl)"] == results[0]["EBX Formula"]
