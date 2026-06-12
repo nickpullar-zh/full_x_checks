@@ -73,9 +73,36 @@ def test_canonical_var_name_tom_camelcase_preserved():
         'LIN_00380excl.acc.type=2ToML07'
 
 
-def test_canonical_var_name_no_excl_unchanged():
-    # Variable without any excl notation is returned unchanged
-    assert _canonical_var_name('A246', ['2']) == 'A246'
+def test_canonical_var_name_plain_name_appends_suffix():
+    # Plain variable name (no excl token) with @2A@ types → suffix appended
+    # e.g. A159_09 has 'Account Type 2' row but no 'excl' in the variable name
+    assert _canonical_var_name('A159_09', ['2']) == 'A159_09excl.acc.type=2'
+
+
+def test_canonical_var_name_plain_name_multi_type():
+    # Plain variable name + multiple @2A@ types → comma-separated, sorted
+    assert _canonical_var_name('A159_09', ['2', '1']) == 'A159_09excl.acc.type=1,2'
+
+
+def test_canonical_var_name_plain_name_with_tom():
+    # Plain name with ToM/TOM suffix and no excl → suffix inserted before ToM/TOM
+    assert _canonical_var_name('A159_09ToML09', ['2']) == 'A159_09excl.acc.type=2ToML09'
+    assert _canonical_var_name('A159_09TOML07', ['2']) == 'A159_09excl.acc.type=2TOML07'
+
+
+def test_canonical_var_name_no_types_no_excl_unchanged():
+    # No types and no excl text in name → unchanged
+    assert _canonical_var_name('A246', []) == 'A246'
+
+
+def test_canonical_var_name_no_types_strips_existing_excl():
+    # Existing excl text is unreliable — always strip it, even when no @2A@ types
+    assert _canonical_var_name('LIN_00380excl.acc.type2', []) == 'LIN_00380'
+
+
+def test_canonical_var_name_no_types_strips_excl_preserves_tom():
+    # Strip excl text but preserve ToM/TOM suffix
+    assert _canonical_var_name('LIN_00380excl.acc.type2ToML07', []) == 'LIN_00380ToML07'
 
 
 def test_canonical_var_name_types_sorted():
@@ -117,6 +144,18 @@ def test_build_excl_formula_no_excl_types_unchanged():
     assert _build_excl_formula(formula, variables) == formula
 
 
+def test_build_excl_formula_strips_excl_when_no_types():
+    # Variable name has pre-written excl text but no @2A@ rows → strip the excl text
+    formula = 'VAL_YTD(LIN_00380excl.2-Aff)>=CONST(0,'+"'USD','E')"
+    variables = {
+        0: {'Variable': 'LIN_00380excl.2-Aff', 'ExclAccountTypes': []},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'LIN_00380' in result
+    assert 'excl' not in result
+    assert '2-Aff' not in result
+
+
 def test_build_excl_formula_multi_type():
     formula = 'ABS(VAL_YTD(LIN_00380excl.acc.type:1,4TOML09))'
     variables = {
@@ -125,6 +164,26 @@ def test_build_excl_formula_multi_type():
     result = _build_excl_formula(formula, variables)
     assert 'excl.acc.type=1,4' in result
     assert 'TOML09' in result
+
+
+def test_build_excl_formula_plain_name_appends_suffix():
+    # A159_09 case: variable name contains no excl token but @2A@ Account Type 2
+    # row was captured → formula should be rewritten with the suffix appended
+    formula = 'ABS(VAL_YTD(A159_09))>=CONST(0,'+"'USD','E')"
+    variables = {
+        0: {'Variable': 'A159_09', 'ExclAccountTypes': ['2']},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'A159_09excl.acc.type=2' in result
+
+
+def test_build_excl_formula_plain_name_multi_type():
+    formula = 'VAL_YTD(A159_09)'
+    variables = {
+        0: {'Variable': 'A159_09', 'ExclAccountTypes': ['2', '1']},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'A159_09excl.acc.type=1,2' in result
 
 
 # ---------------------------------------------------------------------------

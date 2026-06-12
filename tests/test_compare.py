@@ -123,6 +123,77 @@ def test_compare_both_present_mismatch():
     assert rows[0]["Variables Match"] == "MisMatch"
 
 
+def test_compare_formula_excl_match_via_literal_fip():
+    # Literal FIP Formula matches EBX Formula (Excl) → Formula Match (Excl) = Match
+    # even though the constructed FIP Formula (Excl) does not.
+    ebx = [{
+        "X-Check Number": "X1",
+        "EBX Formula": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "EBX Formula (Excl)": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "EBX Variables": "A",
+    }]
+    fip = [{
+        "X-Check Number": "X1",
+        "FIP Formula": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "FIP Formula (Excl)": "VAL_YTD(SOMETHING_ELSE)>=0",
+        "FIP Variables": "A",
+        "FIP Variable (Builder)": "A",
+    }]
+    rows = compare(ebx, fip)
+    assert rows[0]["Formula Match (Excl)"] == "Match"
+
+
+def test_compare_formula_excl_match_via_constructed():
+    # Literal FIP differs but constructed FIP (Excl) matches EBX (Excl) → Match
+    ebx = [{
+        "X-Check Number": "X1",
+        "EBX Formula": "VAL_YTD(A)>=0",
+        "EBX Formula (Excl)": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "EBX Variables": "A",
+    }]
+    fip = [{
+        "X-Check Number": "X1",
+        "FIP Formula": "VAL_YTD(A)>=0",
+        "FIP Formula (Excl)": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "FIP Variables": "A",
+        "FIP Variable (Builder)": "A",
+    }]
+    rows = compare(ebx, fip)
+    assert rows[0]["Formula Match (Excl)"] == "Match"
+
+
+def test_compare_formula_excl_mismatch_when_neither():
+    ebx = [{
+        "X-Check Number": "X1",
+        "EBX Formula": "VAL_YTD(A)>=0",
+        "EBX Formula (Excl)": "VAL_YTD(Aexcl.acc.type=2)>=0",
+        "EBX Variables": "A",
+    }]
+    fip = [{
+        "X-Check Number": "X1",
+        "FIP Formula": "VAL_YTD(X)>=0",
+        "FIP Formula (Excl)": "VAL_YTD(Y)>=0",
+        "FIP Variables": "X",
+        "FIP Variable (Builder)": "X",
+    }]
+    rows = compare(ebx, fip)
+    assert rows[0]["Formula Match (Excl)"] == "MisMatch"
+
+
+def test_compare_variables_builder_match_via_literal_fip():
+    # Literal FIP Variables matches EBX → Variables Match (Builder) = Match
+    # even when the builder string differs.
+    ebx = [{"X-Check Number": "X1", "EBX Formula": "f", "EBX Variables": "Name:A;FS Account:1"}]
+    fip = [{
+        "X-Check Number": "X1",
+        "FIP Formula": "f",
+        "FIP Variables": "Name:A;FS Account:1",
+        "FIP Variable (Builder)": "Name:DIFFERENT",
+    }]
+    rows = compare(ebx, fip)
+    assert rows[0]["Variables Match (Builder)"] == "Match"
+
+
 def test_compare_deduplicates_ebx():
     # Two EBX rows for the same X-Check — only the first should be used
     ebx = [

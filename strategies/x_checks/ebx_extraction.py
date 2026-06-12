@@ -63,6 +63,10 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
     # Using a fine-grained key avoids false positives when the same account appears
     # in both X-flagged rows (no SubA) and non-X rows (with SubA).
     py_subaccount_keys: set = set()
+    # Tracks the Exclude Account Type suffix per Account No. for the current X-Check.
+    # Each row may set it for one account; only variables whose accounts have a
+    # non-empty entry here should receive the excl suffix.
+    excl_by_account: dict = {}
 
     for index, row in df.iterrows():
         # Skip rows without an account number
@@ -84,6 +88,7 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             dict_account = {}
             dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
             py_subaccount_keys = set()
+            excl_by_account = {}
             str_name = row['X-Check No.']
             dict_sub_accounts['SubAccounts'] = [[row['SubA No.'], row['Operator (X-Check Term)']]]
             dict_sub_accounts['Operators'] = [row['Operator (X-Check Term)']]
@@ -96,6 +101,11 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             if row['Operator (X-Check Term)'] not in dict_sub_accounts['Operators']:
                 dict_sub_accounts['Operators'].append(row['Operator (X-Check Term)'])
             dict_account[acct_no] = dict_sub_accounts
+
+        # Track Exclude Account Type per account (a single row defines it for one account)
+        row_excl = _get_excl_acc_type_suffix(row)
+        if row_excl:
+            excl_by_account[acct_no] = row_excl
 
         # Track prior year balance at the (account, subA, operator) level
         if apply_prior_year_balance and str(row.get('Ending Balance Prior Year', '')).strip() == 'X':
@@ -147,11 +157,25 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             use_pct     = _should_use_pct(row)
             str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu, use_pct)
 
-            excl_suffix = _get_excl_acc_type_suffix(row)
-            if excl_suffix:
+            # Per-variable excl suffix: a variable inherits a suffix only if at least
+            # one of its constituent accounts had Exclude Account Type set in its row.
+            # Variables whose accounts all have no excl entry are left as-is.
+            excl_by_variable: dict = {}
+            for value in dict_variables_output.values():
+                vname = value['Variable-Name']
+                for acct in value.get('Accounts', []):
+                    if acct in excl_by_account:
+                        excl_by_variable[vname] = excl_by_account[acct]
+                        break
+
+            if excl_by_variable:
+                def _rewrite(_m, _map=excl_by_variable):
+                    fn, arg = _m.group(1), _m.group(2)
+                    sfx = _map.get(arg, '')
+                    return f'{fn}({_insert_excl_suffix(arg, sfx)})' if sfx else _m.group(0)
                 str_formula_excl = re.sub(
                     r'(VAL_YTD|QU_YTD|LC_YTD)\(([^)]+)\)',
-                    lambda _m, _sfx=excl_suffix: f'{_m.group(1)}({_m.group(2)}{_sfx})',
+                    _rewrite,
                     str_formula
                 )
             else:
@@ -204,6 +228,18 @@ def _get_excl_acc_type_suffix(row) -> str:
         return ''
     m = re.match(r'([\d,]+)', val.replace(' ', ''))
     return f'excl.acc.type={m.group(1)}' if m else ''
+
+
+def _insert_excl_suffix(var_name: str, suffix: str) -> str:
+    """
+    Inserts the excl.acc.type=N suffix into the variable name immediately after
+    the FS Account portion — i.e. before any ToM/TOM movement-type segment.
+    Mirrors FIP placement (e.g. OAN_00277ffexcl.acc.type=2ToM660ff).
+    """
+    m = re.search(r'ToM|TOM', var_name)
+    if m:
+        return var_name[:m.start()] + suffix + var_name[m.start():]
+    return var_name + suffix
 
 
 def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,

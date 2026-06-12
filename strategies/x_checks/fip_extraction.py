@@ -32,32 +32,48 @@ _FS_ACCT_BREAK   = '|-FS Account |'           # break between variable groups
 
 def _canonical_var_name(var_name: str, types: list[str]) -> str:
     """
-    Replaces whatever excl notation is present in a FIP variable name with the
-    canonical form excl.acc.type=N (types sorted numerically, comma-joined).
-    Any ToM/TOM movement-type suffix after the excl notation is preserved.
+    Returns the canonical form of a FIP variable name. The only excl notation
+    we trust is the mechanical one derived from @2A@ Account Type rows
+    (excl.acc.type=N, types sorted numerically, comma-joined).
+
+    - Any existing excl/exl text in the name is always stripped.
+    - If types are present, the canonical suffix is inserted in its place
+      (or appended before any ToM/TOM suffix when no excl text exists).
+    - ToM/TOM movement-type suffix is preserved.
     """
+    suffix = (
+        'excl.acc.type=' + ','.join(str(t) for t in sorted(types, key=int))
+        if types else ''
+    )
     excl_pos = var_name.lower().find('excl')
-    if excl_pos == -1:
+    if excl_pos != -1:
+        base = var_name[:excl_pos]
+        rest = var_name[excl_pos:]
+        tom_match = re.search(r'ToM|TOM', rest)
+        tom_part = rest[tom_match.start():] if tom_match else ''
+        return base + suffix + tom_part
+
+    if not suffix:
         return var_name
-    base = var_name[:excl_pos]
-    rest = var_name[excl_pos:]
-    tom_match = re.search(r'ToM|TOM', rest)
-    tom_part = rest[tom_match.start():] if tom_match else ''
-    suffix = 'excl.acc.type=' + ','.join(str(t) for t in sorted(types, key=int))
-    return base + suffix + tom_part
+    tom_match = re.search(r'ToM|TOM', var_name)
+    if tom_match:
+        return var_name[:tom_match.start()] + suffix + var_name[tom_match.start():]
+    return var_name + suffix
 
 
 def _build_excl_formula(formula: str, variables: dict) -> str:
     """
-    Builds FIP Formula (Excl) by replacing each variable's messy excl notation
-    with the canonical excl.acc.type=N form derived from @2A@ Account Type rows.
-    Variables without ExclAccountTypes are left unchanged.
+    Builds FIP Formula (Excl) by canonicalising each variable's name. A variable
+    is rewritten when it has @2A@ Account Type rows (replace with mechanical
+    excl.acc.type=N) OR when its name contains pre-written excl/exl text
+    (strip the unreliable text, keep only the mechanical addition).
     """
     result = formula
     for var_data in variables.values():
         types = var_data.get('ExclAccountTypes', [])
         var_name = var_data['Variable']
-        if types and re.search(r'exl|excl', var_name, re.IGNORECASE):
+        has_excl = bool(re.search(r'exl|excl', var_name, re.IGNORECASE))
+        if types or has_excl:
             result = result.replace(var_name, _canonical_var_name(var_name, types))
     return result
 

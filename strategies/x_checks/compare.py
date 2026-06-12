@@ -63,7 +63,16 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
 
         fip_formula_excl = fip.get('FIP Formula (Excl)', fip_formula).replace('TOM', 'ToM')
         ebx_formula_excl = ebx.get('EBX Formula (Excl)', ebx_formula)
-        excl_match, _ = _compare_formulas(fip_formula_excl, ebx_formula_excl)
+        # Fallback: literal FIP first, constructed FIP (Excl) second — both vs EBX (Excl)
+        excl_match_literal, _      = _compare_formulas(normalised_fip_formula, ebx_formula_excl)
+        excl_match_constructed, _  = _compare_formulas(fip_formula_excl,       ebx_formula_excl)
+        excl_match = excl_match_literal or excl_match_constructed
+
+        # Variables (Builder) fallback: literal FIP Variables first, then constructed Builder
+        vars_match_builder = (
+            _compare_variables(fip_vars,    ebx_vars)
+            or _compare_variables(fip_builder, ebx_vars)
+        )
 
         rows.append({
             'X-Check Number':            xcheck,
@@ -76,7 +85,7 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
             'Variables Match':           'Match' if _compare_variables(fip_vars, ebx_vars) else 'MisMatch',
             'EBX Variables':             ebx_vars,
             'FIP Variables':             fip_vars,
-            'Variables Match (Builder)': 'Match' if _compare_variables(fip_builder, ebx_vars) else 'MisMatch',
+            'Variables Match (Builder)': 'Match' if vars_match_builder else 'MisMatch',
             'FIP Variable (Builder)':    fip_builder,
         })
 

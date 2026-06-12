@@ -318,3 +318,79 @@ def test_extract_ebx_excl_suffix_absent_when_no_value():
     df = _make_ebx_df_with_excl("")
     results = extract_ebx(df)
     assert results[0]["EBX Formula (Excl)"] == results[0]["EBX Formula"]
+
+
+def test_insert_excl_suffix_before_tom():
+    # FIP places excl.acc.type=N between FS Account and ToM (e.g.
+    # OAN_00277ffexcl.acc.type=2ToM660ff). EBX must match.
+    from strategies.x_checks.ebx_extraction import _insert_excl_suffix
+    assert _insert_excl_suffix("OAN_00277ffToM660ff", "excl.acc.type=2") == \
+        "OAN_00277ffexcl.acc.type=2ToM660ff"
+
+
+def test_insert_excl_suffix_no_tom_appends():
+    from strategies.x_checks.ebx_extraction import _insert_excl_suffix
+    assert _insert_excl_suffix("A246", "excl.acc.type=2") == "A246excl.acc.type=2"
+
+
+def test_insert_excl_suffix_uppercase_tom():
+    from strategies.x_checks.ebx_extraction import _insert_excl_suffix
+    assert _insert_excl_suffix("A246TOM07", "excl.acc.type=2") == "A246excl.acc.type=2TOM07"
+
+
+def _make_ebx_df_with_tom_and_excl():
+    # Two rows for the same X-Check sharing Account No. but with a SubA → produces ToM
+    return pd.DataFrame([
+        {
+            "X-Check No.":                  "TEST_TOM",
+            "Account No.":                  "OAN_00277",
+            "SubA No.":                     "660",
+            "Operator (X-Check Term)":      "+",
+            "Absolute (result)":            "X",
+            "Ending Balance Prior Year":    "",
+            "Category":                     "",
+            "%":                            "",
+            "Operator 1":                   "<=",
+            "Operator 2":                   "",
+            "Limit 1":                      "5",
+            "Limit 2":                      "",
+            "Version Spanning Validation":  "",
+            "Exclude Account Type":         "2 - Affiliated",
+        },
+    ])
+
+
+def test_extract_ebx_excl_suffix_placed_before_tom():
+    # Regression: EBX A159_09-style row must place excl.acc.type=2 before ToM
+    df = _make_ebx_df_with_tom_and_excl()
+    results = extract_ebx(df)
+    assert "excl.acc.type=2ToM660" in results[0]["EBX Formula (Excl)"]
+    assert "ToM660excl" not in results[0]["EBX Formula (Excl)"]
+
+
+def test_extract_ebx_excl_suffix_per_variable_only():
+    # Regression: LA006_09-style — two accounts, only the SECOND row has
+    # Exclude Account Type. The suffix must apply only to the variable whose
+    # account had the value, not the other.
+    base = {
+        "X-Check No.":                  "LA006_09",
+        "SubA No.":                     "",
+        "Absolute (result)":            "",
+        "Ending Balance Prior Year":    "",
+        "Category":                     "",
+        "%":                            "",
+        "Operator 1":                   ">=",
+        "Operator 2":                   "",
+        "Limit 1":                      "0",
+        "Limit 2":                      "",
+        "Version Spanning Validation":  "",
+    }
+    df = pd.DataFrame([
+        {**base, "Account No.": "A001", "Operator (X-Check Term)": "+", "Exclude Account Type": ""},
+        {**base, "Account No.": "B002", "Operator (X-Check Term)": "-", "Exclude Account Type": "2 - Affiliated"},
+    ])
+    results = extract_ebx(df)
+    excl = results[0]["EBX Formula (Excl)"]
+    assert "VAL_YTD(A001)" in excl
+    assert "VAL_YTD(B002excl.acc.type=2)" in excl
+    assert "A001excl" not in excl

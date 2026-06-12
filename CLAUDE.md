@@ -34,6 +34,52 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.18 — EBX excl suffix scoped per-variable (LA006_09 fix) (completed 2026-06-12)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `ebx_extraction.py`: track `Exclude Account Type` per Account No. as rows are read (`excl_by_account` dict, reset per X-Check). | DONE | Previous code grabbed the suffix once from the last row of the X-Check and applied it to every variable in the formula. |
+| 2 | `ebx_extraction.py`: at formula-write time, build `excl_by_variable` map (Variable-Name → suffix) by checking each variable's `Accounts`. Rewrite only the matching `VAL_YTD(...)` segments. | DONE | Variables whose accounts had no Exclude Account Type entry pass through unchanged. |
+| 3 | `tests/test_ebx_extraction.py`: add `test_extract_ebx_excl_suffix_per_variable_only` — two accounts, only the second row has Exclude Account Type; assert only `VAL_YTD(B002...)` gets the suffix. | DONE | 113 passing (1 pre-existing pair2 file-lock failure). |
+| 4 | `version.py`: bump to `0.3.18` | DONE | |
+
+### v0.3.17 — EBX excl suffix placement matches FIP (before ToM) (completed 2026-06-12)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `ebx_extraction.py`: add `_insert_excl_suffix(var_name, suffix)` — inserts `excl.acc.type=N` before any `ToM`/`TOM` segment in a variable name; appends to the end if no ToM. | DONE | Closes A159_09 mismatch where EBX produced `OAN_00277ffToM660ffexcl.acc.type=2` but FIP produced `OAN_00277ffexcl.acc.type=2ToM660ff`. |
+| 2 | `ebx_extraction.py`: extract_ebx loop calls `_insert_excl_suffix` inside the regex `lambda` so each `VAL_YTD/QU_YTD/LC_YTD(...)` argument gets the suffix in the correct slot. | DONE | |
+| 3 | `tests/test_ebx_extraction.py`: 4 new tests — `_insert_excl_suffix` (before ToM, no-ToM, uppercase TOM); end-to-end `extract_ebx` with ToM + Exclude Account Type. | DONE | 114 passing. |
+| 4 | `version.py`: bump to `0.3.17` | DONE | |
+
+### v0.3.16 — Compare: literal-then-constructed fallback for Excl + Builder columns (completed 2026-06-12)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `compare.py`: `Formula Match (Excl)` = Match if **either** literal FIP Formula matches EBX Formula (Excl) **or** constructed FIP Formula (Excl) matches EBX Formula (Excl). Both compared against the same EBX (Excl) target. | DONE | Source-text wins first; constructed canonical form is the fallback. |
+| 2 | `compare.py`: `Variables Match (Builder)` = Match if literal FIP Variables matches EBX Variables OR FIP Variable (Builder) matches EBX Variables. | DONE | Same fallback pattern for variables. |
+| 3 | All output columns retained: `EBX Formula`, `EBX Formula (Excl)`, `FIP Formula` (literal), `FIP Formula (Excl)` (constructed); `EBX Variables`, `FIP Variables` (literal), `FIP Variable (Builder)` (constructed). No renames or removals. | DONE | |
+| 4 | `tests/test_compare.py`: 4 new tests — Excl match via literal, Excl match via constructed, Excl MisMatch when neither, Variables (Builder) match via literal. | DONE | 110 passing. |
+| 5 | `version.py`: bump to `0.3.16` | DONE | |
+
+### v0.3.15 — FIP: always strip pre-written excl text, keep only mechanical @2A@ result (completed 2026-06-12)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `fip_extraction.py` `_canonical_var_name`: when name contains `excl`/`exl`, strip the existing token regardless of types. With types → insert mechanical `excl.acc.type=N`. Without types → strip cleanly. ToM/TOM suffix preserved in both branches. | DONE | Pre-written excl text in FIP is unreliable; the only trustworthy signal is the `@2A@ Account Type` row. |
+| 2 | `fip_extraction.py` `_build_excl_formula`: rewrite a variable when EITHER it has `ExclAccountTypes` OR its name contains `excl`/`exl`. Plain names with neither pass through unchanged. | DONE | |
+| 3 | `tests/test_fip_extraction.py`: add 2 `_canonical_var_name` tests (strip-when-no-types, strip-preserves-ToM) and 1 `_build_excl_formula` test (strip-when-no-types). Replace obsolete `_no_types_unchanged` test. | DONE | 105 passing; pre-existing file-lock failure on integration pair2 unchanged. |
+| 4 | `version.py`: bump to `0.3.15` | DONE | |
+
+### v0.3.14 — FIP @2A@ Account Type suffix appended to plain variable names (completed 2026-06-12)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `fip_extraction.py` `_canonical_var_name`: when the variable name has no `excl`/`exl` token, append `excl.acc.type=N` (sorted, comma-joined for multi-type). ToM/TOM suffix preserved by inserting before it. Empty `types` returns name unchanged. | DONE | Closes the A159_09-class gap: variables with `@2A@ Account Type N` rows but no `excl` token in the FIP name. |
+| 2 | `fip_extraction.py` `_build_excl_formula`: drop the `re.search(r'exl\|excl', var_name)` guard — apply canonical replacement whenever `ExclAccountTypes` is non-empty. | DONE | |
+| 3 | `tests/test_fip_extraction.py`: add 5 new tests (plain-name single/multi-type, plain-name with ToM/TOM, no-types passthrough, formula plain-name single/multi-type); replace obsolete `test_canonical_var_name_no_excl_unchanged`. | DONE | 102 passing, 1 pre-existing file-lock failure on integration pair2. |
+| 4 | `version.py`: bump to `0.3.14` | DONE | |
+
 ### v0.3.13 — Fix: error returns to form instead of closing app (completed 2026-05-27)
 
 | # | Change | Status | Notes |
