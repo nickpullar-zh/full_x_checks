@@ -194,11 +194,14 @@ class TaskSelectorUI:
 
         def run_processing(strategy, dialog, files):
             try:
-                strategy.execute(files)
-                if not dialog.is_stopped():
+                success = strategy.execute(files)
+                if success and not dialog.is_stopped():
                     dialog.mark_success()
                     dialog.append_entry("System", "Processing complete. You may close this window.")
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+                elif not dialog.is_stopped():
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
             except Exception as e:
                 import traceback
@@ -249,11 +252,14 @@ class TaskSelectorUI:
 
         def run_processing(strategy, dialog, files):
             try:
-                strategy.execute(files)
-                if not dialog.is_stopped():
+                success = strategy.execute(files)
+                if success and not dialog.is_stopped():
                     dialog.mark_success()
                     dialog.append_entry("System", "Processing complete. You may close this window.")
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: setattr(dialog, "_stopped", True))
+                elif not dialog.is_stopped():
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
             except Exception as e:
                 import traceback

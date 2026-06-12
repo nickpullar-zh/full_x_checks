@@ -148,22 +148,68 @@ def build(config: dict):
         except PermissionError:
             shutil.rmtree(build_folder, onexc=force_remove)
 
-    # --- Build PyInstaller command (without --clean) ---
-    cmd = [
-        "pyinstaller",
-        "--onefile",
-        "--noconsole",          # suppress the black console window on Windows
-        "--splash", os.path.join(PROJECT_ROOT, "templates", "splash.png"),
-        "--name", config["name"],
-        "--add-data", "templates;templates",
-        "--add-data", "version.py;.",
+    # --- Generate spec file (enables always_on_top=False on Splash) ---
+    datas_entries = [
+        f"(r'{os.path.join(PROJECT_ROOT, 'templates')}', 'templates')",
+        f"(r'{os.path.join(PROJECT_ROOT, 'version.py')}', '.')",
     ]
-
     if config["add_test_data"]:
-        cmd += ["--add-data", "test_data;test_data"]
+        datas_entries.append(
+            f"(r'{os.path.join(PROJECT_ROOT, 'test_data')}', 'test_data')"
+        )
+    datas_str = "[\n" + ",\n".join(f"        {e}" for e in datas_entries) + "\n    ]"
 
-    cmd.append(temp_main)
+    spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
+a = Analysis(
+    [r'{temp_main}'],
+    pathex=[r'{PROJECT_ROOT}'],
+    binaries=[],
+    datas={datas_str},
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={{}},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+)
+pyz = PYZ(a.pure)
+splash = Splash(
+    r'{SPLASH_OUT}',
+    binaries=a.binaries,
+    datas=a.datas,
+    text_pos=None,
+    text_size=12,
+    minify_script=True,
+    always_on_top=False,
+)
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    splash,
+    splash.binaries,
+    [],
+    name='{config["name"]}',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+"""
+    spec_path = os.path.join(PROJECT_ROOT, f"{config['name']}.spec")
+    with open(spec_path, "w", encoding="utf-8") as f:
+        f.write(spec_content)
 
+    cmd = ["pyinstaller", spec_path]
     print(f"  [BUILD] Command: {' '.join(cmd)}")
 
     # --- Run PyInstaller ---

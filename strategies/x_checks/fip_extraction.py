@@ -30,64 +30,35 @@ _FORMULA_HEADER  = '|Formula String |'        # start of formula section
 _VAR_HEADER      = '|-Characteristic Sel Opt Attributes Node Characteristic From To |'  # start of variable section
 _FS_ACCT_BREAK   = '|-FS Account |'           # break between variable groups
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Exclusion notation pattern registry
-#
-# Each entry: (compiled_regex, replacement)
-#   replacement — plain string, or callable(match) -> str
-#
-# To add a new pattern discovered in FIP output, append one line here.
-# See docs/excl-acc-type-variants.md for the full inventory and source citations.
-#
-# Canonical forms used:
-#   excl.acc.type=N  — exclude account type N  (Family A and Family B "without" variants)
-#   (only.type=N)    — include only account type N  (Family B "only" variants)
-# ─────────────────────────────────────────────────────────────────────────────
-_EXCL_PATTERNS: list[tuple[re.Pattern, object]] = [
-
-    # ── Family A: excl.acc.type suffix ───────────────────────────────────────
-    # Position: end of variable name, after account identifier
-    # All variants → excl.acc.type=N
-    # Handles: excl/exl typo, acc/acct abbreviation, =/:/ /none separators,
-    #          single type (2) and multi-type (1,4)
-    (
-        re.compile(
-            r'exc?l'        # 'excl' or 'exl' (typo — missing 'c')
-            r'\.?\s*'
-            r'acct?'        # 'acc' or 'acct'
-            r'\.?\s*'
-            r'type'
-            r'\s*[:=]?\s*'  # optional separator: =, :, space, or nothing
-            r'([\d,]+)',    # type digit(s)/commas; leading whitespace consumed above
-            re.IGNORECASE,
-        ),
-        lambda m: f'excl.acc.type={m.group(1)}',
-    ),
-
-    # ── Family B: parenthetical annotation ───────────────────────────────────
-    # Position: mid-variable, between account name and ToM suffix
-    # Each variant has its own entry — add new ones below as discovered
-
-    # (only 2-affiliated) — include only type 2 (Affiliated); exclude all others
-    (re.compile(r'\(\s*only\s*2\s*[-–]?\s*affiliated\s*\)', re.IGNORECASE), '(only.type=2)'),
-
-    # (without 3rd party) — exclude type 1 (3rd party)
-    (re.compile(r'\(\s*without\s*3rd\s*party\s*\)',               re.IGNORECASE), '(excl.type=1)'),
-
-    # (without affiliated) — exclude type 2 (Affiliated)
-    (re.compile(r'\(\s*without\s*affiliated\s*\)',                 re.IGNORECASE), '(excl.type=2)'),
-]
-
-
-def _normalise_excl_suffix(formula: str) -> str:
+def _canonical_var_name(var_name: str, types: list[str]) -> str:
     """
-    Normalises all known FIP exclusion notation variants to canonical forms.
-    Applies every entry in _EXCL_PATTERNS in order.
-    See docs/excl-acc-type-variants.md for the full pattern inventory.
+    Replaces whatever excl notation is present in a FIP variable name with the
+    canonical form excl.acc.type=N (types sorted numerically, comma-joined).
+    Any ToM/TOM movement-type suffix after the excl notation is preserved.
+    """
+    excl_pos = var_name.lower().find('excl')
+    if excl_pos == -1:
+        return var_name
+    base = var_name[:excl_pos]
+    rest = var_name[excl_pos:]
+    tom_match = re.search(r'ToM|TOM', rest)
+    tom_part = rest[tom_match.start():] if tom_match else ''
+    suffix = 'excl.acc.type=' + ','.join(str(t) for t in sorted(types, key=int))
+    return base + suffix + tom_part
+
+
+def _build_excl_formula(formula: str, variables: dict) -> str:
+    """
+    Builds FIP Formula (Excl) by replacing each variable's messy excl notation
+    with the canonical excl.acc.type=N form derived from @2A@ Account Type rows.
+    Variables without ExclAccountTypes are left unchanged.
     """
     result = formula
-    for pattern, replacement in _EXCL_PATTERNS:
-        result = pattern.sub(replacement, result)
+    for var_data in variables.values():
+        types = var_data.get('ExclAccountTypes', [])
+        var_name = var_data['Variable']
+        if types and re.search(r'exl|excl', var_name, re.IGNORECASE):
+            result = result.replace(var_name, _canonical_var_name(var_name, types))
     return result
 
 
@@ -211,7 +182,7 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
             results.append({
                 "X-Check Number":      current_x_check,
                 "FIP Formula":         returned_x_check['Formula'],
-                "FIP Formula (Excl)":  _normalise_excl_suffix(returned_x_check['Formula']),
+                "FIP Formula (Excl)":  _build_excl_formula(returned_x_check['Formula'], returned_x_check['Variables']),
                 "FIP Variables":       str_output[:-1],
                 "FIP Variable (Builder)": build_variables_string(raw_variables),
             })
@@ -229,9 +200,10 @@ def _get_x_check_information(x_check_block: dict) -> dict:
     str_variables    = ''
     arr_fs_accounts  = []
     arr_movement_types = []
+    arr_excl_account_types = []
 
     dict_all_data    = {'Formula': '', 'Variables': {}}
-    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': [], 'ExclAccountTypes': []}
     counter = 0
 
     for line in x_check_block:
@@ -272,22 +244,26 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
+                dict_information['ExclAccountTypes'] = arr_excl_account_types
                 dict_all_data['Variables'][counter] = dict_information
                 counter += 1
                 arr_fs_accounts = []
                 arr_movement_types = []
-                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                arr_excl_account_types = []
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': [], 'ExclAccountTypes': []}
                 break
             elif 'Movement Type' not in current:
                 if current == _BLANK_LINE:
                     dict_information['Variable'] = str_variables
                     dict_information['FSAccounts'] = arr_fs_accounts
                     dict_information['MovementTypes'] = arr_movement_types
+                    dict_information['ExclAccountTypes'] = arr_excl_account_types
                     dict_all_data['Variables'][counter] = dict_information
                     counter += 1
                     arr_fs_accounts = []
                     arr_movement_types = []
-                    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                    arr_excl_account_types = []
+                    dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': [], 'ExclAccountTypes': []}
                     state = _ParseState.VARIABLE
                 else:
                     if _should_skip_line(current):
@@ -295,6 +271,8 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                     if current != _SEGMENT_END:
                         if _safe_split(current, 3) == 'FS' or _safe_split(current, 3) == 'Business':
                             arr_fs_accounts.append(_safe_split(current, 5))
+                        elif _safe_split(current, 2) == '@2A@' and _safe_split(current, 4) == 'Type':
+                            arr_excl_account_types.append(_safe_split(current, 5))
                         elif _safe_split(current, 3) == 'Account' or '@' in _safe_split(current, 3):
                             continue
                         elif 'Rev./Exp.' in _safe_split(current, 0):
@@ -316,21 +294,25 @@ def _get_x_check_information(x_check_block: dict) -> dict:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
+                dict_information['ExclAccountTypes'] = arr_excl_account_types
                 dict_all_data['Variables'][counter] = dict_information
                 counter += 1
-                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': [], 'ExclAccountTypes': []}
                 arr_fs_accounts = []
                 arr_movement_types = []
+                arr_excl_account_types = []
                 break
             elif current == _BLANK_LINE:
                 dict_information['Variable'] = str_variables
                 dict_information['FSAccounts'] = arr_fs_accounts
                 dict_information['MovementTypes'] = arr_movement_types
+                dict_information['ExclAccountTypes'] = arr_excl_account_types
                 dict_all_data['Variables'][counter] = dict_information
                 counter += 1
-                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': []}
+                dict_information = {'Variable': '', 'FSAccounts': [], 'MovementTypes': [], 'ExclAccountTypes': []}
                 arr_fs_accounts = []
                 arr_movement_types = []
+                arr_excl_account_types = []
                 state = _ParseState.VARIABLE
             elif current != _SEGMENT_END:
                 arr_movement_types.append(_safe_split(current, 3))
@@ -340,6 +322,7 @@ def _get_x_check_information(x_check_block: dict) -> dict:
         dict_information['Variable'] = str_variables
         dict_information['FSAccounts'] = arr_fs_accounts
         dict_information['MovementTypes'] = arr_movement_types
+        dict_information['ExclAccountTypes'] = arr_excl_account_types
         dict_all_data['Variables'][counter] = dict_information
 
     dict_all_data['Formula'] = str_formula

@@ -34,6 +34,36 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.13 — Fix: error returns to form instead of closing app (completed 2026-05-27)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `base_strategy.execute()`: add `return True` after successful `self.process()` call — error paths (file load errors, StopIteration) continue to return `None` | DONE | Root cause: file loading errors were caught internally and returned cleanly, so `run_processing` treated them as success and closed the app. |
+| 2 | `main.py` `run_processing` (both `_run_task` and `_run_debug`): check `if success and not dialog.is_stopped()` before marking success; add `elif not dialog.is_stopped()` branch to set button to "Return to Form" | DONE | Covers both internal errors (file load, validation) and unhandled exceptions. |
+| 3 | `version.py`: bump to `0.3.13` | DONE | |
+
+### v0.3.12 — Startup performance + moveable splash (completed 2026-05-27)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_registry.py`: replace eager `XChecks`/`GroupingBy` imports with `_lazy(module, cls)` factory — defers pandas/openpyxl/numpy import until user clicks Start | DONE | Added `if False:` import hints so PyInstaller static analysis still bundles the libraries. |
+| 2 | `build.py`: switch from `--splash` CLI flag to generated spec file; set `Splash(always_on_top=False)` — error dialogs now appear above the splash | DONE | CLI flag does not expose `always_on_top`; spec file required. |
+| 3 | `version.py`: bump to `0.3.12` | DONE | |
+
+### v0.3.10 — Superseded by v0.3.12
+
+### v0.3.9 — FIP excl extraction rewrite: structured @2A@ data (completed 2026-05-27)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `fip_extraction.py`: remove `_EXCL_PATTERNS` registry and `_normalise_excl_suffix()` — replaced by structured extraction | DONE | Regex approach was fragile and missed `excl.2-Aff` notation (AS602_60, AS603_60, LSOC_00010). |
+| 2 | `fip_extraction.py`: add `_canonical_var_name(var_name, types)` — replaces any excl notation in a variable name with canonical `excl.acc.type=N`; preserves ToM/TOM suffix | DONE | |
+| 3 | `fip_extraction.py`: add `_build_excl_formula(formula, variables)` — uses `ExclAccountTypes` from each variable to drive canonical replacement in the formula string | DONE | Replaces `_normalise_excl_suffix` call in `_parse_x_checks`. |
+| 4 | `fip_extraction.py`: `_get_x_check_information` — detect `FS Account @2A@ Account Type N description` rows in FS_ACCOUNT state; store collected types in `ExclAccountTypes` on each variable dict | DONE | Condition: `_safe_split(current, 2) == '@2A@' and _safe_split(current, 4) == 'Type'`. Inserted before existing `Account`/`@` skip. All 5 variable-boundary save/reset points updated. |
+| 5 | `tests/test_fip_extraction.py`: replace 15 `_normalise_excl_suffix` tests with 14 new tests covering `_canonical_var_name`, `_build_excl_formula`, and `ExclAccountTypes` extraction | DONE | 98 tests total, all passing. |
+| 6 | Golden fixtures regenerated — `FIP Formula (Excl)` now correct for previously-unhandled `excl.2-Aff` cases | DONE | |
+| 7 | `version.py`: bump to `0.3.9` | DONE | |
+
 ### v0.3.7 — Exclude Account Type suffix handling (completed 2026-05-26)
 
 | # | Change | Status | Notes |

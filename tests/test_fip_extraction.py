@@ -1,5 +1,19 @@
-from strategies.x_checks.fip_extraction import _safe_split, _normalise_excl_suffix
+from strategies.x_checks.fip_extraction import (
+    _safe_split,
+    _canonical_var_name,
+    _build_excl_formula,
+    _get_x_check_information,
+    _VAR_HEADER,
+    _BLANK_LINE,
+    _BLOCK_END,
+    _FORMULA_HEADER,
+    _SEPARATOR,
+)
 
+
+# ---------------------------------------------------------------------------
+# _safe_split
+# ---------------------------------------------------------------------------
 
 def test_safe_split_valid_index():
     assert _safe_split('a b c', 1) == 'b'
@@ -10,8 +24,7 @@ def test_safe_split_first_token():
 
 
 def test_safe_split_out_of_bounds_returns_default():
-    # REGRESSION: bare line.split()[5] raised IndexError on short lines;
-    # _safe_split returns default instead
+    # REGRESSION: bare line.split()[5] raised IndexError on short lines
     assert _safe_split('a b', 5) == ''
 
 
@@ -24,101 +37,151 @@ def test_safe_split_empty_line():
 
 
 def test_safe_split_extra_whitespace():
-    # split() with no args collapses whitespace — index is token-based not char-based
     assert _safe_split('  a   b  ', 1) == 'b'
 
 
 # ---------------------------------------------------------------------------
-# _normalise_excl_suffix — all 7 FIP notation variants
+# _canonical_var_name — converts any excl notation to excl.acc.type=N
 # ---------------------------------------------------------------------------
 
-def test_normalise_excl_variant1_equals_spaces():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type = 2)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=2)"
+def test_canonical_var_name_single_type():
+    # excl.acc.type2 (no = sign) → canonical
+    assert _canonical_var_name('LIN_00380excl.acc.type2', ['2']) == \
+        'LIN_00380excl.acc.type=2'
 
 
-def test_normalise_excl_variant2_equals_spaces_type1():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type = 1)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=1)"
+def test_canonical_var_name_multi_type():
+    # multi-type: types sorted numerically, comma-joined
+    assert _canonical_var_name('LIN_00380excl.acc.type:1,4', ['1', '4']) == \
+        'LIN_00380excl.acc.type=1,4'
 
 
-def test_normalise_excl_variant3_colon_space_type2():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type: 2)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=2)"
+def test_canonical_var_name_aff_notation():
+    # excl.2-Aff (previously unhandled gap) → canonical
+    assert _canonical_var_name('SLSTLSAS_11520n-lifeLOBsexcl.2-Aff', ['2']) == \
+        'SLSTLSAS_11520n-lifeLOBsexcl.acc.type=2'
 
 
-def test_normalise_excl_variant4_colon_nospace_multitype():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type:1,4)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=1,4)"
+def test_canonical_var_name_tom_preserved():
+    # TOM movement-type suffix after excl must be preserved
+    assert _canonical_var_name('LIN_00380excl.acc.type2TOML09', ['2']) == \
+        'LIN_00380excl.acc.type=2TOML09'
 
 
-def test_normalise_excl_variant5_concatenated():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380ffexcl.acc.type2)") == \
-        "VAL_YTD(LIN_00380ffexcl.acc.type=2)"
+def test_canonical_var_name_tom_camelcase_preserved():
+    assert _canonical_var_name('LIN_00380excl.acc.type=2ToML07', ['2']) == \
+        'LIN_00380excl.acc.type=2ToML07'
 
 
-def test_normalise_excl_variant6_space_separator():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type 2)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=2)"
+def test_canonical_var_name_no_excl_unchanged():
+    # Variable without any excl notation is returned unchanged
+    assert _canonical_var_name('A246', ['2']) == 'A246'
 
 
-def test_normalise_excl_variant7_acct_abbreviation():
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl.acct.type 2)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=2)"
-
-
-def test_normalise_excl_typo_exl():
-    # 'exl' (missing 'c') variant — seen in AL167_00 and AS130_00
-    assert _normalise_excl_suffix("VAL_YTD(IAN_00023exl.acc.type:2)") == \
-        "VAL_YTD(IAN_00023excl.acc.type=2)"
-
-
-def test_normalise_excl_tom_suffix_preserved():
-    # TOM movement-type tag after the excl suffix must be preserved
-    assert _normalise_excl_suffix("VAL_YTD(LIN_00380excl. acc. type: 2 TOM L09)") == \
-        "VAL_YTD(LIN_00380excl.acc.type=2 TOM L09)"
-
-
-def test_normalise_excl_no_pattern_unchanged():
-    formula = "VAL_YTD(A246)+VAL_YTD(B123)>=CONST(0,'USD','E')"
-    assert _normalise_excl_suffix(formula) == formula
+def test_canonical_var_name_types_sorted():
+    # Types should be sorted numerically — 4 before 2 in input, 1,4 in output would be wrong
+    assert _canonical_var_name('LIN_00380excl.type4,1', ['4', '1']) == \
+        'LIN_00380excl.acc.type=1,4'
 
 
 # ---------------------------------------------------------------------------
-# Family B: parenthetical annotation variants (LA003–LA006 series)
+# _build_excl_formula — replaces variable names in formula using ExclAccountTypes
 # ---------------------------------------------------------------------------
 
-def test_normalise_excl_family_b_only_2_affiliated():
-    # LA003_09 / LA004_09: (only 2-affiliated) → (only.type=2)
-    result = _normalise_excl_suffix("LC_YTD(BSN (only 2-affiliated) ToM 354ff)")
-    assert result == "LC_YTD(BSN (only.type=2) ToM 354ff)"
+def test_build_excl_formula_replaces_single_variable():
+    formula = 'ABS(VAL_YTD(IAN_00051excl.acc.type=2))>=CONST(1,'+"'USD','E')"
+    variables = {
+        0: {'Variable': 'IAN_00051excl.acc.type=2', 'ExclAccountTypes': ['2']},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'IAN_00051excl.acc.type=2' in result
 
 
-def test_normalise_excl_family_b_only_2_affiliated_spaced_variant():
-    # LA004_09 uses TOM (uppercase) and hyphen — same normalisation
-    result = _normalise_excl_suffix("LC_YTD(BSN (only 2-affiliated) TOM 670ff)")
-    assert result == "LC_YTD(BSN (only.type=2) TOM 670ff)"
+def test_build_excl_formula_fixes_aff_notation():
+    # The key gap: excl.2-Aff in formula should become excl.acc.type=2
+    formula = 'ABS(VAL_YTD(SLSTlLSAS_11520excl.2-Aff))'
+    variables = {
+        0: {'Variable': 'SLSTlLSAS_11520excl.2-Aff', 'ExclAccountTypes': ['2']},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'excl.acc.type=2' in result
+    assert 'excl.2-Aff' not in result
 
 
-def test_normalise_excl_family_b_without_3rd_party():
-    # LA003_09 / LA004_09 / LA006_09: (without 3rd party) → (excl.type=1)
-    result = _normalise_excl_suffix("LC_YTD(SN_12895ff (without 3rd party) ToM 660ff)")
-    assert result == "LC_YTD(SN_12895ff (excl.type=1) ToM 660ff)"
+def test_build_excl_formula_no_excl_types_unchanged():
+    formula = 'VAL_YTD(A246)+VAL_YTD(B123)>=CONST(0,'+"'USD','E')"
+    variables = {
+        0: {'Variable': 'A246', 'ExclAccountTypes': []},
+        1: {'Variable': 'B123', 'ExclAccountTypes': []},
+    }
+    assert _build_excl_formula(formula, variables) == formula
 
 
-def test_normalise_excl_family_b_without_affiliated():
-    # LA005_09: (without affiliated) → (excl.type=2); slash separator preserved
-    result = _normalise_excl_suffix("LC_YTD(SN_12895ff(without affiliated)/ToM 660ff)")
-    assert result == "LC_YTD(SN_12895ff(excl.type=2)/ToM 660ff)"
+def test_build_excl_formula_multi_type():
+    formula = 'ABS(VAL_YTD(LIN_00380excl.acc.type:1,4TOML09))'
+    variables = {
+        0: {'Variable': 'LIN_00380excl.acc.type:1,4TOML09', 'ExclAccountTypes': ['1', '4']},
+    }
+    result = _build_excl_formula(formula, variables)
+    assert 'excl.acc.type=1,4' in result
+    assert 'TOML09' in result
 
 
-def test_normalise_excl_family_b_tom_and_surrounding_text_preserved():
-    # Confirm nothing outside the annotation is changed
-    result = _normalise_excl_suffix(
-        "ABS(LC_YTD(28832)+LC_YTD(BSN (only 2-affiliated) TOM 670ff)"
-        "-LC_YTD(SN_12895ff (without 3rd party) ToM 670ff))<=CONST(5,'USD','E')"
+# ---------------------------------------------------------------------------
+# _get_x_check_information — ExclAccountTypes captured from @2A@ rows
+# ---------------------------------------------------------------------------
+
+def _make_block(*lines):
+    """Helper: dict[int, str] from a sequence of lines."""
+    return {i: line for i, line in enumerate(lines)}
+
+
+def test_get_x_check_information_excl_account_types_single():
+    # Variable with one @2A@ Account Type row → ExclAccountTypes=['2']
+    block = _make_block(
+        _FORMULA_HEADER,
+        'VAL_YTD(IAN_00051excl.acc.type=2)',
+        _BLOCK_END,
+        _VAR_HEADER,
+        'IAN_00051excl.acc.type=2',
+        _BLANK_LINE,
+        '|-FS Account @2A@ Account Type 2 affiliated |',
+        _BLOCK_END,
     )
-    assert "(only.type=2)" in result
-    assert "(excl.type=1)" in result
-    assert "LC_YTD(28832)" in result
-    assert "CONST(5,'USD','E')" in result
+    result = _get_x_check_information(block)
+    var = result['Variables'][0]
+    assert var['ExclAccountTypes'] == ['2']
+
+
+def test_get_x_check_information_excl_account_types_multi():
+    # Variable with two @2A@ Account Type rows → ExclAccountTypes=['1','4']
+    block = _make_block(
+        _FORMULA_HEADER,
+        'VAL_YTD(LIN_00380excl.acc.type:1,4)',
+        _BLOCK_END,
+        _VAR_HEADER,
+        'LIN_00380excl.acc.type:1,4',
+        _BLANK_LINE,
+        '|-FS Account @2A@ Account Type 1 3rd party |',
+        '|-FS Account @2A@ Account Type 4 linked |',
+        _BLOCK_END,
+    )
+    result = _get_x_check_information(block)
+    var = result['Variables'][0]
+    assert var['ExclAccountTypes'] == ['1', '4']
+
+
+def test_get_x_check_information_no_excl_account_types():
+    # Normal variable with no @2A@ Account Type rows → ExclAccountTypes=[]
+    block = _make_block(
+        _FORMULA_HEADER,
+        'VAL_YTD(A246)+VAL_YTD(B123)',
+        _BLOCK_END,
+        _VAR_HEADER,
+        'A246',
+        _BLANK_LINE,
+        _BLOCK_END,
+    )
+    result = _get_x_check_information(block)
+    var = result['Variables'].get(0, {})
+    assert var.get('ExclAccountTypes', []) == []

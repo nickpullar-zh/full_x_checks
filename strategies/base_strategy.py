@@ -56,6 +56,7 @@ class BaseStrategy(ABC):
                 self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
             self.process(loaded_files, files)
+            return True
 
         except StopIteration:
             # User pressed Stop — log it, then return cleanly
