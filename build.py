@@ -22,6 +22,13 @@ VERSION = f"v{__version__}"
 # ==========================================
 BUILDS = [
     {
+        "key":         "ap",
+        "name":        f"X-Checks_Debug_AccountingPrinciples_{VERSION}",
+        "debug_mode":  True,
+        "debug_task":  "Accounting Principles",
+        "add_test_data": True,
+    },
+    {
         "key":         "prod",
         "name":        f"X-Checks_{VERSION}",
         "debug_mode":  False,
@@ -154,7 +161,12 @@ def build(config: dict):
     # PyInstaller's static analyser cannot see them. Each strategy branch
     # extends this list with its own modules. The infra `main` branch ships
     # an empty list because no strategies are registered.
-    hidden_imports: list[str] = []
+    hidden_imports: list[str] = [
+        "strategies.accounting_principles",
+        "strategies.accounting_principles.accounting_principles",
+        "strategies.accounting_principles.validation_methods",
+        "strategies.accounting_principles.compare",
+    ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 
     spec_content = f"""# -*- mode: python ; coding: utf-8 -*-

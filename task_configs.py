@@ -1,17 +1,31 @@
 """
 Per-strategy file-upload configurations.
 
-This file lives on the infrastructure (`main`) branch with no entries — each
-strategy branch (e.g. v0.3-X-Checks, v0.5-Accounting-Principles) adds its own
-UploadTaskConfig and registers it in task_registry.py.
+This branch (v0.5-Accounting-Principles) registers exactly one strategy:
+Accounting Principles. Other strategies live on their own branches.
 """
-from file_upload_config import UploadTaskConfig, FileFieldConfig  # noqa: F401
+from file_upload_config import UploadTaskConfig, FileFieldConfig
 
-# Each strategy branch adds its own config here, e.g.:
-#
-# X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
-#     task_name="X-Checks",
-#     window_title="X-Check Files",
-#     requires_output_directory=True,
-#     file_fields=[...],
-# )
+
+ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="Accounting Principles",
+    window_title="Accounting Principles Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="Validation Methods File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The 'validation methods.xlsx' template — sheet 'Validation Methods', "
+                        "with Validation Events in row 1 and the current period block in rows 4–6.",
+            default_sheet="Validation Methods",
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="EBX file containing both the 'cross checks all' sheet and the "
+                        "'FIP Methods Rules and Condition' sheet (the VALMSG dump). "
+                        "The strategy reads both sheets from this single file.",
+            default_sheet="cross checks all",
+        ),
+    ],
+)

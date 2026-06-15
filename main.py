@@ -36,10 +36,24 @@ DEBUG_FILES = {
     "process_only_differences": False,
 }
 
+DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
+    "files": {
+        "Validation Methods File":   os.path.join(_BASE, "test_data", "validation methods.xlsx"),
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+    },
+    "sheet_names": {
+        "Validation Methods File":   "Validation Methods",
+        "X-Checks Publication File": "cross checks all",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
 # Maps each task name to its debug file config — build.py patches DEBUG_TASK per build.
-# Each strategy branch adds its own entry here.
-DEBUG_TASK = ""  # ← patched by build.py to match a key in TASK_REGISTRY
-_DEBUG_FILES_MAP: dict = {}
+DEBUG_TASK = "Accounting Principles"  # ← patched by build.py to match a key in TASK_REGISTRY
+_DEBUG_FILES_MAP: dict = {
+    "Accounting Principles": DEBUG_FILES_ACCOUNTING_PRINCIPLES,
+}
 
 
 def _register_fonts():

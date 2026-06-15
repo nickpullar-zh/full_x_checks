@@ -45,6 +45,23 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.0 — Accounting Principles strategy (completed 2026-06-15, branch v0.5-Accounting-Principles)
+
+First release of the Accounting Principles task. Compares the severity letter recorded for each X-Check on the EBX `cross checks all` sheet against the W/E recorded in `FIP Methods Rules and Condition` (the VALMSG dump), guided by a `Validation Methods` workbook that defines which methods correspond to which Validation Events.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | New strategy `strategies/accounting_principles/` with three modules: `validation_methods.py` (parser for the validation methods xlsx), `compare.py` (FIP-gated comparator + match table), `accounting_principles.py` (`AccountingPrinciples(BaseStrategy)`). | DONE | Pipeline: parse Validation Methods → load `cross checks all` (header row 2) → load `FIP Methods Rules and Condition` from same workbook → walk FIP, emit one row per (X-Check, Event, Method) where the X-Check letter is non-empty and a FIP row exists. Match if FIP letter (W/E) == cross-checks-all letter (w/e). |
+| 2 | Match rules: `Warning↔w`, `Error↔e`, `Both↔(w or e)` — Both events use whichever methods (warning-row or error-row) match the actual letter. Empty actual → no row. | DONE | Both-events with the same method in both row groups don't double-count. |
+| 3 | `task_configs.py`: `ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG` with two file fields (Validation Methods File, X-Checks Publication File). FIP Methods Rules and Condition is read from the SAME workbook as the X-Checks Publication File so the user only picks the file once. | DONE | Strategy reads cross-checks-all with `header=1` directly (BaseStrategy's `_load_files` defaults to `header=0`, which is wrong for this sheet). |
+| 4 | `task_registry.py`: register `Accounting Principles` task; add lazy-import factory and PyInstaller hint. | DONE | |
+| 5 | `build.py`: new `BUILDS` entry `ap` for the debug build (`X-Checks_Debug_AccountingPrinciples_v<ver>`); add accounting_principles submodules to `hidden_imports`. | DONE | |
+| 6 | `main.py`: `DEBUG_FILES_ACCOUNTING_PRINCIPLES` dict; `_DEBUG_FILES_MAP` registers it under `Accounting Principles`. `DEBUG_TASK` defaults to `Accounting Principles` on this branch. | DONE | |
+| 7 | `test_data/`: copy reference fixtures `validation methods.xlsx` and `20260602 VALMSG (Accounting Principle).xlsx` for debug builds. | DONE | |
+| 8 | `tests/test_accounting_principles.py`: 18 unit tests covering `_extract_method_codes`, `parse_validation_methods` (Warning-only, Error-only, independent W+E, Both-via-merged-cell, dash-as-blank, subset filter), and `compare` (Match, MisMatch, FIP-missing-no-row, actual-empty-no-row, Both-w, Both-e, no-double-count, out-of-scope-xcheck filtered). | DONE | All 18 passing. |
+| 9 | `version.py`: bump to `0.5.0` (first release of v0.5 line). | DONE | |
+| - | UI multi-select + persistence to `%APPDATA%/X-Checks/accounting_principles.json` for the Validation Events subset. | DEFERRED | v0.5.0 ships with the 27-event default hardcoded; v0.5.1 adds the form-driven multi-select. |
+
 ### v0.4.6 — Infrastructure refresh on main (completed 2026-06-15)
 
 This commit ports every infrastructure improvement made on the v0.3 / v0.4 branches between v0.3.5 and v0.4.6 onto `main`, while stripping all strategy code (X-Checks, Grouping By, accounting/conditions stubs, their tests, their UAT artefacts). Strategy branches stay where they are; future strategies branch from this clean infra `main`.
