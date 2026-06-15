@@ -133,11 +133,80 @@ PLAN_ROWS = [
      "Restart, select EBX = 20260313 Cross Checks All.xlsx and FIP = 20260318 FIP X-Checks.txt. "
      "Run.",
      "New comparison file produced. Output structure identical to first pair. No crashes."),
+
+    # =========================================================================
+    # v0.4.x — Collect Live X-Checks task
+    # =========================================================================
+    ("Collect Live X-Checks Process Starts",
+     'Re-launch the app, choose "Collect Live X-Checks" in the dropdown\nClick "Start"',
+     '"Collect Live X-Checks" dialog appears with only two fields: '
+     'X-Checks Publication File * and Output Directory *.'),
+
+    ("",
+     'Verify "Collect Live X-Checks" is the FIRST entry in the dropdown',
+     'Application Selector dropdown order: Collect Live X-Checks, X-Checks, '
+     'X-Checks Grouping By.'),
+
+    ('Collect Live process "X-Checks Publication file" upload',
+     'Click on "Browse" button in "X-Checks Publication file" row.\n'
+     'Select "20260313 Cross Checks All.xlsx"\nClick "Open"',
+     '"20260313 Cross Checks All.xlsx" appears in the row. Sheet name '
+     'becomes active and is populated with "cross checks all".'),
+
+    ('Collect Live process "Output Directory"',
+     'Click "Browse" next to Output Directory; pick a folder; click "Select Folder"',
+     'Folder path appears. "Proceed" button is now active.'),
+
+    ("Run Collect Live X-Checks",
+     'Click "Proceed"',
+     "Dialog disappears. Progress dialog opens."),
+
+    ("", "",
+     'Log shows:\n'
+     '  [System] X-Check Application v{ver}\n'
+     '  [System] Loading files into memory...\n'
+     '  [System] Files loaded successfully\n'
+     '  [System] Starting Collect Live X-Checks\n'
+     '  [Collect] Wrote <timestamp>_X-Check_Nos.txt\n'
+     '  [Collect] Copied to clipboard'),
+
+    ("Verify .txt output file",
+     'Open the chosen Output Directory and locate '
+     '<timestamp>_X-Check_Nos.txt. Open it in Notepad.',
+     'File contains one X-Check Number per line, in order of first appearance, '
+     'with no duplicates. Rows where Status = INACTIVE, Type of Change is blank, '
+     'Exclude Z-Core = X, or Category cell is yellow are NOT in the file.'),
+
+    ("Verify clipboard contents",
+     "Open Excel/Notepad. Press Ctrl+V to paste.",
+     "Same X-Check Numbers as the .txt, one per line. Identical content."),
+
+    ("Close progress dialog",
+     'Click "Close"',
+     "App exits cleanly."),
+
+    # =========================================================================
+    # v0.4.3–v0.4.5 — Error visibility + exit options
+    # =========================================================================
+    ("Error styling: bold red + chime",
+     'Re-launch. Choose Collect Live X-Checks. Pick an EBX file that is currently OPEN '
+     'in Excel (so pandas cannot read it). Click Proceed.',
+     'Progress log line "[System] Error loading files: ..." appears in BOLD RED. '
+     'A Windows error chime ("bonk") plays at the same time.'),
+
+    ("Exit Application button",
+     'After the error above, two buttons are visible at the bottom of the progress '
+     'dialog: "Return to Form" and "Exit Application". Click "Exit Application".',
+     "App exits cleanly. No file selection form is shown."),
+
+    ("Exit Application button visible during a healthy run",
+     "Re-launch and start any task. Observe the progress dialog while it runs.",
+     '"Exit Application" button is visible alongside the Stop button at all times.'),
 ]
 
 
 def write_test_plan(ws, version):
-    ws.title = "Sheet1"
+    ws.title = "Instructions"
     ws.sheet_view.showGridLines = False
 
     # Lead-in (top of sheet)
@@ -149,6 +218,9 @@ def write_test_plan(ws, version):
     ws["B3"].font = NARRATIVE_FONT
     ws["B4"] = "Validate Files"
     ws["B4"].font = NARRATIVE_FONT
+    ws["B5"] = ("Collect Live X-Checks task — produces .txt of in-scope X-Check Nos "
+                "and copies to clipboard")
+    ws["B5"].font = NARRATIVE_FONT
 
     # Test Plan section
     ws["A6"] = "Test Plan"
@@ -196,6 +268,9 @@ FILES_ROWS = [
     ("X-Checks", "Known Exception List",
      "Known_Exception_List.xlsx",
      "Known Exceptions", "No"),
+    ("Collect Live X-Checks", "X-Checks Publication File (EBX)",
+     "20260313 Cross Checks All.xlsx",
+     "cross checks all", "Yes"),
 ]
 
 # General UI and Dialog Behavior test cases (Test/Action/Expected/Tested By/Date/Result)
@@ -230,6 +305,34 @@ GENERAL_UI_CASES = [
     ("Proceed button initial state",
      "Open the X-Checks dialog and observe the Proceed button.",
      "Proceed button is visible and disabled until all required fields are filled."),
+
+    # ---- v0.4.x additions ------------------------------------------------------
+    ("Dropdown order — Collect Live X-Checks first",
+     "Open the Application Selector dropdown.",
+     "Dropdown lists tasks in this order: Collect Live X-Checks, X-Checks, "
+     "X-Checks Grouping By."),
+
+    ("Progress dialog has Exit Application button",
+     "Run any task. While the progress dialog is open, look at the bottom button bar.",
+     'Two buttons are visible: the existing Stop / Close / Return to Form button '
+     'AND a permanent "Exit Application" button to its right.'),
+
+    ("Exit Application button shuts down everything",
+     'Click "Exit Application" while a run is in progress (or after it errors).',
+     "App exits immediately. No further dialogs appear. The Application Selector "
+     "is also closed."),
+
+    ("Error log lines styled bold red",
+     "Trigger an error (e.g. supply an EBX file that is open in Excel). Observe the "
+     "progress dialog log.",
+     "Lines containing 'error', 'failed', 'failure', 'exception' or 'traceback' "
+     "(case-insensitive) appear in BOLD RED. Non-error lines remain in the default "
+     "dark-blue Courier."),
+
+    ("Error chime plays on error log line",
+     "Trigger any error (audio on).",
+     "Standard Windows critical-stop chime plays at the moment the red line is "
+     "added to the log."),
 ]
 
 # Detailed Field Interaction
@@ -327,6 +430,53 @@ WORKFLOW_CASES = [
     ("X-Checks", "Pair 2 regression",
      "Run with 20260313 + 20260318 inputs.",
      "Output produced with same structure. No crashes, no missing X-Checks."),
+
+    # ---- Collect Live X-Checks -------------------------------------------------
+    ("Collect Live X-Checks", "Smoke run — full pipeline",
+     "Pick Collect Live X-Checks. Use 20260313 Cross Checks All.xlsx. Output dir = "
+     "anywhere writable. Click Proceed.",
+     "Progress log shows '[Collect] Wrote ..._X-Check_Nos.txt' and '[Collect] "
+     "Copied to clipboard'. .txt file exists in the output folder. Ctrl+V into "
+     "Notepad pastes the same list."),
+
+    ("Collect Live X-Checks", ".txt content matches selection rules",
+     "Open the .txt produced above. Spot-check 5 X-Check Nos against the source "
+     "Cross Checks All sheet.",
+     "Each X-Check in the .txt has at least one row with Status = ACTIVE and a "
+     "non-blank Type of Change. None have any row with Exclude Z-Core = X. None "
+     "have a yellow (#FFFF00) Category cell."),
+
+    ("Collect Live X-Checks", "INACTIVE rows filtered out",
+     "Pick a known X-Check from the source whose only rows are Status = INACTIVE.",
+     "That X-Check Number does NOT appear in the output .txt or on the clipboard."),
+
+    ("Collect Live X-Checks", "Exclude Z-Core filter",
+     "Pick an X-Check from the source where any active row has Exclude Z-Core = X.",
+     "That X-Check Number does NOT appear in the output."),
+
+    ("Collect Live X-Checks", "Yellow Category filter",
+     "Pick an X-Check whose Category cell is filled with standard Excel yellow #FFFF00.",
+     "That X-Check Number does NOT appear in the output."),
+
+    ("Collect Live X-Checks", "Order is first-occurrence, no duplicates",
+     "Inspect the .txt: confirm an X-Check that appears multiple times in the source "
+     "appears exactly once, in the order of its first occurrence.",
+     "One line per unique X-Check, source-order preserved."),
+
+    ("Collect Live X-Checks", "Case-insensitive column headers",
+     "Optional: clone the EBX file and rename headers to mixed case (e.g. 'status', "
+     "'Type of change', 'EXCLUDE Z-CORE', 'category'). Run the task on the clone.",
+     "Output identical to the original — header lookup is case-insensitive."),
+
+    ("Collect Live X-Checks", "Error visibility — file open in Excel",
+     "Open the EBX file in Excel. Run Collect Live X-Checks against it.",
+     "Log line '[System] Error loading files: ... [Errno 13] Permission denied: ...' "
+     "appears in BOLD RED, error chime plays. No .txt is written and the clipboard "
+     "is unchanged."),
+
+    ("Collect Live X-Checks", "Exit cleanly with Exit Application",
+     "After a successful run, click Exit Application instead of Close.",
+     "App exits immediately. .txt remains on disk."),
 ]
 
 
@@ -355,7 +505,7 @@ def write_section_row(ws, row, values, n_cols):
 
 
 def write_sheet2(ws, version):
-    ws.title = "Sheet2"
+    ws.title = "UAT Tests"
     ws.sheet_view.showGridLines = False
 
     # Files Required
@@ -412,7 +562,7 @@ def write_sheet2(ws, version):
 def main():
     wb = Workbook()
     write_test_plan(wb.active, __version__)
-    write_sheet2(wb.create_sheet("Sheet2"), __version__)
+    write_sheet2(wb.create_sheet("UAT Tests"), __version__)
 
     out_dir = os.path.dirname(os.path.abspath(__file__))
     today = date.today().strftime("%Y%m%d")

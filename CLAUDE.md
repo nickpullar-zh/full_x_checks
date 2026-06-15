@@ -22,6 +22,16 @@
 
 ## Change Log
 
+### v0.4.6 — UAT plan extended for Collect Live X-Checks + error UX (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_uat.py`: extend `PLAN_ROWS` with a Collect Live X-Checks walkthrough block (dropdown selection, file uploads, .txt verification, clipboard verification, exit) and an error-UX block (bold-red styling, error chime, Exit Application button). | DONE | Continuation rows used so each step's multiple expected outcomes line up cleanly. |
+| 2 | Extend `FILES_ROWS` with the Collect Live X-Checks `CaseUI`. | DONE | |
+| 3 | Extend `GENERAL_UI_CASES` with 5 new cases: dropdown order, Exit Application button presence + behaviour, bold-red error styling, error chime. | DONE | |
+| 4 | Extend `WORKFLOW_CASES` with 9 Collect Live X-Checks cases: smoke run, .txt content, INACTIVE filter, Exclude Z-Core filter, yellow Category filter, order/dedup, case-insensitive headers, error visibility, Exit Application. | DONE | |
+| 5 | New artefact: `docs/20260615 X-Checks_v0.4.6 Test Plan.xlsx`. | DONE | Re-runnable via `python docs/generate_uat.py` whenever the version bumps. |
+
 ### v0.4.6 — Clipboard fix (Win32) + reorder dropdown (completed 2026-06-15)
 
 | # | Change | Status | Notes |
