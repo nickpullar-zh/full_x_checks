@@ -94,13 +94,14 @@ class BaseStrategy(ABC):
     # Excel output utilities — available to all strategies
     # -------------------------------------------------------------------------
 
-    def build_output_path(self, output_directory: str, label: str, timestamp: str) -> str:
+    def build_output_path(self, output_directory: str, label: str, timestamp: str,
+                          extension: str = ".xlsx") -> str:
         """
         Builds a safe, timestamped output file path from a label.
         Replaces characters that are invalid in Windows filenames.
         """
         safe_label = re.sub(r'[<>:"/\\|?*()]', '_', label)
-        filename = f"{timestamp}_{safe_label}.xlsx"
+        filename = f"{timestamp}_{safe_label}{extension}"
         return os.path.join(output_directory, filename)
 
     def set_progress_dialog(self, dialog):
@@ -247,7 +248,7 @@ class BaseStrategy(ABC):
                         return None
 
                     if self.process_only_differences:
-                        df = self._filter_coloured_rows(df, path, sheet)
+                        df = self._filter_changed_rows(df, path, sheet)
 
                     loaded[label] = df
 
@@ -281,34 +282,54 @@ class BaseStrategy(ABC):
             
         return loaded
 
-    def _filter_coloured_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
-        """
-        Uses openpyxl to detect rows with any background fill colour,
-        then filters the DataFrame to those rows only.
+    # Column name in EBX Cross Checks All sheet flagging changed X-Checks.
+    # Any non-blank value (case-insensitive of the cell content) marks the row as changed.
+    _CHANGE_FLAG_COLUMN = "Type of change"
 
-        NOTE: This loads the workbook a second time (first load is via pd.read_excel).
-        This trade-off keeps data loading and colour detection cleanly separated.
-        If performance becomes an issue with large files, consider loading openpyxl
-        first and extracting both data and colours in a single pass.
+    def _filter_changed_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
         """
+        Returns rows that are either coloured (background fill on any cell) OR
+        have a non-blank value in the 'Type of change' column. The two sets are
+        unioned and de-duplicated, preserving the original row order.
+
+        Falls back to the full DataFrame if both detection paths fail.
+        """
+        coloured_idx = self._coloured_row_indices(filepath, sheet_name)
+        flag_idx     = self._change_flag_row_indices(df)
+
+        union_idx = sorted(set(coloured_idx) | set(flag_idx))
+
+        if not union_idx:
+            self.log_step(self.log, os.path.basename(filepath),
+                          "No changed rows found — returning empty DataFrame", 0)
+            return df.iloc[[]]
+
+        filtered = df.iloc[union_idx].reset_index(drop=True)
+        self.log_step(self.log, os.path.basename(filepath),
+                      "Changed rows retained", len(filtered),
+                      notes=(f"Filtered from {len(df)} total rows "
+                             f"(coloured={len(coloured_idx)}, "
+                             f"flag={len(flag_idx)})"))
+        return filtered
+
+    def _coloured_row_indices(self, filepath: str, sheet_name: str) -> list[int]:
+        """Returns 0-based DataFrame row indices for rows whose Excel cells have any fill colour."""
         ext = os.path.splitext(filepath)[1].lower()
         if ext != ".xlsx":
-            #print(f"  [process_only_differences] Skipping colour filter for {os.path.basename(filepath)} — .xls not supported by openpyxl")
-            self.log_step(self.log, os.path.basename(filepath), "Colour filter skipped — .xls not supported by openpyxl", 0)
-            return df
+            self.log_step(self.log, os.path.basename(filepath),
+                          "Colour filter skipped — .xls not supported by openpyxl", 0)
+            return []
 
         try:
             wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
             ws = wb[sheet_name]
         except Exception as e:
-            # Non-fatal: fall back to full dataset if colour detection fails
             self.log_step(self.log, os.path.basename(filepath),
-                        "Colour filter failed — using full dataset", len(df),
-                        notes=str(e))
-            return df
+                          "Colour filter failed — falling back to flag column only", 0,
+                          notes=str(e))
+            return []
 
-        coloured_row_indices = []
-
+        indices: list[int] = []
         for row in ws.iter_rows(min_row=2):
             for cell in row:
                 fill = cell.fill
@@ -317,20 +338,21 @@ class BaseStrategy(ABC):
                     and fill.fgColor.type != "auto"
                 ):
                     if cell.row is not None:
-                        coloured_row_indices.append(cell.row - 2)
+                        indices.append(cell.row - 2)
                     break
-
         wb.close()
+        return indices
 
-        if not coloured_row_indices:
-            self.log_step(self.log, os.path.basename(filepath), "No coloured rows found — returning empty DataFrame", 0)
-            return df.iloc[[]]
-
-        filtered = df.iloc[coloured_row_indices].reset_index(drop=True)
-        self.log_step(self.log, os.path.basename(filepath),
-                "Coloured rows retained", len(filtered),
-                notes=f"Filtered from {len(df)} total rows") 
-        return filtered
+    def _change_flag_row_indices(self, df: pd.DataFrame) -> list[int]:
+        """
+        Returns 0-based DataFrame row indices for rows whose 'Type of change'
+        column has any non-blank value.
+        """
+        if self._CHANGE_FLAG_COLUMN not in df.columns:
+            return []
+        col = df[self._CHANGE_FLAG_COLUMN].astype(str).str.strip()
+        mask = ~col.isin(("", "nan", "None"))
+        return df.index[mask].tolist()
 
     def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
         """

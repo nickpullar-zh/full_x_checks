@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from strategies.base_strategy import BaseStrategy, UploadTaskConfig
 from .ebx_extraction import extract_ebx
@@ -12,6 +13,12 @@ class XChecks(BaseStrategy):
 
     def process(self, loaded_files: dict, files: dict):
         self.log_step(self.log, "System", "Starting X-Checks processing", 0)
+
+        # 0. X-Check No Selection — write the list of changed X-Check Nos to a .txt
+        #    file the user can paste into FIP. Only runs when "Process only differences"
+        #    is enabled, since otherwise every X-Check would be listed.
+        if self.process_only_differences:
+            self._write_x_check_no_list(loaded_files, files)
 
         # 1. Load GCoA QU accounts (optional)
         qu_accounts: set = set()
@@ -84,6 +91,40 @@ class XChecks(BaseStrategy):
             sheets={"X-Checks Comparison": df_comparison},
             log=self.log,
         )
+
+    def _write_x_check_no_list(self, loaded_files: dict, files: dict) -> None:
+        """
+        Writes the unique X-Check Nos (from the already-filtered EBX DataFrame) to
+        <timestamp>_X-Check_Nos.txt in the chosen output directory, one per line.
+        Order of first occurrence is preserved.
+        """
+        ebx_df = loaded_files.get("X-Checks Publication File")
+        if ebx_df is None or "X-Check No." not in ebx_df.columns:
+            self.log_step(self.log, "X-Check No Selection",
+                          "Skipped — EBX missing 'X-Check No.' column", 0)
+            return
+
+        seen: set = set()
+        ordered: list[str] = []
+        for raw in ebx_df["X-Check No."].tolist():
+            val = str(raw).strip()
+            if val in ("", "nan", "None") or val in seen:
+                continue
+            seen.add(val)
+            ordered.append(val)
+
+        if not ordered:
+            self.log_step(self.log, "X-Check No Selection", "No changed X-Check Nos to write", 0)
+            return
+
+        out_path = self.build_output_path(
+            files["output_directory"], "X-Check_Nos", files["timestamp"], extension=".txt"
+        )
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(ordered))
+        self.log_step(self.log, "X-Check No Selection",
+                      f"Wrote {os.path.basename(out_path)}", len(ordered),
+                      notes=out_path)
 
     def _load_known_exceptions(self, path: str) -> dict:
         """

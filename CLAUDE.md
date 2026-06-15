@@ -22,17 +22,18 @@
 
 ## Change Log
 
-### v0.4.0 — X-Check No Selection (in progress, branch v0.4-X-Check-No-Selection)
+### v0.4.0 — X-Check No Selection (completed 2026-06-15, branch v0.4-X-Check-No-Selection)
 
-A pre-filter step that extracts the list of *changed* X-Check Nos from the EBX `cross checks all` sheet so the user can paste it into FIP (limiting the FIP export to a manageable size).
+A pre-filter step that extracts the list of *changed* X-Check Nos from the EBX `cross checks all` sheet so the user can paste it into FIP (limiting the FIP export to a manageable size). The filter is driven by the existing **Process only differences** checkbox.
 
 | # | Change | Status | Notes |
 |---|--------|--------|-------|
 | 1 | Branch from `v0.3-X-Checks`; push `v0.4-X-Check-No-Selection` to origin | DONE | |
 | 2 | `version.py`: bump to `0.4.0` | DONE | |
-| 3 | Extend `process_only_differences` filtering to include text-flag column matching alongside the existing coloured-row check; union the two row sets | PROPOSED | Awaiting column header + accepted value(s) from Nick. |
-| 4 | Derive unique X-Check Nos from the filtered EBX rows (order of first occurrence) and write to `<timestamp>_X-Check_Nos.txt` in the output directory | PROPOSED | One X-Check No per line, ready to paste into FIP. |
-| 5 | Unit tests: column-value match, colour match, union/dedup, order preservation, .txt format | PROPOSED | |
+| 3 | `base_strategy.py`: rename `_filter_coloured_rows` → `_filter_changed_rows`; split detection into `_coloured_row_indices` (existing logic) + `_change_flag_row_indices` (new — non-blank `Type of change` column). Union the two index sets, preserve order. | DONE | Module constant `_CHANGE_FLAG_COLUMN = "Type of change"`. Missing column / non-xlsx files fall through gracefully. |
+| 4 | `x_checks.py`: when `process_only_differences` is on, write unique X-Check Nos from the filtered EBX DataFrame to `<timestamp>_X-Check_Nos.txt` (one per line, order of first occurrence). Logged in processing log. | DONE | `_write_x_check_no_list` runs at the start of `process()` so the .txt is produced even if downstream comparison aborts. |
+| 5 | `base_strategy.build_output_path`: add optional `extension=".xlsx"` kwarg so the same helper can produce `.txt` paths. | DONE | Backwards-compatible; existing callers unchanged. |
+| 6 | `tests/test_change_filter.py`: 8 new tests covering `_change_flag_row_indices` (non-blank picks, nan-string handling, missing column, all-blank) and `_write_x_check_no_list` (order preservation, blanks skipped, no-data, missing column). | DONE | 123 passing. |
 
 ### v0.3.1 — Post-Parity Improvements (in progress)
 
