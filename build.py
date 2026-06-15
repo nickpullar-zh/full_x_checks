@@ -159,13 +159,30 @@ def build(config: dict):
         )
     datas_str = "[\n" + ",\n".join(f"        {e}" for e in datas_entries) + "\n    ]"
 
+    # Explicit hidden imports: the lazy `_lazy(module, cls)` factory in
+    # task_registry.py defers strategy imports to runtime, so PyInstaller's
+    # static analyser cannot see them. List them here so they get bundled.
+    hidden_imports = [
+        "strategies.x_checks",
+        "strategies.x_checks.x_checks",
+        "strategies.x_checks.ebx_extraction",
+        "strategies.x_checks.fip_extraction",
+        "strategies.x_checks.compare",
+        "strategies.x_checks.variable_builder",
+        "strategies.x_checks.x_check_no_selection",
+        "strategies.collect_live_x_checks",
+        "strategies.collect_live_x_checks.collect_live_x_checks",
+        "strategies.grouping_by",
+    ]
+    hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
+
     spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
 a = Analysis(
     [r'{temp_main}'],
     pathex=[r'{PROJECT_ROOT}'],
     binaries=[],
     datas={datas_str},
-    hiddenimports=[],
+    hiddenimports={hidden_str},
     hookspath=[],
     hooksconfig={{}},
     runtime_hooks=[],

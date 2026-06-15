@@ -22,6 +22,14 @@
 
 ## Change Log
 
+### v0.4.3 — Bold-red error styling in processing log (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: configure a `error` text-tag (foreground `#C00000`, bold Courier 9). In `append_entry` detect error lines via keyword scan over `file`/`step`/`notes` (`error`, `failed`, `failure`, `exception`, `traceback`); pass an `is_error` flag through to `_write_line`. | DONE | Threshold is intentionally loose — false positives like a step containing the word "failure" are preferable to silently passing real errors. |
+| 2 | `_write_line` applies the `error` tag when `is_error=True`. | DONE | |
+| 3 | `version.py`: bump to `0.4.3` | DONE | |
+
 ### v0.4.2 — Collect Live X-Checks task + clipboard output (completed 2026-06-15)
 
 | # | Change | Status | Notes |

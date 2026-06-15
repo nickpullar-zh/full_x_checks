@@ -75,6 +75,12 @@ class ProgressDialog:
         )
         self.text_area.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=self.text_area.yview)
+        # Bold red highlighting for error / exception lines.
+        self.text_area.tag_configure(
+            "error",
+            foreground="#C00000",
+            font=("Courier", 9, "bold"),
+        )
 
         # --- Stop / Close button ---
         btn_frame = ttk.Frame(outer_frame)
@@ -125,10 +131,13 @@ class ProgressDialog:
     # Public interface — called from background thread
     # =========================================================
 
+    _ERROR_KEYWORDS = ("error", "failed", "failure", "exception", "traceback")
+
     def append_entry(self, file: str, step: str, count: int = 0, notes: str = ""):
         """
         Thread-safe method to append a log line to the text area.
         Uses root.after() to marshal the update onto the main thread.
+        Lines whose file or step indicate an error are styled bold red.
         """
         line = f"[{file}]  {step}"
         if count:
@@ -137,12 +146,18 @@ class ProgressDialog:
             line += f"  — {notes}"
         line += "\n"
 
-        self.root.after(0, self._write_line, line)
+        haystack = f"{file} {step} {notes}".casefold()
+        is_error = any(kw in haystack for kw in self._ERROR_KEYWORDS)
 
-    def _write_line(self, line: str):
+        self.root.after(0, self._write_line, line, is_error)
+
+    def _write_line(self, line: str, is_error: bool = False):
         """Must only be called on the main thread via root.after()."""
         self.text_area.config(state="normal")
-        self.text_area.insert("end", line)
+        if is_error:
+            self.text_area.insert("end", line, "error")
+        else:
+            self.text_area.insert("end", line)
         self.text_area.see("end")          # Auto-scroll to latest entry
         self.text_area.config(state="disabled")
 
