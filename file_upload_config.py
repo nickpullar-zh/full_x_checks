@@ -27,3 +27,5 @@ class UploadTaskConfig:
     file_fields: List[FileFieldConfig] = field(default_factory=list)
     window_title: str = "File Upload"
     requires_output_directory: bool = True  # Most tasks will need this
+    checkboxes: list = field(default_factory=list)
+    # Each checkbox: {"key": str, "label": str, "default": bool}

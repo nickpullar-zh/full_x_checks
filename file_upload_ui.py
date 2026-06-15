@@ -4,6 +4,57 @@ from tkinter import ttk, filedialog, messagebox
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
 
+
+class _Tooltip:
+    """Shows a floating tooltip window when the user hovers over a widget."""
+
+    DELAY_MS = 600   # ms before tooltip appears
+    WRAP_PX  = 320   # max tooltip width before wrapping
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget  = widget
+        self._text    = text
+        self._win: Optional[tk.Toplevel] = None
+        self._after_id = None
+        widget.bind("<Enter>", self._on_enter)
+        widget.bind("<Leave>", self._on_leave)
+
+    def _on_enter(self, event=None):
+        self._after_id = self._widget.after(self.DELAY_MS, self._show)
+
+    def _on_leave(self, event=None):
+        if self._after_id:
+            self._widget.after_cancel(self._after_id)
+            self._after_id = None
+        self._hide()
+
+    def _show(self):
+        if self._win:
+            return
+        x = self._widget.winfo_rootx() + 20
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._win = tk.Toplevel(self._widget)
+        self._win.wm_overrideredirect(True)   # no title bar or borders
+        self._win.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            self._win,
+            text=self._text,
+            justify="left",
+            background="#DDE4E3",   # Dove (brand)
+            foreground="#23366F",   # Dark Blue (accessible on Dove per brand guidelines)
+            relief="solid",
+            borderwidth=1,
+            wraplength=self.WRAP_PX,
+            padx=6,
+            pady=4,
+        ).pack()
+
+    def _hide(self):
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+
 class FileUploadUI:
     """
     Dynamically builds a file upload dialog from an UploadTaskConfig.
@@ -11,7 +62,7 @@ class FileUploadUI:
     output directory picker — all driven by configuration.
     """
 
-    def __init__(self, config: UploadTaskConfig, parent: tk.Tk):
+    def __init__(self, config: UploadTaskConfig, parent: tk.Tk, prefill: Optional[Dict] = None):
         self.config = config
         self.file_paths: Dict[str, tk.StringVar] = {}
         self.sheet_names: Dict[str, tk.StringVar] = {}
@@ -22,13 +73,16 @@ class FileUploadUI:
         self.output_label = None
         self.result: Optional[Dict] = None
         self.parent = parent
-        self.process_only_differences = tk.BooleanVar(value=False)
+        self.process_only_differences = tk.BooleanVar(value=True)  # v0.4: default ON
+        self.extra_checkboxes: dict = {}
 
         self.root = tk.Toplevel(parent)  # ← Toplevel not Tk()
         self.root.title(config.window_title)
         self.root.resizable(False, False)
         self.root.grab_set()  # ← Modal
         self._build_ui()
+        if prefill:
+            self._apply_prefill(prefill)
         self._set_position()  # ← Position logic
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -122,7 +176,7 @@ class FileUploadUI:
         ttk.Label(
             main_frame,
             text=self.config.task_name,
-            font=("Helvetica", 14, "bold")
+            font=("Zurich Sans Semibold", 14)
         ).grid(row=current_row, column=0, columnspan=3, pady=(0, 15))
         current_row += 1
 
@@ -182,7 +236,7 @@ class FileUploadUI:
                 sheet_label = ttk.Label(
                     main_frame,
                     text="Sheet name:",
-                    font=("Helvetica", 8),
+                    font=("Zurich Sans", 9),
                     foreground="grey"
                 )
                 sheet_label.grid(row=current_row, column=0, padx=5, pady=(0, 4), sticky="e")
@@ -192,7 +246,7 @@ class FileUploadUI:
                     main_frame,
                     textvariable=sheet_var,
                     width=30,
-                    font=("Helvetica", 8),
+                    font=("Zurich Sans", 9),
                     state="disabled"
                 )
                 sheet_entry.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
@@ -206,7 +260,7 @@ class FileUploadUI:
                 main_frame,
                 text=hint_text,
                 foreground="black",
-                font=("Helvetica", 8),
+                font=("Zurich Sans", 9),
                 wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
                 justify="left"
             )
@@ -252,7 +306,7 @@ class FileUploadUI:
                 main_frame,
                 text="  Folder where output files will be saved",
                 foreground="black",
-                font=("Helvetica", 8),
+                font=("Zurich Sans", 9),
                 wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
                 justify="left"
             )
@@ -273,6 +327,16 @@ class FileUploadUI:
             variable=self.process_only_differences
         ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
         current_row += 1
+
+        # --- Config-driven checkboxes (e.g. experimental options) ---
+        for cb in self.config.checkboxes:
+            var = tk.BooleanVar(value=cb.get("default", False))
+            self.extra_checkboxes[cb["key"]] = var
+            btn = ttk.Checkbutton(main_frame, text=cb["label"], variable=var)
+            btn.grid(row=current_row, column=0, columnspan=3, pady=(2, 2))
+            if cb.get("tooltip"):
+                _Tooltip(btn, cb["tooltip"])
+            current_row += 1
 
         ttk.Separator(main_frame, orient="horizontal").grid(
             row=current_row, column=0, columnspan=3, sticky="ew", pady=5
@@ -309,6 +373,40 @@ class FileUploadUI:
         if self.output_label:
             self.output_label.config(wraplength=max_hint_width)
 
+
+    def _apply_prefill(self, prefill: dict):
+        """Restore a previous run's inputs into the form fields."""
+        # File paths
+        for label, path in (prefill.get("files") or {}).items():
+            if path and label in self.file_paths:
+                self.file_paths[label].set(path)
+                self.path_labels[label].config(
+                    text=os.path.basename(path), foreground="black"
+                )
+                for field in self.config.file_fields:
+                    if field.label == label and field.show_sheet:
+                        self.sheet_labels[label].config(foreground="black")
+                        self.sheet_entries[label].config(state="normal")
+
+        # Sheet names
+        for label, sheet in (prefill.get("sheet_names") or {}).items():
+            if sheet and label in self.sheet_names:
+                self.sheet_names[label].set(sheet)
+
+        # Output directory
+        output_dir = prefill.get("output_directory")
+        if output_dir:
+            self.output_directory = output_dir
+            if self.output_label is not None:
+                self.output_label.config(text=output_dir, foreground="black")
+
+        # Checkboxes
+        self.process_only_differences.set(prefill.get("process_only_differences", True))
+        for key, var in self.extra_checkboxes.items():
+            if key in prefill:
+                var.set(prefill[key])
+
+        self._check_ready()
 
     # ==========================================
     # Event Handlers
@@ -369,6 +467,8 @@ class FileUploadUI:
             "timestamp": timestamp,  # Reference the local timestamp here
             "process_only_differences": self.process_only_differences.get()
         }
+        for key, var in self.extra_checkboxes.items():
+            self.result[key] = var.get()
         self.root.destroy()
 
     # ==========================================

@@ -10,18 +10,22 @@ class ProgressDialog:
     Displays log entries in real time as processing occurs.
     Runs on the main thread; processing runs on a background thread.
 
-    Stop behaviour:
-    - "Stop" sets the stop event; processing halts at the next log_step checkpoint.
-    - Button changes to "Close".
-    - "Close" destroys the window and exits the application.
+    Stop / dismiss behaviour:
+    - "Stop"           → sets stop event; button changes to "Return to Form".
+    - "Return to Form" → destroys dialog; calls on_dismiss() to return to the
+                         file-upload form pre-filled with the previous inputs.
+    - On success       → button changes to "Close"; "Close" exits the application.
+    - on_dismiss=None  → always exits (legacy / debug mode behaviour).
     """
 
     WINDOW_SIZE = 550  # Square dimensions in pixels
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, on_dismiss=None):
         self.root = root
+        self.on_dismiss = on_dismiss        # callable() → return to upload form
         self.stop_event = threading.Event()
         self._stopped = False
+        self._completed_successfully = False
 
         self._build_ui()
         self._centre_on_screen()
@@ -46,7 +50,7 @@ class ProgressDialog:
         ttk.Label(
             outer_frame,
             text="Processing Log",
-            font=("Helvetica", 13, "bold")
+            font=("Zurich Sans Semibold", 13)
         ).pack(pady=(0, 8))
 
         # --- Scrollable text area ---
@@ -61,8 +65,8 @@ class ProgressDialog:
             state="disabled",       # Read-only
             wrap="word",
             font=("Courier", 9),
-            bg="#f7f7f7",
-            fg="#222222",
+            bg="#ECEEEF",
+            fg="#23366F",
             relief="sunken",
             borderwidth=1,
             yscrollcommand=scrollbar.set,
@@ -71,18 +75,32 @@ class ProgressDialog:
         )
         self.text_area.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=self.text_area.yview)
+        # Bold red highlighting for error / exception lines.
+        self.text_area.tag_configure(
+            "error",
+            foreground="#C00000",
+            font=("Courier", 9, "bold"),
+        )
 
-        # --- Stop / Close button ---
+        # --- Stop / Close + Exit buttons ---
         btn_frame = ttk.Frame(outer_frame)
         btn_frame.pack(pady=(10, 0))
 
         self.action_btn = ttk.Button(
             btn_frame,
             text="Stop",
-            width=12,
+            width=16,
             command=self._on_stop_or_close
         )
-        self.action_btn.pack()
+        self.action_btn.pack(side="left", padx=(0, 8))
+
+        self.exit_btn = ttk.Button(
+            btn_frame,
+            text="Exit Application",
+            width=16,
+            command=self._on_exit_application
+        )
+        self.exit_btn.pack(side="left")
 
     def _centre_on_screen(self):
         self.window.update_idletasks()
@@ -98,28 +116,50 @@ class ProgressDialog:
     # Button handler
     # =========================================================
 
+    def _on_exit_application(self):
+        """Hard exit — close dialog and shut down the entire app regardless of state."""
+        self.stop_event.set()
+        try:
+            self.window.grab_release()
+            self.window.destroy()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+        sys.exit(0)
+
     def _on_stop_or_close(self):
         if not self._stopped:
             # First press — stop processing
             self._stopped = True
             self.stop_event.set()
-            self.action_btn.config(text="Close")
+            self.action_btn.config(text="Return to Form")
             self.append_entry("---", "User requested stop. Waiting for current step to finish...")
         else:
-            # Second press — clean up and exit
+            # Second press — dismiss
             self.window.grab_release()
             self.window.destroy()
-            self.root.destroy()
-            sys.exit(0)
+            if self._completed_successfully or self.on_dismiss is None:
+                # Success or no callback registered → exit the application
+                self.root.destroy()
+                sys.exit(0)
+            else:
+                # Cancel or error → return to the upload form
+                self.on_dismiss()
 
     # =========================================================
     # Public interface — called from background thread
     # =========================================================
 
+    _ERROR_KEYWORDS = ("error", "failed", "failure", "exception", "traceback")
+
     def append_entry(self, file: str, step: str, count: int = 0, notes: str = ""):
         """
         Thread-safe method to append a log line to the text area.
         Uses root.after() to marshal the update onto the main thread.
+        Lines whose file or step indicate an error are styled bold red.
         """
         line = f"[{file}]  {step}"
         if count:
@@ -128,14 +168,36 @@ class ProgressDialog:
             line += f"  — {notes}"
         line += "\n"
 
-        self.root.after(0, self._write_line, line)
+        haystack = f"{file} {step} {notes}".casefold()
+        is_error = any(kw in haystack for kw in self._ERROR_KEYWORDS)
 
-    def _write_line(self, line: str):
+        if is_error:
+            self._play_error_sound()
+        self.root.after(0, self._write_line, line, is_error)
+
+    @staticmethod
+    def _play_error_sound() -> None:
+        """Plays the Windows system 'critical stop' chime (MB_ICONHAND).
+        Silent no-op on non-Windows platforms."""
+        try:
+            import winsound
+            winsound.MessageBeep(0x10)  # MB_ICONHAND
+        except Exception:
+            pass
+
+    def _write_line(self, line: str, is_error: bool = False):
         """Must only be called on the main thread via root.after()."""
         self.text_area.config(state="normal")
-        self.text_area.insert("end", line)
+        if is_error:
+            self.text_area.insert("end", line, "error")
+        else:
+            self.text_area.insert("end", line)
         self.text_area.see("end")          # Auto-scroll to latest entry
         self.text_area.config(state="disabled")
 
     def is_stopped(self) -> bool:
         return self.stop_event.is_set()
+
+    def mark_success(self):
+        """Call from the processing thread when the run completes without error."""
+        self._completed_successfully = True

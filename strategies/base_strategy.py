@@ -56,6 +56,7 @@ class BaseStrategy(ABC):
                 self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
             self.process(loaded_files, files)
+            return True
 
         except StopIteration:
             # User pressed Stop — log it, then return cleanly
@@ -93,13 +94,14 @@ class BaseStrategy(ABC):
     # Excel output utilities — available to all strategies
     # -------------------------------------------------------------------------
 
-    def build_output_path(self, output_directory: str, label: str, timestamp: str) -> str:
+    def build_output_path(self, output_directory: str, label: str, timestamp: str,
+                          extension: str = ".xlsx") -> str:
         """
         Builds a safe, timestamped output file path from a label.
         Replaces characters that are invalid in Windows filenames.
         """
         safe_label = re.sub(r'[<>:"/\\|?*()]', '_', label)
-        filename = f"{timestamp}_{safe_label}.xlsx"
+        filename = f"{timestamp}_{safe_label}{extension}"
         return os.path.join(output_directory, filename)
 
     def set_progress_dialog(self, dialog):
@@ -245,8 +247,9 @@ class BaseStrategy(ABC):
                     if df is None:
                         return None
 
-                    if self.process_only_differences:
-                        df = self._filter_coloured_rows(df, path, sheet)
+                    # NOTE: process_only_differences no longer filters the EBX DataFrame.
+                    # Downstream comparison runs on the full dataset; the X-Check No
+                    # selection (.txt) is computed in XChecks.process from a copy of df.
 
                     loaded[label] = df
 
@@ -280,56 +283,6 @@ class BaseStrategy(ABC):
             
         return loaded
 
-    def _filter_coloured_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
-        """
-        Uses openpyxl to detect rows with any background fill colour,
-        then filters the DataFrame to those rows only.
-
-        NOTE: This loads the workbook a second time (first load is via pd.read_excel).
-        This trade-off keeps data loading and colour detection cleanly separated.
-        If performance becomes an issue with large files, consider loading openpyxl
-        first and extracting both data and colours in a single pass.
-        """
-        ext = os.path.splitext(filepath)[1].lower()
-        if ext != ".xlsx":
-            #print(f"  [process_only_differences] Skipping colour filter for {os.path.basename(filepath)} — .xls not supported by openpyxl")
-            self.log_step(self.log, os.path.basename(filepath), "Colour filter skipped — .xls not supported by openpyxl", 0)
-            return df
-
-        try:
-            wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
-            ws = wb[sheet_name]
-        except Exception as e:
-            # Non-fatal: fall back to full dataset if colour detection fails
-            self.log_step(self.log, os.path.basename(filepath),
-                        "Colour filter failed — using full dataset", len(df),
-                        notes=str(e))
-            return df
-
-        coloured_row_indices = []
-
-        for row in ws.iter_rows(min_row=2):
-            for cell in row:
-                fill = cell.fill
-                if (
-                    fill.fill_type not in (None, "none")
-                    and fill.fgColor.type != "auto"
-                ):
-                    if cell.row is not None:
-                        coloured_row_indices.append(cell.row - 2)
-                    break
-
-        wb.close()
-
-        if not coloured_row_indices:
-            self.log_step(self.log, os.path.basename(filepath), "No coloured rows found — returning empty DataFrame", 0)
-            return df.iloc[[]]
-
-        filtered = df.iloc[coloured_row_indices].reset_index(drop=True)
-        self.log_step(self.log, os.path.basename(filepath),
-                "Coloured rows retained", len(filtered),
-                notes=f"Filtered from {len(df)} total rows") 
-        return filtered
 
     def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
         """
