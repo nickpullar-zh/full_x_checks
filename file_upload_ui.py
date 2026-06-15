@@ -73,7 +73,7 @@ class FileUploadUI:
         self.output_label = None
         self.result: Optional[Dict] = None
         self.parent = parent
-        self.process_only_differences = tk.BooleanVar(value=False)
+        self.process_only_differences = tk.BooleanVar(value=True)  # v0.4: default ON
         self.extra_checkboxes: dict = {}
 
         self.root = tk.Toplevel(parent)  # ← Toplevel not Tk()
@@ -401,7 +401,7 @@ class FileUploadUI:
                 self.output_label.config(text=output_dir, foreground="black")
 
         # Checkboxes
-        self.process_only_differences.set(prefill.get("process_only_differences", False))
+        self.process_only_differences.set(prefill.get("process_only_differences", True))
         for key, var in self.extra_checkboxes.items():
             if key in prefill:
                 var.set(prefill[key])

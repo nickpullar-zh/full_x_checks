@@ -247,8 +247,9 @@ class BaseStrategy(ABC):
                     if df is None:
                         return None
 
-                    if self.process_only_differences:
-                        df = self._filter_changed_rows(df, path, sheet)
+                    # NOTE: process_only_differences no longer filters the EBX DataFrame.
+                    # Downstream comparison runs on the full dataset; the X-Check No
+                    # selection (.txt) is computed in XChecks.process from a copy of df.
 
                     loaded[label] = df
 
@@ -282,77 +283,6 @@ class BaseStrategy(ABC):
             
         return loaded
 
-    # Column name in EBX Cross Checks All sheet flagging changed X-Checks.
-    # Any non-blank value (case-insensitive of the cell content) marks the row as changed.
-    _CHANGE_FLAG_COLUMN = "Type of change"
-
-    def _filter_changed_rows(self, df: pd.DataFrame, filepath: str, sheet_name: str) -> pd.DataFrame:
-        """
-        Returns rows that are either coloured (background fill on any cell) OR
-        have a non-blank value in the 'Type of change' column. The two sets are
-        unioned and de-duplicated, preserving the original row order.
-
-        Falls back to the full DataFrame if both detection paths fail.
-        """
-        coloured_idx = self._coloured_row_indices(filepath, sheet_name)
-        flag_idx     = self._change_flag_row_indices(df)
-
-        union_idx = sorted(set(coloured_idx) | set(flag_idx))
-
-        if not union_idx:
-            self.log_step(self.log, os.path.basename(filepath),
-                          "No changed rows found — returning empty DataFrame", 0)
-            return df.iloc[[]]
-
-        filtered = df.iloc[union_idx].reset_index(drop=True)
-        self.log_step(self.log, os.path.basename(filepath),
-                      "Changed rows retained", len(filtered),
-                      notes=(f"Filtered from {len(df)} total rows "
-                             f"(coloured={len(coloured_idx)}, "
-                             f"flag={len(flag_idx)})"))
-        return filtered
-
-    def _coloured_row_indices(self, filepath: str, sheet_name: str) -> list[int]:
-        """Returns 0-based DataFrame row indices for rows whose Excel cells have any fill colour."""
-        ext = os.path.splitext(filepath)[1].lower()
-        if ext != ".xlsx":
-            self.log_step(self.log, os.path.basename(filepath),
-                          "Colour filter skipped — .xls not supported by openpyxl", 0)
-            return []
-
-        try:
-            wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
-            ws = wb[sheet_name]
-        except Exception as e:
-            self.log_step(self.log, os.path.basename(filepath),
-                          "Colour filter failed — falling back to flag column only", 0,
-                          notes=str(e))
-            return []
-
-        indices: list[int] = []
-        for row in ws.iter_rows(min_row=2):
-            for cell in row:
-                fill = cell.fill
-                if (
-                    fill.fill_type not in (None, "none")
-                    and fill.fgColor.type != "auto"
-                ):
-                    if cell.row is not None:
-                        indices.append(cell.row - 2)
-                    break
-        wb.close()
-        return indices
-
-    def _change_flag_row_indices(self, df: pd.DataFrame) -> list[int]:
-        """
-        Returns 0-based DataFrame row indices for rows whose 'Type of change'
-        column has any non-blank value.
-        """
-        if self._CHANGE_FLAG_COLUMN not in df.columns:
-            return []
-        col = df[self._CHANGE_FLAG_COLUMN].astype(str).str.strip()
-        mask = ~col.isin(("", "nan", "None"))
-        return df.index[mask].tolist()
 
     def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
         """

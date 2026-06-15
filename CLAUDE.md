@@ -22,7 +22,20 @@
 
 ## Change Log
 
-### v0.4.0 — X-Check No Selection (completed 2026-06-15, branch v0.4-X-Check-No-Selection)
+### v0.4.1 — X-Check No Selection: full Cross Checks All pipeline (completed 2026-06-15)
+
+The v0.4.0 "coloured OR non-blank" union was wrong. Replaced with the user's full pipeline.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | New module `strategies/x_checks/x_check_no_selection.py` with `select_x_check_nos(df, filepath, sheet_name)`. Pipeline: drop `Status = INACTIVE` → keep rows with non-blank `Type of Change` → take unique `X-Check No.` → drop X-Checks where any active row has `Exclude Z-Core = X` → drop X-Checks whose `Category` cell is yellow (#FFFF00). Operates on a copy; input df is not mutated. | DONE | All column lookups via `_resolve_col` (case-insensitive). |
+| 2 | `base_strategy.py`: removed `_filter_changed_rows` / `_change_flag_row_indices` / `_coloured_row_indices` helpers and the `process_only_differences` invocation in `_load_files`. Downstream EBX df is no longer filtered — comparison runs on full data. | DONE | The checkbox now controls only the X-Check No selection .txt output. |
+| 3 | `x_checks.py`: `_write_x_check_no_list` rewritten to delegate to `select_x_check_nos`; reads EBX path + sheet from `files['files']` / `files['sheet_names']`. | DONE | |
+| 4 | `file_upload_ui.py`: `process_only_differences` BooleanVar default and `_apply_prefill` fallback both flipped to `True` (was `False`). | DONE | Checkbox now defaults ON. |
+| 5 | `tests/test_change_filter.py`: dropped 4 obsolete `_change_flag_row_indices` tests; added 14 tests for `_resolve_col`, `_ordered_unique_str`, `select_x_check_nos` (each pipeline step + combined + idempotence + case-insensitive headers), and the writer. | DONE | 129 passing. |
+| 6 | `version.py`: bump to `0.4.1` | DONE | |
+
+### v0.4.0 — X-Check No Selection (superseded by v0.4.1)
 
 A pre-filter step that extracts the list of *changed* X-Check Nos from the EBX `cross checks all` sheet so the user can paste it into FIP (limiting the FIP export to a manageable size). The filter is driven by the existing **Process only differences** checkbox.
 

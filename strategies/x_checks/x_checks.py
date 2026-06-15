@@ -4,6 +4,7 @@ from strategies.base_strategy import BaseStrategy, UploadTaskConfig
 from .ebx_extraction import extract_ebx
 from .fip_extraction import extract_fip
 from .compare import compare
+from .x_check_no_selection import select_x_check_nos
 
 
 class XChecks(BaseStrategy):
@@ -94,36 +95,38 @@ class XChecks(BaseStrategy):
 
     def _write_x_check_no_list(self, loaded_files: dict, files: dict) -> None:
         """
-        Writes the unique X-Check Nos (from the already-filtered EBX DataFrame) to
-        <timestamp>_X-Check_Nos.txt in the chosen output directory, one per line.
-        Order of first occurrence is preserved.
+        Runs the full Cross Checks All selection pipeline (Status / Type of Change /
+        Exclude Z-Core / yellow Category) and writes the surviving X-Check Nos to
+        <timestamp>_X-Check_Nos.txt in the output directory, one per line.
+
+        Operates on a copy of the EBX DataFrame; the loaded df is unchanged so
+        downstream comparison still runs against the full dataset.
         """
         ebx_df = loaded_files.get("X-Checks Publication File")
-        if ebx_df is None or "X-Check No." not in ebx_df.columns:
-            self.log_step(self.log, "X-Check No Selection",
-                          "Skipped — EBX missing 'X-Check No.' column", 0)
+        if ebx_df is None:
+            self.log_step(self.log, "X-Check No Selection", "Skipped — EBX not loaded", 0)
             return
 
-        seen: set = set()
-        ordered: list[str] = []
-        for raw in ebx_df["X-Check No."].tolist():
-            val = str(raw).strip()
-            if val in ("", "nan", "None") or val in seen:
-                continue
-            seen.add(val)
-            ordered.append(val)
+        ebx_path = files["files"].get("X-Checks Publication File")
+        ebx_sheet = files["sheet_names"].get("X-Checks Publication File")
+        if not ebx_path or not ebx_sheet:
+            self.log_step(self.log, "X-Check No Selection",
+                          "Skipped — EBX file path or sheet not provided", 0)
+            return
 
-        if not ordered:
-            self.log_step(self.log, "X-Check No Selection", "No changed X-Check Nos to write", 0)
+        x_check_nos = select_x_check_nos(ebx_df, ebx_path, ebx_sheet)
+        if not x_check_nos:
+            self.log_step(self.log, "X-Check No Selection",
+                          "No X-Check Nos in scope after pipeline", 0)
             return
 
         out_path = self.build_output_path(
             files["output_directory"], "X-Check_Nos", files["timestamp"], extension=".txt"
         )
         with open(out_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(ordered))
+            f.write("\n".join(x_check_nos))
         self.log_step(self.log, "X-Check No Selection",
-                      f"Wrote {os.path.basename(out_path)}", len(ordered),
+                      f"Wrote {os.path.basename(out_path)}", len(x_check_nos),
                       notes=out_path)
 
     def _load_known_exceptions(self, path: str) -> dict:
