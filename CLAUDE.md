@@ -45,6 +45,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.1 — Separate FIP File upload field (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: add 3rd `FileFieldConfig` "FIP File (VALMSG)" with `default_sheet="FIP Methods Rules and Condition"`, required. | DONE | EBX file no longer needs to also contain the FIP sheet. |
+| 2 | `accounting_principles.py`: read FIP from its own path; honour user-supplied sheet names for both the EBX 'cross checks all' sheet and the FIP sheet. | DONE | |
+| 3 | `main.py`: add the FIP entry to `DEBUG_FILES_ACCOUNTING_PRINCIPLES`. | DONE | Debug build still uses the same workbook for both EBX and FIP — the file containing both sheets — but the strategy treats them as separate paths. |
+| 4 | `version.py`: bump to `0.5.1`. | DONE | 18 tests passing. |
+
 ### v0.5.0 — Accounting Principles strategy (completed 2026-06-15, branch v0.5-Accounting-Principles)
 
 First release of the Accounting Principles task. Compares the severity letter recorded for each X-Check on the EBX `cross checks all` sheet against the W/E recorded in `FIP Methods Rules and Condition` (the VALMSG dump), guided by a `Validation Methods` workbook that defines which methods correspond to which Validation Events.

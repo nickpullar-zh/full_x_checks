@@ -22,10 +22,15 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
         FileFieldConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
-            description="EBX file containing both the 'cross checks all' sheet and the "
-                        "'FIP Methods Rules and Condition' sheet (the VALMSG dump). "
-                        "The strategy reads both sheets from this single file.",
+            description="EBX file with the 'cross checks all' sheet.",
             default_sheet="cross checks all",
+        ),
+        FileFieldConfig(
+            label="FIP File (VALMSG)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="VALMSG export with the 'FIP Methods Rules and Condition' sheet "
+                        "(rows keyed by '<Method>|<X-Check No.>' and an MT column of W/E).",
+            default_sheet="FIP Methods Rules and Condition",
         ),
     ],
 )

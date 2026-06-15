@@ -40,10 +40,12 @@ DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
     "files": {
         "Validation Methods File":   os.path.join(_BASE, "test_data", "validation methods.xlsx"),
         "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+        "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
     },
     "sheet_names": {
         "Validation Methods File":   "Validation Methods",
         "X-Checks Publication File": "cross checks all",
+        "FIP File (VALMSG)":          "FIP Methods Rules and Condition",
     },
     "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
     "process_only_differences": False,
