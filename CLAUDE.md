@@ -22,6 +22,18 @@
 
 ## Change Log
 
+### v0.4.0 — X-Check No Selection (in progress, branch v0.4-X-Check-No-Selection)
+
+A pre-filter step that extracts the list of *changed* X-Check Nos from the EBX `cross checks all` sheet so the user can paste it into FIP (limiting the FIP export to a manageable size).
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | Branch from `v0.3-X-Checks`; push `v0.4-X-Check-No-Selection` to origin | DONE | |
+| 2 | `version.py`: bump to `0.4.0` | DONE | |
+| 3 | Extend `process_only_differences` filtering to include text-flag column matching alongside the existing coloured-row check; union the two row sets | PROPOSED | Awaiting column header + accepted value(s) from Nick. |
+| 4 | Derive unique X-Check Nos from the filtered EBX rows (order of first occurrence) and write to `<timestamp>_X-Check_Nos.txt` in the output directory | PROPOSED | One X-Check No per line, ready to paste into FIP. |
+| 5 | Unit tests: column-value match, colour match, union/dedup, order preservation, .txt format | PROPOSED | |
+
 ### v0.3.1 — Post-Parity Improvements (in progress)
 
 | # | Change | Status | Notes |
