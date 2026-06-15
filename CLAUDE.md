@@ -22,6 +22,13 @@
 
 ## Change Log
 
+### v0.4.5 — Exit Application button on Processing Log dialog (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: add a permanent "Exit Application" button next to the Stop/Close/Return to Form button. Click → sets stop event, destroys dialog and root, `sys.exit(0)`. | DONE | Always visible (not only on error) so the user always has a clear way out. Both buttons widen to 16 chars to keep parity. |
+| 2 | `version.py`: bump to `0.4.5` | DONE | |
+
 ### v0.4.4 — System error chime on error log lines (completed 2026-06-15)
 
 | # | Change | Status | Notes |

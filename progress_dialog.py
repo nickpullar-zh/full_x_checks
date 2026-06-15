@@ -82,17 +82,25 @@ class ProgressDialog:
             font=("Courier", 9, "bold"),
         )
 
-        # --- Stop / Close button ---
+        # --- Stop / Close + Exit buttons ---
         btn_frame = ttk.Frame(outer_frame)
         btn_frame.pack(pady=(10, 0))
 
         self.action_btn = ttk.Button(
             btn_frame,
             text="Stop",
-            width=12,
+            width=16,
             command=self._on_stop_or_close
         )
-        self.action_btn.pack()
+        self.action_btn.pack(side="left", padx=(0, 8))
+
+        self.exit_btn = ttk.Button(
+            btn_frame,
+            text="Exit Application",
+            width=16,
+            command=self._on_exit_application
+        )
+        self.exit_btn.pack(side="left")
 
     def _centre_on_screen(self):
         self.window.update_idletasks()
@@ -107,6 +115,20 @@ class ProgressDialog:
     # =========================================================
     # Button handler
     # =========================================================
+
+    def _on_exit_application(self):
+        """Hard exit — close dialog and shut down the entire app regardless of state."""
+        self.stop_event.set()
+        try:
+            self.window.grab_release()
+            self.window.destroy()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+        sys.exit(0)
 
     def _on_stop_or_close(self):
         if not self._stopped:
