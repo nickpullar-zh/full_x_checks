@@ -22,6 +22,16 @@
 
 ## Change Log
 
+### v0.4.2 — Collect Live X-Checks task + clipboard output (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | New `task_configs.COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG` — task name "Collect Live X-Checks", requires only the EBX Publication File and an output directory. | DONE | No FIP / GCoA / Known Exception fields. |
+| 2 | New strategy `strategies/collect_live_x_checks/` — `CollectLiveXChecks.process` reuses `select_x_check_nos` to compute the in-scope X-Check Nos, then writes a `<timestamp>_X-Check_Nos.txt` and copies the same `\n`-joined string to the Windows clipboard via a hidden `tk.Tk` root. Clipboard failures are logged but do not abort the run. | DONE | |
+| 3 | `task_registry.py`: register "Collect Live X-Checks" between X-Checks and X-Checks Grouping By. PyInstaller hint added so the strategy module is bundled. | DONE | Dropdown order: X-Checks → Collect Live X-Checks → X-Checks Grouping By. |
+| 4 | `tests/test_collect_live_x_checks.py`: 4 new tests — happy path (writes .txt + clipboard called), nothing-in-scope (no file, no clipboard), clipboard failure does not break run, missing EBX aborts cleanly. | DONE | 133 passing. |
+| 5 | `version.py`: bump to `0.4.2` | DONE | |
+
 ### v0.4.1 — X-Check No Selection: full Cross Checks All pipeline (completed 2026-06-15)
 
 The v0.4.0 "coloured OR non-blank" union was wrong. Replaced with the user's full pipeline.

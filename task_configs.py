@@ -64,6 +64,21 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
     ]
 )
 
+# --- Collect Live X-Checks Task (v0.4.2) ---
+COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="Collect Live X-Checks",
+    window_title="Collect Live X-Checks",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all"
+        ),
+    ]
+)
+
 # --- Accounting Principles Task ---
 ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
     task_name="X-Check Accounting Principles",

@@ -2,6 +2,7 @@ import importlib
 
 from task_configs import (
     X_CHECKS_UPLOAD_CONFIG,
+    COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG,
     ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,
     CONDITIONS_UPLOAD_CONFIG,
     GROUPING_BY_UPLOAD_CONFIG,
@@ -11,6 +12,7 @@ from task_configs import (
 # PyInstaller's static analyser so that pandas/openpyxl/numpy are bundled.
 if False:
     from strategies.x_checks import XChecks
+    from strategies.collect_live_x_checks import CollectLiveXChecks
     from strategies.grouping_by import GroupingBy
 
 
@@ -25,8 +27,9 @@ def _lazy(module: str, cls: str):
 # Registry maps display name → (UI config, processing strategy factory)
 # To add a new use case: add one line here and a new config in task_configs.py
 TASK_REGISTRY = {
-    "X-Checks":           (X_CHECKS_UPLOAD_CONFIG,   _lazy('strategies.x_checks',    'XChecks')),
+    "X-Checks":               (X_CHECKS_UPLOAD_CONFIG,            _lazy('strategies.x_checks',               'XChecks')),
+    "Collect Live X-Checks":  (COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG, _lazy('strategies.collect_live_x_checks', 'CollectLiveXChecks')),
     #"X-Checks Accounting Principles": (ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG, _lazy('strategies.accounting_principles', 'AccountingPrinciples')),
     #"X-Checks Conditions":            (CONDITIONS_UPLOAD_CONFIG,            _lazy('strategies.conditions',            'Conditions')),
-    "X-Checks Grouping By": (GROUPING_BY_UPLOAD_CONFIG, _lazy('strategies.grouping_by', 'GroupingBy')),
+    "X-Checks Grouping By":   (GROUPING_BY_UPLOAD_CONFIG,         _lazy('strategies.grouping_by',            'GroupingBy')),
 }
