@@ -34,6 +34,13 @@
 | 6 | `ebx_extraction.py`: remove always-true dead condition `if len(df) - 1 >= index:` | DONE |
 | 7 | `fip_extraction.py`: replace boolean flags in `_get_x_check_information` with a `_ParseState` enum | DONE |
 
+### v0.3.18 — UAT workbook in reference format + build-uat-plan skill (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_uat.py`: rewritten to match the reference format used by `20260410 X-Checks_v0.1 Test Plan.xlsx` — Sheet1 narrative walkthrough (Aptos Narrow 11) with continuation rows; Sheet2 sectioned tables (Files Required + General UI + Detailed Field Interaction + Workflow-Specific) using Zurich Sans Light/Medium and brand colours `FF2167AE` / `FF4D4D4D` with medium top/bottom borders. | DONE | Filename pattern: `<YYYYMMDD> X-Checks_v<version> Test Plan.xlsx`. Re-runnable on every version bump. |
+| 2 | `~/.claude/skills/build-uat-plan/`: new user-level skill that, given a project, instructs Claude to (a) inspect any reference workbook the user provides, (b) collect content from CLAUDE.md change log + version.py + task_configs.py, (c) emit a `docs/generate_uat.py` script in the same Sheet1+Sheet2 format. Includes `templates/generate_uat_template.py` as a starting point. | DONE | No app behaviour change — tooling/docs only, no version bump. |
+
 ### v0.3.18 — EBX excl suffix scoped per-variable (LA006_09 fix) (completed 2026-06-12)
 
 | # | Change | Status | Notes |
