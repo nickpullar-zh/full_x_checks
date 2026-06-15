@@ -22,6 +22,14 @@
 
 ## Change Log
 
+### v0.4.6 — Clipboard fix (Win32) + reorder dropdown (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `collect_live_x_checks.py` `_copy_to_clipboard`: replace Tk `clipboard_append` (does not flush from a worker thread) with direct Win32 calls (`OpenClipboard` / `EmptyClipboard` / `SetClipboardData(CF_UNICODETEXT)`). All `argtypes`/`restype` bound through `ctypes.wintypes` so 64-bit pointer-sized handles round-trip correctly. | DONE | Symptom in v0.4.5 was an empty clipboard despite the .txt being written; root cause was Tk's clipboard never receiving its update() pump from the background thread. |
+| 2 | `task_registry.py`: reorder `TASK_REGISTRY` so `Collect Live X-Checks` is the first dropdown entry. | DONE | |
+| 3 | `version.py`: bump to `0.4.6` | DONE | |
+
 ### v0.4.5 — Exit Application button on Processing Log dialog (completed 2026-06-15)
 
 | # | Change | Status | Notes |
