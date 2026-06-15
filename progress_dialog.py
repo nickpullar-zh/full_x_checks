@@ -149,7 +149,19 @@ class ProgressDialog:
         haystack = f"{file} {step} {notes}".casefold()
         is_error = any(kw in haystack for kw in self._ERROR_KEYWORDS)
 
+        if is_error:
+            self._play_error_sound()
         self.root.after(0, self._write_line, line, is_error)
+
+    @staticmethod
+    def _play_error_sound() -> None:
+        """Plays the Windows system 'critical stop' chime (MB_ICONHAND).
+        Silent no-op on non-Windows platforms."""
+        try:
+            import winsound
+            winsound.MessageBeep(0x10)  # MB_ICONHAND
+        except Exception:
+            pass
 
     def _write_line(self, line: str, is_error: bool = False):
         """Must only be called on the main thread via root.after()."""

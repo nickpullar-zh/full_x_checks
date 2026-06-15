@@ -22,6 +22,13 @@
 
 ## Change Log
 
+### v0.4.4 — System error chime on error log lines (completed 2026-06-15)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: when `append_entry` detects an error line, also call `winsound.MessageBeep(MB_ICONHAND=0x10)` to play the standard Windows "critical stop" chime. Wrapped in try/except so non-Windows / no-audio environments are silent no-ops. | DONE | Triggers from the same keyword detection that drives the bold-red styling. |
+| 2 | `version.py`: bump to `0.4.4` | DONE | |
+
 ### v0.4.3 — Bold-red error styling in processing log (completed 2026-06-15)
 
 | # | Change | Status | Notes |
