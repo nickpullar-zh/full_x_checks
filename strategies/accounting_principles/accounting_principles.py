@@ -111,6 +111,7 @@ class AccountingPrinciples(BaseStrategy):
             sheets={"Accounting Principles": df},
             log=self.log,
         )
+        return True
 
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font

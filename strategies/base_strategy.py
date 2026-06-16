@@ -55,8 +55,11 @@ class BaseStrategy(ABC):
             for label, data in loaded_files.items():
                 self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
-            self.process(loaded_files, files)
-            return True
+            # Strategies that complete a full run return True. Strategies that
+            # bail early (e.g. missing column, no rows to compare) return None
+            # or False — propagate that so run_processing surfaces the failure
+            # via 'Return to Form' instead of claiming success.
+            return bool(self.process(loaded_files, files))
 
         except StopIteration:
             # User pressed Stop — log it, then return cleanly

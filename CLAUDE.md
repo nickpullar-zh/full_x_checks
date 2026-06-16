@@ -45,6 +45,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.2 — Abort lines styled as errors; abort no longer reads as success (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog._ERROR_KEYWORDS`: extend with `aborting`, `aborted`, `cannot`, `invalid`, `missing`, `not found`. Any line containing these now styles bold-red and plays the error chime. | DONE | Closes the case where `Required column 'X-Check No.' not found — aborting` was rendered in default dark blue. |
+| 2 | `BaseStrategy.execute()`: return `bool(self.process(...))` instead of unconditional `True`. Strategies that bail early (return `None`) now signal failure to `run_processing`, which switches the dialog button to **Return to Form** instead of **Close** + "Processing complete". | DONE | |
+| 3 | `accounting_principles.process()`: return `True` at the bottom of the success path. Existing early-return-on-error branches stay as-is and now correctly propagate `False`. | DONE | |
+| 4 | `version.py`: bump to `0.5.2` | DONE | 18 tests passing. |
+
 ### v0.5.1 — Separate FIP File upload field (completed 2026-06-15)
 
 | # | Change | Status | Notes |

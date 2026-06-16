@@ -153,7 +153,12 @@ class ProgressDialog:
     # Public interface — called from background thread
     # =========================================================
 
-    _ERROR_KEYWORDS = ("error", "failed", "failure", "exception", "traceback")
+    _ERROR_KEYWORDS = (
+        "error", "failed", "failure", "exception", "traceback",
+        "aborting", "aborted",   # any abort line is a stop condition
+        "cannot",   "invalid",   # validation errors
+        "missing", "not found",  # required input missing
+    )
 
     def append_entry(self, file: str, step: str, count: int = 0, notes: str = ""):
         """
