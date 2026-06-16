@@ -16,21 +16,24 @@ VERSION = f"v{__version__}"
 #   python build.py debug       → all debug builds (any strategy)
 #   python build.py prod        → production only
 #
-# Strategy branches add their own debug entries (e.g. {key:"xc",
-# debug_task:"X-Checks", add_test_data:True}); the infra `main` branch
-# ships only the production build.
+# Each strategy branch sets STRATEGY_LABEL to identify which strategy
+# this branch ships. Both the production EXE name and every debug EXE
+# name derive from it, so renaming the strategy is a one-line change.
+# Strategy branches add their own debug entries here too.
 # ==========================================
+STRATEGY_LABEL = "AccountingPrinciples"   # ← change per strategy branch
+
 BUILDS = [
     {
         "key":         "ap",
-        "name":        f"X-Checks_Debug_AccountingPrinciples_{VERSION}",
+        "name":        f"X-Checks_Debug_{STRATEGY_LABEL}_{VERSION}",
         "debug_mode":  True,
         "debug_task":  "Accounting Principles",
         "add_test_data": True,
     },
     {
         "key":         "prod",
-        "name":        f"X-Checks_AccountingPrinciples_{VERSION}",
+        "name":        f"X-Checks_{STRATEGY_LABEL}_{VERSION}",
         "debug_mode":  False,
         "add_test_data": False,
     },

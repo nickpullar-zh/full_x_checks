@@ -45,6 +45,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.7 — Centralise EXE strategy label (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `build.py`: introduce `STRATEGY_LABEL = "AccountingPrinciples"` constant. Both BUILDS entries derive their `name` from it (debug: `X-Checks_Debug_<LABEL>_<VERSION>`, prod: `X-Checks_<LABEL>_<VERSION>`). Renaming the strategy is now a one-line change instead of two. | DONE | Replaces v0.5.6's spot fix where I edited only the prod entry. Future strategy branches set `STRATEGY_LABEL` once and both EXE filenames stay consistent. |
+| 2 | `version.py`: bump to `0.5.7`. | DONE | |
+
 ### v0.5.6 — Rename prod EXE to include strategy name (completed 2026-06-16)
 
 | # | Change | Status | Notes |
