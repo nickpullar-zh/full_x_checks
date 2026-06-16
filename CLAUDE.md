@@ -45,6 +45,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.6 — Rename prod EXE to include strategy name (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `build.py` BUILDS prod entry: `name` changed from `f"X-Checks_{VERSION}"` to `f"X-Checks_AccountingPrinciples_{VERSION}"` so the production EXE's filename identifies the strategy carried by this branch. | DONE | Was a leftover from when `main` was refreshed before strategies were split into per-branch packaging. |
+| 2 | `version.py`: bump to `0.5.6`. | DONE | |
+
 ### v0.5.5 — Wire 'Process only differences' into Accounting Principles (completed 2026-06-16)
 
 | # | Change | Status | Notes |

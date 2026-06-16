@@ -30,7 +30,7 @@ BUILDS = [
     },
     {
         "key":         "prod",
-        "name":        f"X-Checks_{VERSION}",
+        "name":        f"X-Checks_AccountingPrinciples_{VERSION}",
         "debug_mode":  False,
         "add_test_data": False,
     },
