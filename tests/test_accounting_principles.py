@@ -224,3 +224,28 @@ def test_compare_skips_out_of_scope_xcheck():
     fip = _make_fip_df([("V001|X1", "W"), ("V001|X2", "W")])
     out = compare(defs, cc, ["X1"], fip)
     assert [r["X-Check No."] for r in out] == ["X1"]
+
+
+def test_compare_event_name_punctuation_insensitive():
+    """Validation methods uses 'DE-GAAP RFD'; cross-checks-all uses 'DE GAAP RFD'.
+    The strategy must match them despite the hyphen-vs-space difference."""
+    defs = [EventDefinition(event="DE-GAAP RFD", severity="Error", methods_e=["V791A"])]
+    cc  = _make_cc_df([{"X-Check No.": "X1", "DE GAAP RFD": "e"}])  # space, not hyphen
+    fip = _make_fip_df([("V791A|X1", "E")])
+    out = compare(defs, cc, ["X1"], fip)
+    assert len(out) == 1
+    assert out[0]["Match"] == "Match"
+    assert out[0]["Event"] == "DE-GAAP RFD"   # output keeps the validation-methods spelling
+
+
+def test_compare_pandas_dot_n_dedup_column_ignored():
+    """When the same column name appears twice in cross-checks-all, pandas
+    appends '.1', '.2', etc. The matcher should pick the FIRST occurrence
+    only (the un-suffixed one)."""
+    defs = [EventDefinition(event="Ev1", severity="Warning", methods_w=["V001"])]
+    # Build a df with a duplicate-named column; pandas adds '.1' to the second
+    cc = pd.DataFrame([{"X-Check No.": "X1", "Ev1": "w", "Ev1.1": "BOGUS"}])
+    fip = _make_fip_df([("V001|X1", "W")])
+    out = compare(defs, cc, ["X1"], fip)
+    assert len(out) == 1
+    assert out[0]["Actual"] == "w"

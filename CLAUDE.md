@@ -45,6 +45,20 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.4 — Punctuation-insensitive event-column matching (completed 2026-06-16)
+
+Reconciled the strategy output (322 rows in v0.5.3) against the spreadsheet template's manual extract (435 rows). Root cause: cross-checks-all uses `DE GAAP RFD` (space) while validation methods uses `DE-GAAP RFD` (hyphen) — the strategy's exact-string column lookup missed the entire DE-GAAP family.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `compare._norm_event_name`: lowercase + strip spaces and hyphens. Used as the canonical key for matching validation-methods event names against cross-checks-all column headers. | DONE | |
+| 2 | `compare._build_event_to_column`: pre-builds {event_name → actual cross-checks-all column header} once. Handles pandas's `.1`/`.2` suffix on duplicate column names by stripping a trailing `.<digits>` before normalising, and keeps the first occurrence so the bogus duplicate is ignored. | DONE | |
+| 3 | `compare.compare`: looks up the cross-checks-all column via the new map instead of `d.event in cross_checks_df.columns`. | DONE | |
+| 4 | `tests/test_accounting_principles.py`: 2 new tests (`test_compare_event_name_punctuation_insensitive`, `test_compare_pandas_dot_n_dedup_column_ignored`). | DONE | 20 tests passing. |
+| 5 | `version.py`: bump to `0.5.4`. | DONE | |
+| - | Output now produces 407 rows (covers all 402 unique (X-Check, Method) pairs from the spreadsheet, plus 1 corrected typo: spreadsheet template has `V815S` and `V110` while the validation methods file has `V851S` and `V1100` — the strategy uses the validation methods values, so it correctly emits `V851S\|A336_00` which the spreadsheet's `V815S` block missed). | INFO | |
+| - | Why 407 vs 435: the spreadsheet has separate method-blocks per (Event, Method) so a method like `V900W` that serves both `IFRS New RFD Warning` AND `IFRS New SFD Warning` produces two blocks → two rows per X-Check. The strategy collapses both into the same FIP join. Both representations are correct; the strategy's grain is (X-Check × Event × Method) which matches what the user asked for in the spec. | INFO | |
+
 ### v0.5.3 — Header-row auto-detection in BaseStrategy._load_files (completed 2026-06-16)
 
 | # | Change | Status | Notes |

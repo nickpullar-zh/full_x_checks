@@ -38,6 +38,36 @@ def _norm_letter(raw) -> str:
     return "" if s in ("", "nan", "none") else s
 
 
+def _norm_event_name(name: str) -> str:
+    """Squash spaces and hyphens, lowercase. Used to match validation-methods
+    event names against cross-checks-all column headers despite punctuation
+    differences (e.g. 'DE-GAAP RFD' vs 'DE GAAP RFD')."""
+    return "".join(ch for ch in str(name).lower() if ch not in (" ", "-"))
+
+
+def _build_event_to_column(cc_df: pd.DataFrame, events: list[str]) -> dict[str, str]:
+    """
+    Returns {event_name: actual_cross_checks_all_column}, matching by
+    punctuation-insensitive name. If multiple cc_df columns normalise to the
+    same form (e.g. pandas appended a '.1' suffix), the first one wins.
+    Events with no match are absent from the dict.
+    """
+    norm_to_col: dict[str, str] = {}
+    for col in cc_df.columns:
+        # pandas adds '.<n>' on duplicate headers — strip it before normalising
+        base = str(col).rsplit(".", 1)[0] if str(col).rsplit(".", 1)[-1].isdigit() else str(col)
+        n = _norm_event_name(base)
+        if n and n not in norm_to_col:
+            norm_to_col[n] = col
+
+    out: dict[str, str] = {}
+    for ev in events:
+        n = _norm_event_name(ev)
+        if n in norm_to_col:
+            out[ev] = norm_to_col[n]
+    return out
+
+
 def compare(
     definitions: list[EventDefinition],
     cross_checks_df: pd.DataFrame,
@@ -74,6 +104,12 @@ def compare(
         if xc in in_scope_set and xc not in xcheck_to_row:
             xcheck_to_row[xc] = row
 
+    # Build: event -> actual cross-checks-all column header
+    # (handles 'DE-GAAP RFD' vs 'DE GAAP RFD' style differences).
+    event_to_col = _build_event_to_column(
+        cross_checks_df, [d.event for d in definitions]
+    )
+
     rows: list[dict] = []
 
     # Walk FIP. Each row gives us a concrete (method, x_check) pair AND its W/E.
@@ -95,9 +131,10 @@ def compare(
         ccrow = xcheck_to_row[xcheck]
 
         for d in defs:
-            if d.event not in cross_checks_df.columns:
+            cc_col = event_to_col.get(d.event)
+            if cc_col is None:
                 continue
-            actual = _norm_letter(ccrow.get(d.event))
+            actual = _norm_letter(ccrow.get(cc_col))
             if actual == "":
                 continue
             verdict = "Match" if fip_letter == actual else "MisMatch"
