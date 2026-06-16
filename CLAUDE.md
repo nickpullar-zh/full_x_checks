@@ -45,6 +45,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.8 — Field-label wrap fix (X-Checks Publication File "*" on same row) (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: bump `wraplength` on the field-label widgets from `150` to `220` (file-field labels and the Output Directory label). The Accounting Principles dialog's "X-Checks Publication File *" was wrapping; the `*` ended up on row 2. | DONE | The dialog auto-sizes around the wider label so it grows in width by ~70 px overall. |
+| 2 | `version.py`: bump to `0.5.8`. | DONE | |
+
 ### v0.5.7 — Centralise EXE strategy label (completed 2026-06-16)
 
 | # | Change | Status | Notes |
