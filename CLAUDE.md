@@ -45,6 +45,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.3 — Header-row auto-detection in BaseStrategy._load_files (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `FileFieldConfig`: add optional `header_signals: list[str]` field — when set, _load_files scans the first 6 rows of the sheet for a row whose cells include ALL of these names (case-insensitive, stripped) and uses that as the header row. | DONE | Defaults to None = treat row 1 as header (existing behaviour). |
+| 2 | `BaseStrategy._detect_header_row()`: walks rows 1-6 with openpyxl read-only, returns the matching 0-indexed row or 0 as fallback so the caller still gets a DataFrame and the strategy's own 'column not found' check can surface the right error. | DONE | |
+| 3 | `_load_files`: pass `header=` from the detector into pd.read_excel. | DONE | |
+| 4 | `task_configs.py`: EBX field for Accounting Principles gets `header_signals=["X-Check No.", "Status", "Type of change"]`. | DONE | These three column names coexist on the header row of every Cross Checks All sheet seen so far. |
+| 5 | `accounting_principles.process()`: drop the explicit `pd.read_excel(... header=1)` and `pd.read_excel(fip_path, ...)` reads — both files are already loaded by BaseStrategy via the upload form's path/sheet inputs. | DONE | Strategy now just consumes `loaded_files`. |
+| 6 | `version.py`: bump to `0.5.3`. | DONE | 18 tests passing; same 322-row output on the test fixtures. |
+
 ### v0.5.2 — Abort lines styled as errors; abort no longer reads as success (completed 2026-06-16)
 
 | # | Change | Status | Notes |

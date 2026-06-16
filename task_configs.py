@@ -24,6 +24,7 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
             file_types=[("Excel Files", "*.xlsx")],
             description="EBX file with the 'cross checks all' sheet.",
             default_sheet="cross checks all",
+            header_signals=["X-Check No.", "Status", "Type of change"],
         ),
         FileFieldConfig(
             label="FIP File (VALMSG)",

@@ -43,17 +43,11 @@ class AccountingPrinciples(BaseStrategy):
     def process(self, loaded_files: dict, files: dict):
         self.log_step(self.log, "System", "Starting Accounting Principles processing", 0)
 
-        vm_path  = files["files"].get("Validation Methods File")
-        xc_path  = files["files"].get("X-Checks Publication File")
-        fip_path = files["files"].get("FIP File (VALMSG)")
-        if not vm_path or not xc_path or not fip_path:
-            self.log_step(self.log, "System", "Missing required file path(s)", 0)
+        vm_path = files["files"].get("Validation Methods File")
+        if not vm_path:
+            self.log_step(self.log, "System",
+                          "Missing required file: Validation Methods File", 0)
             return
-
-        # User-supplied sheet names (fall back to defaults if absent).
-        sheet_xc  = files["sheet_names"].get("X-Checks Publication File", "cross checks all")
-        sheet_fip = files["sheet_names"].get("FIP File (VALMSG)",
-                                             "FIP Methods Rules and Condition")
 
         # 1. Validation Methods: parse expected severity per event
         subset = files.get("validation_events_subset") or DEFAULT_EVENTS
@@ -63,16 +57,20 @@ class AccountingPrinciples(BaseStrategy):
         self.log_step(self.log, "Validation Methods",
                       "Definitions extracted", len(defs))
 
-        # 2. Cross Checks All — header is on row 2 of the sheet (pandas header=1)
-        # so we bypass BaseStrategy._load_files for this and read directly.
-        self.log_step(self.log, "EBX", f"Reading '{sheet_xc}' (header=row 2)...", 0)
-        cc_df = pd.read_excel(xc_path, sheet_name=sheet_xc, header=1)
-        self.log_step(self.log, "EBX", "Cross Checks All loaded", len(cc_df))
+        # 2. Cross Checks All — already loaded by BaseStrategy._load_files,
+        #    using header_signals to detect the right header row automatically.
+        cc_df = loaded_files.get("X-Checks Publication File")
+        if cc_df is None:
+            self.log_step(self.log, "System",
+                          "Missing required file: X-Checks Publication File", 0)
+            return
 
-        # 3. FIP Methods Rules and Condition — separate file
-        self.log_step(self.log, "FIP", f"Reading '{sheet_fip}' from FIP file...", 0)
-        fip_df = pd.read_excel(fip_path, sheet_name=sheet_fip)
-        self.log_step(self.log, "FIP", "FIP Methods loaded", len(fip_df))
+        # 3. FIP Methods Rules and Condition — also already loaded.
+        fip_df = loaded_files.get("FIP File (VALMSG)")
+        if fip_df is None:
+            self.log_step(self.log, "System",
+                          "Missing required file: FIP File (VALMSG)", 0)
+            return
 
         # 4. In-scope X-Checks: every unique non-blank X-Check No. for now.
         # NOTE: a future revision can plug in select_x_check_nos here.
