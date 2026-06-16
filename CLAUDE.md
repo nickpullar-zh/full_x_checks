@@ -45,6 +45,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.5 — Wire 'Process only differences' into Accounting Principles (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `accounting_principles.process()`: when `self.process_only_differences` is True, run an in-strategy port of v0.4.1's `select_x_check_nos` pipeline (drop INACTIVE rows, keep non-blank Type of change, drop X-Checks with Exclude Z-Core = X, drop X-Checks whose Category cell is yellow #FFFF00) and use those as the in-scope X-Check Nos. When False, fall back to every unique non-blank X-Check No. (existing behaviour). | DONE | The pipeline is reimplemented locally rather than imported from `strategies.x_checks` to honour the architectural rule: strategy branches don't depend on each other's modules. |
+| 2 | `_select_in_scope_x_checks` helper: case-insensitive column resolution; reads the EBX file with openpyxl to detect yellow Category cells (auto-detects header row 1–6 by signal `X-Check No. + Status + Type of change`). | DONE | |
+| 3 | `version.py`: bump to `0.5.5`. | DONE | 20 tests passing. Filter narrows the live `20260313 Cross Checks All.xlsx` from 189 unique X-Checks to 152. |
+
 ### v0.5.4 — Punctuation-insensitive event-column matching (completed 2026-06-16)
 
 Reconciled the strategy output (322 rows in v0.5.3) against the spreadsheet template's manual extract (435 rows). Root cause: cross-checks-all uses `DE GAAP RFD` (space) while validation methods uses `DE-GAAP RFD` (hyphen) — the strategy's exact-string column lookup missed the entire DE-GAAP family.

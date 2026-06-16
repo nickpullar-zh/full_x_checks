@@ -72,22 +72,33 @@ class AccountingPrinciples(BaseStrategy):
                           "Missing required file: FIP File (VALMSG)", 0)
             return
 
-        # 4. In-scope X-Checks: every unique non-blank X-Check No. for now.
-        # NOTE: a future revision can plug in select_x_check_nos here.
+        # 4. In-scope X-Checks. When 'Process only differences' is on, use the
+        # same pipeline as v0.4.1 X-Check No Selection (drop INACTIVE rows,
+        # keep non-blank Type of Change, drop Exclude Z-Core = X, drop yellow
+        # Category). Otherwise take every unique non-blank X-Check No.
         x_check_col = "X-Check No."
         if x_check_col not in cc_df.columns:
             self.log_step(self.log, "EBX",
                           f"Required column '{x_check_col}' not found — aborting", 0)
             return
-        xchecks: list[str] = []
-        seen: set = set()
-        for v in cc_df[x_check_col].tolist():
-            s = str(v).strip()
-            if s in ("", "nan", "None") or s in seen:
-                continue
-            seen.add(s)
-            xchecks.append(s)
-        self.log_step(self.log, "EBX", "In-scope X-Check Nos", len(xchecks))
+
+        if self.process_only_differences:
+            ebx_path  = files["files"].get("X-Checks Publication File")
+            ebx_sheet = files["sheet_names"].get("X-Checks Publication File",
+                                                 "cross checks all")
+            xchecks = self._select_in_scope_x_checks(cc_df, ebx_path, ebx_sheet)
+            self.log_step(self.log, "EBX",
+                          "In-scope X-Check Nos (filtered)", len(xchecks))
+        else:
+            xchecks: list[str] = []
+            seen: set = set()
+            for v in cc_df[x_check_col].tolist():
+                s = str(v).strip()
+                if s in ("", "nan", "None") or s in seen:
+                    continue
+                seen.add(s)
+                xchecks.append(s)
+            self.log_step(self.log, "EBX", "In-scope X-Check Nos", len(xchecks))
 
         # 5. Compare
         rows = compare(defs, cc_df, xchecks, fip_df)
@@ -110,6 +121,111 @@ class AccountingPrinciples(BaseStrategy):
             log=self.log,
         )
         return True
+
+    # Column names used by the 'Process only differences' filter, matched
+    # case-insensitively against the cross-checks-all header row.
+    _COL_STATUS    = "Status"
+    _COL_TYPE_CHG  = "Type of change"
+    _COL_EXCL_ZC   = "Exclude Z-Core"
+    _COL_CATEGORY  = "Category"
+    _COL_X_CHECK   = "X-Check No."
+    _YELLOW_RGB    = "FFFF00"
+
+    def _select_in_scope_x_checks(self, cc_df, ebx_path: str, ebx_sheet: str) -> list[str]:
+        """
+        Mirrors v0.4.1 select_x_check_nos: drop INACTIVE rows, keep non-blank
+        Type of change, drop X-Checks where Exclude Z-Core = X, drop X-Checks
+        whose Category cell is filled with standard Excel yellow (#FFFF00).
+        Returns unique X-Check Nos in order of first appearance.
+        """
+        import openpyxl
+        # Resolve actual column names case-insensitively
+        def _resolve(name: str) -> str | None:
+            target = name.casefold()
+            for c in cc_df.columns:
+                if str(c).casefold() == target:
+                    return c
+            return None
+
+        col_x       = _resolve(self._COL_X_CHECK)
+        col_status  = _resolve(self._COL_STATUS)
+        col_type    = _resolve(self._COL_TYPE_CHG)
+        col_excl_zc = _resolve(self._COL_EXCL_ZC)
+        col_cat     = _resolve(self._COL_CATEGORY)
+        if col_x is None:
+            return []
+
+        df = cc_df.copy()
+        if col_status is not None:
+            mask = df[col_status].astype(str).str.strip().str.upper() != "INACTIVE"
+            df = df[mask]
+        if col_type is not None:
+            toc = df[col_type].astype(str).str.strip()
+            df = df[~toc.isin(("", "nan", "None"))]
+
+        # Z-Core exclusion: drop X-Checks with any 'X' on this column
+        excluded_x: set = set()
+        if col_excl_zc is not None:
+            zc = df[col_excl_zc].astype(str).str.strip().str.upper()
+            for _, r in df[zc == "X"].iterrows():
+                excluded_x.add(str(r[col_x]).strip())
+
+        # Yellow Category exclusion (read original sheet for fill colour)
+        yellow_x: set = set()
+        if col_cat is not None and ebx_path and ebx_sheet:
+            try:
+                wb = openpyxl.load_workbook(ebx_path, data_only=True)
+                ws = wb[ebx_sheet]
+                # Find the Excel column index for Category from the header row.
+                # Header may be row 1 or row 2 — auto-detect by scanning rows 1-6
+                # for a row that contains 'X-Check No.' / 'Status' / 'Type of change'.
+                hdr_row = None
+                wanted = {self._COL_X_CHECK.casefold(),
+                          self._COL_STATUS.casefold(),
+                          self._COL_TYPE_CHG.casefold()}
+                for r_idx in range(1, 7):
+                    cells = {str(ws.cell(r_idx, c).value).strip().casefold()
+                             for c in range(1, ws.max_column + 1)
+                             if ws.cell(r_idx, c).value is not None}
+                    if wanted.issubset(cells):
+                        hdr_row = r_idx
+                        break
+                if hdr_row is not None:
+                    cat_col = None
+                    xc_col = None
+                    for c in range(1, ws.max_column + 1):
+                        v = ws.cell(hdr_row, c).value
+                        if v is None: continue
+                        s = str(v).strip().casefold()
+                        if s == self._COL_CATEGORY.casefold(): cat_col = c
+                        elif s == self._COL_X_CHECK.casefold(): xc_col = c
+                    if cat_col is not None and xc_col is not None:
+                        for r in range(hdr_row + 1, ws.max_row + 1):
+                            cell = ws.cell(r, cat_col)
+                            fill = cell.fill
+                            if (fill and fill.fill_type and fill.fill_type != "none"
+                                and fill.fgColor and fill.fgColor.type == "rgb"):
+                                rgb = str(fill.fgColor.rgb).upper()
+                                if rgb[-6:] == self._YELLOW_RGB:
+                                    xv = ws.cell(r, xc_col).value
+                                    if xv is not None:
+                                        yellow_x.add(str(xv).strip())
+                wb.close()
+            except Exception as e:
+                self.log_step(self.log, "EBX",
+                              f"Could not read Category fill colour: {e}", 0)
+
+        out: list[str] = []
+        seen: set = set()
+        for v in df[col_x].tolist():
+            s = str(v).strip()
+            if s in ("", "nan", "None") or s in seen:
+                continue
+            if s in excluded_x or s in yellow_x:
+                continue
+            seen.add(s)
+            out.append(s)
+        return out
 
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font
