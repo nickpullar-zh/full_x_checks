@@ -45,6 +45,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.9 — Close → strategy selector; Exit Application → quit (completed 2026-06-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: `_on_stop_or_close` no longer calls `sys.exit()` on the success branch. Both success (Close) and failure (Return to Form) now invoke `on_dismiss(success)` with a boolean flag, leaving the exit decision to the caller. Hard exit stays on the dedicated **Exit Application** button. | DONE | The dialog itself no longer makes the policy choice between "exit" and "return to start" — main.py decides per task. |
+| 2 | `main.py` `_run_task`: `on_dismiss` callback now branches on the success flag. Success → `root.deiconify()` to return to the strategy selector for a fresh pick. Cancel/error → existing prefill+rerun behaviour. | DONE | Debug mode (`_run_debug`) keeps `on_dismiss=None` so it still hard-exits on any close — debug builds are intended to run a single task and stop. |
+| 3 | `version.py`: bump to `0.5.9`. | DONE | 20 tests passing. |
+
 ### v0.5.8 — Field-label wrap fix (X-Checks Publication File "*" on same row) (completed 2026-06-16)
 
 | # | Change | Status | Notes |

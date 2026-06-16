@@ -11,11 +11,14 @@ class ProgressDialog:
     Runs on the main thread; processing runs on a background thread.
 
     Stop / dismiss behaviour:
-    - "Stop"           → sets stop event; button changes to "Return to Form".
-    - "Return to Form" → destroys dialog; calls on_dismiss() to return to the
-                         file-upload form pre-filled with the previous inputs.
-    - On success       → button changes to "Close"; "Close" exits the application.
-    - on_dismiss=None  → always exits (legacy / debug mode behaviour).
+    - "Stop"             → sets stop event; button changes to "Return to Form".
+    - "Return to Form"   → destroys dialog; calls on_dismiss(success=False) so the
+                           caller re-opens the upload form pre-filled.
+    - On success         → button changes to "Close"; "Close" calls
+                           on_dismiss(success=True) so the caller can return the
+                           user to the strategy selector for the next run.
+    - "Exit Application" → hard exit. Always available, regardless of state.
+    - on_dismiss=None    → always exits (legacy / debug mode behaviour).
     """
 
     WINDOW_SIZE = 550  # Square dimensions in pixels
@@ -138,16 +141,20 @@ class ProgressDialog:
             self.action_btn.config(text="Return to Form")
             self.append_entry("---", "User requested stop. Waiting for current step to finish...")
         else:
-            # Second press — dismiss
+            # Second press — dismiss this run.
+            # Close (on success), Return to Form (on stop/error), and the
+            # window 'X' button all route through here. They all return the
+            # user to the start of the app via the on_dismiss callback so the
+            # next strategy can be picked. Hard exit lives on the separate
+            # 'Exit Application' button only.
             self.window.grab_release()
             self.window.destroy()
-            if self._completed_successfully or self.on_dismiss is None:
-                # Success or no callback registered → exit the application
+            if self.on_dismiss is None:
+                # Debug-mode dialog has no callback registered → exit.
                 self.root.destroy()
                 sys.exit(0)
             else:
-                # Cancel or error → return to the upload form
-                self.on_dismiss()
+                self.on_dismiss(self._completed_successfully)
 
     # =========================================================
     # Public interface — called from background thread

@@ -182,8 +182,12 @@ class TaskSelectorUI:
 
     def _run_task(self, config, strategy_class, files):
         """Create the progress dialog and run the processing thread.
-        On cancel or error the dialog calls back to _run_task_loop with the
-        same inputs pre-filled so the user can adjust and re-run."""
+
+        Dialog dismissal routes:
+          - Close (success)            → return to the strategy selector
+          - Return to Form (cancel/err)→ re-open this task's upload form pre-filled
+          - Exit Application           → handled inside ProgressDialog (sys.exit)
+        """
         from progress_dialog import ProgressDialog
         import threading
 
@@ -206,9 +210,17 @@ class TaskSelectorUI:
                 self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
                 self.root.after(0, lambda: setattr(dialog, "_stopped", True))
 
+        def _on_dismiss(success: bool):
+            if success:
+                # Clean Close → back to the strategy selector for a fresh pick.
+                self.root.deiconify()
+            else:
+                # Cancel or error → re-open this task's form pre-filled.
+                self._run_task_loop(config, strategy_class, prefill=files)
+
         dialog = ProgressDialog(
             self.root,
-            on_dismiss=lambda: self._run_task_loop(config, strategy_class, prefill=files),
+            on_dismiss=_on_dismiss,
         )
         strategy = strategy_class(config)
         strategy.set_progress_dialog(dialog)
