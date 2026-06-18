@@ -11,8 +11,8 @@ from __future__ import annotations
 import pandas as pd
 
 from strategies.base_strategy import BaseStrategy, UploadTaskConfig
-from .validation_methods import parse_validation_methods
-from .compare import compare
+from .validation_methods import parse_method_bindings
+from .compare import compare_with_bindings
 
 
 # Default subset of Validation Events used on first run (before the user's
@@ -49,13 +49,13 @@ class AccountingPrinciples(BaseStrategy):
                           "Missing required file: Validation Methods File", 0)
             return
 
-        # 1. Validation Methods: parse expected severity per event
+        # 1. Validation Methods: parse method bindings (one per cell occurrence)
         subset = files.get("validation_events_subset") or DEFAULT_EVENTS
         self.log_step(self.log, "Validation Methods",
                       "Parsing validation methods file...", len(subset))
-        defs = parse_validation_methods(vm_path, subset)
+        bindings = parse_method_bindings(vm_path, subset)
         self.log_step(self.log, "Validation Methods",
-                      "Definitions extracted", len(defs))
+                      "Method bindings extracted", len(bindings))
 
         # 2. Cross Checks All — already loaded by BaseStrategy._load_files,
         #    using header_signals to detect the right header row automatically.
@@ -101,7 +101,7 @@ class AccountingPrinciples(BaseStrategy):
             self.log_step(self.log, "EBX", "In-scope X-Check Nos", len(xchecks))
 
         # 5. Compare
-        rows = compare(defs, cc_df, xchecks, fip_df)
+        rows = compare_with_bindings(bindings, cc_df, xchecks, fip_df)
         if not rows:
             self.log_step(self.log, "Compare",
                           "No comparable rows produced — aborting output", 0)

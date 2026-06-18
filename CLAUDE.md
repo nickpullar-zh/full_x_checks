@@ -45,6 +45,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.10 — Black/grey font priority; one row per (X-Check, V-code) (completed 2026-06-18)
+
+The validation methods file uses grey font (theme=1, tint > 0) to mark "reference copies" of a method that already appears in another column. The previous comparator emitted one row per matching event definition, producing duplicates whenever a V-code appeared (in any colour) under multiple events.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `validation_methods.py`: new `MethodBinding` dataclass and `parse_method_bindings()` that returns one record per (V-code, event, severity, font, column) cell occurrence. `_font_kind(cell)` returns `"grey"` for `theme=1, tint>0` cells, else `"black"`. The legacy `parse_validation_methods()` + `EventDefinition` helpers are kept so the existing test suite keeps passing. | DONE | |
+| 2 | `compare.py`: new `compare_with_bindings()` consumed by the strategy. For each (V-code, X-Check) FIP hit it walks bindings sorted by `(font priority [black<grey], leftmost column first)` and emits ONE row attributed to the first binding whose cross-checks-all column has a non-empty actual letter. Old `compare()` retained as a backwards-compat wrapper for tests. | DONE | |
+| 3 | `accounting_principles.process()`: switched from `parse_validation_methods` + `compare` to `parse_method_bindings` + `compare_with_bindings`. | DONE | |
+| 4 | `version.py`: bump to `0.5.10`. | DONE | 20 tests pass. Live data: 318 rows / 318 unique (X-Check, Method) — duplicates eliminated. |
+
 ### v0.5.9 — Close → strategy selector; Exit Application → quit (completed 2026-06-16)
 
 | # | Change | Status | Notes |

@@ -12,6 +12,9 @@ Layout (Q1 2026 file):
         "V900A - Part A (2023 onwards)"
     The leading code before " - " is the method ID we keep.
   - "-" or empty cells mean 'no entry' for that severity.
+  - Cells using grey font (theme=1, tint > 0) are 'reference copies' — they
+    bind the same V-code to a second event but only count when no higher-priority
+    binding produces a non-empty actual letter on cross-checks-all.
 """
 from __future__ import annotations
 
@@ -36,14 +39,28 @@ class EventDefinition:
     Severity declared for a Validation Event in the current-period block,
     plus the method codes the user should expect to see for each severity.
 
-    For severity == "Both", the methods on the merged cell are returned via
-    methods_w (and copied into methods_e) so a downstream cross-checks-all 'w'
-    or 'e' can both look up applicable methods.
+    Kept for backwards compatibility with existing tests. The comparator
+    now consumes MethodBinding instead.
     """
     event: str
     severity: str            # "Warning" | "Error" | "Both"
     methods_w: list[str] = field(default_factory=list)
     methods_e: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MethodBinding:
+    """
+    One (V-code, event, severity, font-colour, column) binding gleaned from
+    a single cell in the validation methods file. The comparator orders these
+    per V-code by (font_priority, column) and walks them in priority order
+    when looking up actual letters on cross-checks-all rows.
+    """
+    method:    str            # e.g. 'V900W'
+    event:     str            # e.g. 'IFRS New RFD'
+    severity:  str            # 'Warning' | 'Error' | 'Both'
+    font:      str            # 'black' | 'grey'
+    column:    int            # 1-based Excel column index (for left-to-right ordering)
 
 
 _METHOD_LINE_RE = re.compile(r"^\s*([A-Za-z0-9]+)")
@@ -79,6 +96,20 @@ def _is_blank(cell_value) -> bool:
     return s == "" or s == "-"
 
 
+def _font_kind(cell) -> str:
+    """
+    Returns 'grey' if the cell's font is theme=1 with tint > 0 (the canonical
+    'reference copy' style in this file), else 'black'.
+    """
+    f = cell.font
+    if f is None or f.color is None:
+        return "black"
+    c = f.color
+    if c.type == "theme" and c.theme == 1 and c.tint and c.tint > 0:
+        return "grey"
+    return "black"
+
+
 def _column_is_in_warning_merge_with_error(ws, col: int) -> bool:
     """True if a single merged region in this column spans the Warning row AND
     at least one Error row (i.e. the cell's content covers Warning+Error =
@@ -92,26 +123,30 @@ def _column_is_in_warning_merge_with_error(ws, col: int) -> bool:
     return False
 
 
+def _merge_origin(ws, row: int, col: int) -> tuple[int, int]:
+    """Returns the (origin_row, origin_col) of the merged range covering (row, col),
+    or (row, col) if not in a merge."""
+    cell = ws.cell(row=row, column=col)
+    if not isinstance(cell, MergedCell):
+        return (row, col)
+    for rng in ws.merged_cells.ranges:
+        if rng.min_row <= row <= rng.max_row and rng.min_col <= col <= rng.max_col:
+            return (rng.min_row, rng.min_col)
+    return (row, col)
+
+
 def _read_cell_through_merges(ws, row: int, col: int):
     """Returns the value at (row,col), following merged-cell semantics so
     every cell in a merged range yields the merged value (not None)."""
-    cell = ws.cell(row=row, column=col)
-    if not isinstance(cell, MergedCell):
-        return cell.value
-    for rng in ws.merged_cells.ranges:
-        if rng.min_row <= row <= rng.max_row and rng.min_col <= col <= rng.max_col:
-            return ws.cell(row=rng.min_row, column=rng.min_col).value
-    return None
+    o_row, o_col = _merge_origin(ws, row, col)
+    return ws.cell(row=o_row, column=o_col).value
 
 
 def parse_validation_methods(filepath: str, subset: list[str]) -> list[EventDefinition]:
     """
-    Reads the Validation Methods workbook and returns one EventDefinition per
-    event in `subset` that has any non-empty content in rows 4-6. Events with
-    nothing recorded are silently dropped (per the spec's "do nothing" rule).
-
-    `subset` is matched case-sensitively against row-1 event names; events not
-    found in the file are skipped (the caller can warn separately).
+    Returns a list of EventDefinition records, one per (event, severity)
+    combination with non-empty methods. Kept for tests and backward compat;
+    the comparator uses parse_method_bindings() instead.
     """
     wb = openpyxl.load_workbook(filepath, data_only=True)
     if SHEET_NAME not in wb.sheetnames:
@@ -119,7 +154,6 @@ def parse_validation_methods(filepath: str, subset: list[str]) -> list[EventDefi
         raise ValueError(f"Sheet '{SHEET_NAME}' not found in {filepath}")
     ws = wb[SHEET_NAME]
 
-    # Build event-name -> column index map (only for columns present in subset)
     subset_set = set(subset)
     col_for_event: dict[str, int] = {}
     for col in range(EVENT_COL_START, ws.max_column + 1):
@@ -148,24 +182,16 @@ def parse_validation_methods(filepath: str, subset: list[str]) -> list[EventDefi
         is_both = _column_is_in_warning_merge_with_error(ws, col)
 
         if is_both:
-            # The merged-cell content was written into warning_methods AND
-            # the error rows already (since _read_cell_through_merges follows
-            # the merge). Deduplicate while preserving order.
             merged_methods = list(dict.fromkeys(warning_methods + error_methods))
             if not merged_methods:
-                continue   # Both declared but no method content -> ignore
+                continue
             results.append(EventDefinition(
-                event=event,
-                severity="Both",
-                methods_w=merged_methods,
-                methods_e=merged_methods,
+                event=event, severity="Both",
+                methods_w=merged_methods, methods_e=merged_methods,
             ))
             continue
 
-        # Independent Warning + Error cells
         if warning_methods and error_methods:
-            # Per spec: emit two definitions (Warning + Error) so the comparator
-            # can match each independently against the cross-checks-all letter.
             results.append(EventDefinition(
                 event=event, severity="Warning",
                 methods_w=warning_methods, methods_e=[],
@@ -184,15 +210,71 @@ def parse_validation_methods(filepath: str, subset: list[str]) -> list[EventDefi
                 event=event, severity="Error",
                 methods_w=[], methods_e=error_methods,
             ))
-        # else: nothing recorded for this event -> drop
 
     wb.close()
     return results
 
 
+def parse_method_bindings(filepath: str, subset: list[str]) -> list[MethodBinding]:
+    """
+    Reads the Validation Methods sheet and returns one MethodBinding per
+    (V-code, event, severity, font-colour, column) cell occurrence. Order in
+    the returned list reflects file order; callers sort/filter as needed.
+
+    For black font we trust every binding. For grey we still emit the binding
+    but mark font='grey' so the comparator can decide whether to use it.
+    """
+    wb = openpyxl.load_workbook(filepath, data_only=True)
+    if SHEET_NAME not in wb.sheetnames:
+        wb.close()
+        raise ValueError(f"Sheet '{SHEET_NAME}' not found in {filepath}")
+    ws = wb[SHEET_NAME]
+
+    subset_set = set(subset)
+    bindings: list[MethodBinding] = []
+
+    for col in range(EVENT_COL_START, ws.max_column + 1):
+        h = ws.cell(row=EVENT_ROW, column=col).value
+        if h is None:
+            continue
+        event = str(h).strip()
+        if event not in subset_set:
+            continue
+
+        is_both = _column_is_in_warning_merge_with_error(ws, col)
+        if is_both:
+            # All methods on the merged cell apply for both 'w' and 'e' actuals.
+            origin_row, origin_col = _merge_origin(ws, WARNING_ROW, col)
+            cell = ws.cell(row=origin_row, column=origin_col)
+            font = _font_kind(cell)
+            for m in _extract_method_codes(cell.value):
+                bindings.append(MethodBinding(
+                    method=m, event=event, severity="Both",
+                    font=font, column=col,
+                ))
+            continue
+
+        # Independent Warning / Error rows
+        for r, sev in ((WARNING_ROW, "Warning"),
+                       (ERROR_ROWS[0], "Error"),
+                       (ERROR_ROWS[1], "Error")):
+            origin_row, origin_col = _merge_origin(ws, r, col)
+            cell = ws.cell(row=origin_row, column=origin_col)
+            if _is_blank(cell.value):
+                continue
+            font = _font_kind(cell)
+            for m in _extract_method_codes(cell.value):
+                bindings.append(MethodBinding(
+                    method=m, event=event, severity=sev,
+                    font=font, column=col,
+                ))
+
+    wb.close()
+    return bindings
+
+
 def list_all_event_names(filepath: str) -> list[str]:
-    """Returns every Validation Event name in row 1 (cols C..BM), in column order.
-    Used by the form's multi-select to build the checkbox list."""
+    """Returns every Validation Event name in row 1 (cols C..BM), in column order."""
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     if SHEET_NAME not in wb.sheetnames:
         wb.close()
