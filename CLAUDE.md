@@ -45,6 +45,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.12 — MIP sensitivity label applied to all generated Excel outputs (completed 2026-06-19)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | New module `strategies/sensitivity.py` with `ExcelLabeler`. Mirrors the VBA `SetLabelInfo` procedure (`Workbook.SensitivityLabel.CreateLabelInfo` + `AssignmentMethod=PRIVILEGED` + `LabelName`/`LabelId`/`SiteId` + `SetLabel`) via pywin32. Caches a single `Excel.Application` COM instance per strategy run so multiple writes share startup cost. | DONE | `_LABELS` table imports the seven Label IDs and the Tenant `SITE_ID` from your VBA module verbatim. |
+| 2 | `BaseStrategy.write_excel_output()`: after the workbook saves, call `_apply_sensitivity_label(path)` which lazily creates the `ExcelLabeler` and applies `DEFAULT_SENSITIVITY_LEVEL = "Internal_Use_Only"`. Failure logs `[Sensitivity] Could not apply label: <reason>` and the run continues. | DONE | Wired in `BaseStrategy` so every current and future strategy on every branch picks it up automatically. |
+| 3 | `BaseStrategy.execute()`: wrapped the main try block with a `finally` that closes the cached labeler so Excel exits cleanly when the strategy finishes (success or error). | DONE | |
+| 4 | `build.py`: added `strategies.sensitivity` plus `win32com.client`, `win32com`, `pythoncom`, `pywintypes` to `hidden_imports`. | DONE | PyInstaller can't statically resolve `win32com.client.DispatchEx`. |
+| 5 | `tests/test_sensitivity.py`: 6 new unit tests covering the level → (LabelId, LabelName) mapping, unknown-level error, and missing-file/unknown-level failure paths on the labeler. | DONE | 26 tests passing. Smoke run on the live AP fixtures applied + verified `Internal_Use_Only` label. |
+| 6 | `version.py`: bump to `0.5.12`. | DONE | |
+
 ### v0.5.11 — UAT plan for Accounting Principles (completed 2026-06-19)
 
 | # | Change | Status | Notes |

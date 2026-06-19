@@ -20,10 +20,15 @@ class BaseStrategy(ABC):
     - Logging processing steps
     """
     
+    # Default sensitivity label applied to every workbook this base writes.
+    # Override per branch / strategy if needed.
+    DEFAULT_SENSITIVITY_LEVEL = "Internal_Use_Only"
+
     def __init__(self, config: UploadTaskConfig):
         self.config = config
         self._progress_dialog = None          # Set via set_progress_dialog()
-        self._stop_event: threading.Event | None = None    
+        self._stop_event: threading.Event | None = None
+        self._sensitivity_labeler = None      # lazy ExcelLabeler, created on first write
 
     def execute(self, files: dict):
         """
@@ -41,25 +46,34 @@ class BaseStrategy(ABC):
         self.process_only_differences = files.get("process_only_differences", False)
 
         try:
-            self.log_step(self.log, "System", "Loading files into memory...", 0)
             try:
-                loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
-            except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
-                self.log_step(self.log, "System", f"Error loading files: {e}", 0)
-                return
+                self.log_step(self.log, "System", "Loading files into memory...", 0)
+                try:
+                    loaded_files = self._load_files(files["files"], files["sheet_names"], self.config.file_fields)
+                except (FileLoadError, SheetNotFoundError, MissingColumnsError, UnsupportedFileTypeError) as e:
+                    self.log_step(self.log, "System", f"Error loading files: {e}", 0)
+                    return
 
-            if loaded_files is None:
-                return
+                if loaded_files is None:
+                    return
 
-            self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
-            for label, data in loaded_files.items():
-                self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
+                self.log_step(self.log, "System", "Files loaded successfully:", len(loaded_files))
+                for label, data in loaded_files.items():
+                    self.log_step(self.log, "    " + label, f"Loaded {type(data).__name__}", len(data))
 
-            # Strategies that complete a full run return True. Strategies that
-            # bail early (e.g. missing column, no rows to compare) return None
-            # or False — propagate that so run_processing surfaces the failure
-            # via 'Return to Form' instead of claiming success.
-            return bool(self.process(loaded_files, files))
+                # Strategies that complete a full run return True. Strategies that
+                # bail early (e.g. missing column, no rows to compare) return None
+                # or False — propagate that so run_processing surfaces the failure
+                # via 'Return to Form' instead of claiming success.
+                return bool(self.process(loaded_files, files))
+            finally:
+                # Always shut down the cached Excel COM session, success or not.
+                if self._sensitivity_labeler is not None:
+                    try:
+                        self._sensitivity_labeler.close()
+                    except Exception:
+                        pass
+                    self._sensitivity_labeler = None
 
         except StopIteration:
             # User pressed Stop — log it, then return cleanly
@@ -198,7 +212,32 @@ class BaseStrategy(ABC):
             self.apply_output_formatting(writer.book)
 
         self.log_step(self.log, "Output", f"Output written to: {output_path}", 0)
-    
+
+        # Apply MIP sensitivity label via Excel COM. Best-effort — failures
+        # are logged but do not abort the strategy.
+        self._apply_sensitivity_label(output_path)
+
+    def _apply_sensitivity_label(self, path: str) -> None:
+        """Lazy-creates the cached ExcelLabeler and labels `path`. No-op on
+        non-Windows or when Excel COM is unavailable."""
+        try:
+            from .sensitivity import ExcelLabeler
+        except Exception as e:
+            self.log_step(self.log, "Sensitivity",
+                          f"Module import failed: {e}", 0)
+            return
+        if self._sensitivity_labeler is None:
+            self._sensitivity_labeler = ExcelLabeler()
+        ok, msg = self._sensitivity_labeler.label_file(
+            path, self.DEFAULT_SENSITIVITY_LEVEL
+        )
+        if ok:
+            self.log_step(self.log, "Sensitivity",
+                          f"Applied label: {msg}", 0)
+        else:
+            self.log_step(self.log, "Sensitivity",
+                          f"Could not apply label: {msg}", 0)
+
     def apply_output_formatting(self, workbook):
         """
         Hook for subclasses to apply strategy-specific formatting.

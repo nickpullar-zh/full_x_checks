@@ -169,6 +169,12 @@ def build(config: dict):
         "strategies.accounting_principles.accounting_principles",
         "strategies.accounting_principles.validation_methods",
         "strategies.accounting_principles.compare",
+        # Sensitivity labelling via Excel COM (v0.5.12).
+        "strategies.sensitivity",
+        "win32com.client",
+        "win32com",
+        "pythoncom",
+        "pywintypes",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 
