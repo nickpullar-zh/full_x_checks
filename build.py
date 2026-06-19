@@ -154,7 +154,14 @@ def build(config: dict):
     # PyInstaller's static analyser cannot see them. Each strategy branch
     # extends this list with its own modules. The infra `main` branch ships
     # an empty list because no strategies are registered.
-    hidden_imports: list[str] = []
+    hidden_imports: list[str] = [
+        # Sensitivity labelling via Excel COM (BaseStrategy hook).
+        "strategies.sensitivity",
+        "win32com.client",
+        "win32com",
+        "pythoncom",
+        "pywintypes",
+    ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 
     spec_content = f"""# -*- mode: python ; coding: utf-8 -*-

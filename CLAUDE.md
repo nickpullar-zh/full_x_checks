@@ -7,7 +7,8 @@
 - **Strategy branches** (each carries its own strategy module + tests + UAT):
   - `v0.3-X-Checks` — X-Checks comparison + Collect Live X-Checks (X-Checks family)
   - `v0.2-Grouping_By` — Grouping By comparison
-  - `v0.5-Accounting-Principles` — Accounting Principles (in progress)
+  - `v0.5-Accounting-Principles` — Accounting Principles (shipped)
+  - `v0.6-Conditions` — Conditions (in progress)
 
 ## Branch architecture
 
@@ -44,6 +45,19 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 ---
 
 ## Change Log
+
+### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
+
+Ported from `v0.5-Accounting-Principles` (commit `e17698d`) so every strategy on every branch automatically applies a Microsoft Information Protection sensitivity label to the Excel workbooks it produces.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | New `strategies/sensitivity.py` with `ExcelLabeler`. Wraps `Workbook.SensitivityLabel.CreateLabelInfo` + `AssignmentMethod=PRIVILEGED` + `LabelName`/`LabelId`/`SiteId` + `SetLabel` via pywin32. Caches one `Excel.Application` COM session per run. | DONE | Tenant `SITE_ID` and 7 label GUIDs imported verbatim from the user's VBA `SetLabelInfo` module. |
+| 2 | `BaseStrategy.write_excel_output()` calls `_apply_sensitivity_label(path)` after each save. `DEFAULT_SENSITIVITY_LEVEL = "Internal_Use_Only"`. Failure logs `[Sensitivity] Could not apply label: <reason>` and the run continues. | DONE | Strategies can override `DEFAULT_SENSITIVITY_LEVEL` if they need a different default. |
+| 3 | `BaseStrategy.execute()` `finally` block closes the cached labeler so Excel exits cleanly on success or error. | DONE | |
+| 4 | `build.py`: `hidden_imports` extended with `strategies.sensitivity`, `win32com.client`, `win32com`, `pythoncom`, `pywintypes`. | DONE | PyInstaller can't statically resolve `win32com.client.DispatchEx`. |
+| 5 | `tests/test_sensitivity.py`: 6 unit tests covering the level → (LabelId, LabelName) mapping, unknown-level error, and the missing-file failure path. | DONE | Excel COM is mocked; round-trip verified live on the v0.5 branch. |
+| 6 | `version.py`: bump to `0.4.7`. | DONE | |
 
 ### v0.4.6 — Infrastructure refresh on main (completed 2026-06-15)
 
