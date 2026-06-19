@@ -45,6 +45,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.11 — UAT plan for Accounting Principles (completed 2026-06-19)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_uat.py` authored on this branch in the standard reference format (Sheet1 narrative walkthrough in Aptos Narrow + Sheet2 Zurich-branded sectioned tables). | DONE | Re-runnable on every version bump; filename auto-stamps date + version. |
+| 2 | Sections covered: Files Required (3 fields); General UI + Dialog (15 cases including v0.5.8 label wrap, v0.4.3 bold-red errors, v0.4.4 chime, v0.4.5 Exit Application, v0.5.9 Close→selector + Return-to-Form pre-fill); Detailed Field Interaction (9 cases); Workflow-Specific (19 cases including smoke run, output structure, all match rules, v0.5.10 black/grey font priority + dedup, v0.5.4 punctuation-insensitive matching, v0.5.5 process-only-differences filter ON/OFF, error visibility paths). | DONE | |
+| 3 | Generated `docs/20260619 X-Checks_AccountingPrinciples_v0.5.11 Test Plan.xlsx`. | DONE | |
+
 ### v0.5.11 — Output workbook adds EBX & FIP sheets; rename to Comparison (completed 2026-06-19)
 
 | # | Change | Status | Notes |
