@@ -45,6 +45,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.5.11 — Output workbook adds EBX & FIP sheets; rename to Comparison (completed 2026-06-19)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `accounting_principles.process()`: rename main sheet `Accounting Principles` → `Comparison`. Add `EBX` sheet (cc_df filtered to in-scope X-Check Nos). Add `FIP` sheet (FIP rows whose V-code is in the validation-methods subset). Sheet order written: EBX → FIP → Comparison → Processing Log. | DONE | Lets the user audit what the strategy was reading without opening the source files. |
+| 2 | `apply_output_formatting`: target sheet renamed to `Comparison`. | DONE | Conditional formatting (green Match / red MisMatch) preserved. |
+| 3 | `version.py`: bump to `0.5.11`. | DONE | 20 tests pass. Smoke test produces EBX 1499 rows × 95 cols, FIP 5066 rows × 11 cols, Comparison 318 rows × 7 cols. |
+
 ### v0.5.10 — Black/grey font priority; one row per (X-Check, V-code) (completed 2026-06-18)
 
 The validation methods file uses grey font (theme=1, tint > 0) to mark "reference copies" of a method that already appears in another column. The previous comparator emitted one row per matching event definition, producing duplicates whenever a V-code appeared (in any colour) under multiple events.

@@ -106,10 +106,25 @@ class AccountingPrinciples(BaseStrategy):
             self.log_step(self.log, "Compare",
                           "No comparable rows produced — aborting output", 0)
             return
-        df = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
-        self.log_step(self.log, "Compare", "Comparison rows produced", len(df))
+        df_compare = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
+        self.log_step(self.log, "Compare", "Comparison rows produced", len(df_compare))
 
-        # 6. Write output
+        # 6. EBX sheet: cross-checks-all rows for in-scope X-Checks only
+        in_scope_set = set(xchecks)
+        ebx_mask = cc_df[x_check_col].astype(str).str.strip().isin(in_scope_set)
+        df_ebx = cc_df.loc[ebx_mask].reset_index(drop=True)
+        self.log_step(self.log, "EBX", "Rows kept for output sheet", len(df_ebx))
+
+        # 7. FIP sheet: only rows whose V-code is in the validation-methods subset
+        known_methods = {b.method for b in bindings}
+        def _v_code(key: str) -> str:
+            s = str(key)
+            return s.split("|", 1)[0].strip() if "|" in s else ""
+        fip_mask = fip_df["Key"].astype(str).map(_v_code).isin(known_methods)
+        df_fip = fip_df.loc[fip_mask].reset_index(drop=True)
+        self.log_step(self.log, "FIP", "Rows kept for output sheet", len(df_fip))
+
+        # 8. Write output. Sheet order: EBX, FIP, Comparison.
         out_path = self.build_output_path(
             files["output_directory"],
             "Accounting Principles Comparison",
@@ -117,7 +132,11 @@ class AccountingPrinciples(BaseStrategy):
         )
         self.write_excel_output(
             output_path=out_path,
-            sheets={"Accounting Principles": df},
+            sheets={
+                "EBX":        df_ebx,
+                "FIP":        df_fip,
+                "Comparison": df_compare,
+            },
             log=self.log,
         )
         return True
@@ -230,7 +249,7 @@ class AccountingPrinciples(BaseStrategy):
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font
 
-        sheet_name = "Accounting Principles"
+        sheet_name = "Comparison"
         if sheet_name not in workbook.sheetnames:
             return
 
