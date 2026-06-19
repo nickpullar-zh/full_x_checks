@@ -452,6 +452,23 @@ WORKFLOW_CASES = [
      "methods subset (e.g. V900W, V900A, V901A ..., V791A ..., V600A ...). "
      "Roughly 5,000 rows for the live data."),
 
+    # Sensitivity label (v0.5.12)
+    ("Accounting Principles", "Output file is labelled Internal_Use_Only",
+     "Run the strategy. After it completes, open the produced "
+     "<timestamp>_Accounting Principles Comparison.xlsx in Excel and inspect "
+     "the sensitivity label (File → Info → Sensitivity, or the bar at the top of the workbook).",
+     "Sensitivity label reads 'Internal_Use_Only'. The processing log shows "
+     "'[Sensitivity] Applied label: Internal_Use_Only' as the final step before "
+     "'Processing complete'."),
+
+    ("Accounting Principles", "Sensitivity failure does not abort run",
+     "Trigger a labelling failure (e.g. close Excel forcibly during the labelling step, "
+     "or run on a machine where Excel is not installed). Run the strategy.",
+     "The .xlsx is still produced (just unlabelled). The processing log shows "
+     "'[Sensitivity] Could not apply label: <reason>' in BOLD RED but the run "
+     "completes with the 'Processing complete' status. Tester can apply the label "
+     "manually."),
+
     # Error visibility
     ("Accounting Principles", "EBX file locked in Excel",
      "Open the EBX .xlsx in Excel. Run the strategy.",
