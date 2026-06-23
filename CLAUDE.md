@@ -46,6 +46,57 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.6.0 — Conditions strategy (completed 2026-06-22)
+
+Full implementation of the Conditions strategy on `v0.6-Conditions`. Compares X-Check condition data from the publication file (yellow/green cells) against the FIP ZQ9_VALMETH extract, producing a 4-sheet output workbook.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: add `CONDITIONS_UPLOAD_CONFIG` (2 file fields: X-Checks Publication File, FIP File). | DONE | |
+| 2 | `task_registry.py`: register `"Conditions"` entry + `if False:` import. | DONE | |
+| 3 | `strategies/conditions/extract.py`: `_is_yellow`, `_is_green` helpers + `extract_conditions(pub_path, sheet_name)` → working DataFrame with X-Check No., 5 condition value columns, 5 concat columns. | DONE | Handles openpyxl rgb/theme/indexed colour variants. |
+| 4 | `strategies/conditions/fip.py`: `process_fip(df)` — rename 8 columns per spec, add `Concatenated` key column (`Normal X-Check No \| Condition No`). | DONE | |
+| 5 | `strategies/conditions/compare.py`: `compare(working_df, fip_df)` → results DataFrame (True/False/blank per X-Check × condition) + summary dict. | DONE | |
+| 6 | `strategies/conditions/conditions.py`: `Conditions(BaseStrategy)` wiring extract → fip → compare → `write_excel_output`. `apply_output_formatting` applies green/red fills to True/False cells. | DONE | |
+| 7 | `strategies/conditions/__init__.py`: re-exports `Conditions` for lazy import. | DONE | |
+| 8 | `main.py`: add `_DEBUG_FILES_CONDITIONS` dict + entry in `_DEBUG_FILES_MAP`. | DONE | Uses existing test_data files. |
+| 9 | `build.py`: add `conditions_debug` BUILDS entry + hidden_imports for all 5 conditions submodules. | DONE | |
+| 10 | `tests/test_conditions.py`: 20 unit tests for extract, fip, compare + integration test for process(). All pass. | DONE | |
+| 11 | `version.py`: bump to `0.6.0`. | DONE | |
+
+### v0.6.1 — Conditions output format aligned to reference workbook (completed 2026-06-22)
+
+Restructure the Conditions comparison output to match the 3-column format used in the Q2 2026 Final Cross Checks Summary workbook (`EBX Data | FIP Data | Comparison`), with one row per `XCheck|ConditionValue` pair instead of one row per X-Check with 5 match columns.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/compare.py`: rewrite `compare()` to emit one row per pair with columns `EBX Data`, `FIP Data`, `Comparison` (True/False). Summary dict updated accordingly. | DONE | |
+| 2 | `strategies/conditions/conditions.py`: rename output sheet from `"Comparison Results"` to `"Conditions"`; remove wide-format green/red cell formatting (reference has no fills). Update `apply_output_formatting` accordingly. | DONE | |
+| 3 | `tests/test_conditions.py`: update `TestCompare` tests to match new 3-column row-per-pair output shape. | DONE | |
+| 4 | `version.py`: bump to `0.6.1`. | DONE | |
+
+### v0.6.2 — Fix extraction rule: only collect condition cells that are themselves yellow or green (completed 2026-06-22)
+
+The previous logic also collected rows where the X-Check No. cell was green and the condition cell had any value, regardless of the condition cell's own colour. The correct rule (matching the manual workbook process) is: a condition cell is included only if it is itself yellow or green **and** has a non-blank value.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/extract.py`: remove the `xc_is_green` path that collects condition cells based on the X-Check No. cell colour. Keep only: yellow condition cell → collect; green condition cell with value → collect. | DONE | |
+| 2 | `tests/test_conditions.py`: added `TestExtractionRule` class with 4 tests confirming the corrected rule. | DONE | |
+| 3 | `version.py`: bump to `0.6.2`. | DONE | |
+
+### v0.6.3 — Honour "process only differences" checkbox in Conditions extraction (completed 2026-06-22)
+
+When the checkbox is **unchecked**: collect every non-blank condition cell regardless of colour (full file).
+When the checkbox is **checked**: collect only condition cells that are yellow or green (changed/new rows — ~20 rows).
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/extract.py`: add `process_only_differences` parameter to `extract_conditions()`. When `False`, skip the colour check and collect all non-blank condition cells. When `True` (default behaviour), keep the yellow/green-only rule. | DONE | |
+| 2 | `strategies/conditions/conditions.py`: pass `files["process_only_differences"]` through to `extract_conditions()`. Log message updated to show mode. | DONE | |
+| 3 | `tests/test_conditions.py`: added 2 tests for both modes in `TestExtractionRule`. | DONE | |
+| 4 | `version.py`: bump to `0.6.3`. | DONE | |
+
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
 Ported from `v0.5-Accounting-Principles` (commit `e17698d`) so every strategy on every branch automatically applies a Microsoft Information Protection sensitivity label to the Excel workbooks it produces.

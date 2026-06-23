@@ -27,6 +27,13 @@ BUILDS = [
         "debug_mode":  False,
         "add_test_data": False,
     },
+    {
+        "key":          "conditions_debug",
+        "name":         f"X-Checks_Debug_Conditions_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Conditions",
+        "add_test_data": True,
+    },
 ]
 
 PROJECT_ROOT    = os.path.dirname(os.path.abspath(__file__))
@@ -161,6 +168,12 @@ def build(config: dict):
         "win32com",
         "pythoncom",
         "pywintypes",
+        # Conditions strategy submodules (loaded lazily via task_registry._lazy).
+        "strategies.conditions",
+        "strategies.conditions.conditions",
+        "strategies.conditions.extract",
+        "strategies.conditions.fip",
+        "strategies.conditions.compare",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 

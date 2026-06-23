@@ -39,7 +39,23 @@ DEBUG_FILES = {
 # Maps each task name to its debug file config — build.py patches DEBUG_TASK per build.
 # Each strategy branch adds its own entry here.
 DEBUG_TASK = ""  # ← patched by build.py to match a key in TASK_REGISTRY
-_DEBUG_FILES_MAP: dict = {}
+
+_DEBUG_FILES_CONDITIONS = {
+    "files": {
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All - Copy.xlsx"),
+        "FIP File":                  os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+    },
+    "sheet_names": {
+        "X-Checks Publication File": "cross checks all",
+        "FIP File":                  "FIP Conditions",
+    },
+    "output_directory": os.path.join(_BASE, "test_data", "X-Checks Output"),
+    "process_only_differences": False,
+}
+
+_DEBUG_FILES_MAP: dict = {
+    "Conditions": _DEBUG_FILES_CONDITIONS,
+}
 
 
 def _register_fonts():
