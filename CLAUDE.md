@@ -3,7 +3,7 @@
 ## Repository
 
 - **Repo:** https://github.com/nickpullar-zh/full_x_checks
-- **Working branch:** `v0.3-X-Checks`
+- **Working branch:** `v0.4-X-Check-No-Selection`
 - **Archive branch (read-only):** `X-Checks_v0.3_Parity_with_Original_X-Checks_Archive`
 
 ---
@@ -91,7 +91,7 @@ A pre-filter step that extracts the list of *changed* X-Check Nos from the EBX `
 
 | # | Change | Status | Notes |
 |---|--------|--------|-------|
-| 1 | Branch from `v0.3-X-Checks`; push `v0.4-X-Check-No-Selection` to origin | DONE | |
+| 1 | Branch from `obsolete_to_v0.4-X-Checks`; push `v0.4-X-Check-No-Selection` to origin | DONE | |
 | 2 | `version.py`: bump to `0.4.0` | DONE | |
 | 3 | `base_strategy.py`: rename `_filter_coloured_rows` → `_filter_changed_rows`; split detection into `_coloured_row_indices` (existing logic) + `_change_flag_row_indices` (new — non-blank `Type of change` column). Union the two index sets, preserve order. | DONE | Module constant `_CHANGE_FLAG_COLUMN = "Type of change"`. Missing column / non-xlsx files fall through gracefully. |
 | 4 | `x_checks.py`: when `process_only_differences` is on, write unique X-Check Nos from the filtered EBX DataFrame to `<timestamp>_X-Check_Nos.txt` (one per line, order of first occurrence). Logged in processing log. | DONE | `_write_x_check_no_list` runs at the start of `process()` so the .txt is produced even if downstream comparison aborts. |
