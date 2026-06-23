@@ -7,16 +7,14 @@ own entries here and a matching config in task_configs.py.
 """
 import importlib
 
-# from task_configs import (
-#     X_CHECKS_UPLOAD_CONFIG,
-# )
+from task_configs import GROUPING_BY_UPLOAD_CONFIG
 
 # PyInstaller dependency hints — never executed at runtime, but scanned by the
 # static analyser so strategy modules are bundled even though they are
 # loaded lazily via _lazy(). Each strategy branch adds a matching `if False`
 # import alongside its TASK_REGISTRY entry.
 if False:
-    pass
+    from strategies.grouping_by import GroupingBy  # noqa: F401
 
 
 def _lazy(module: str, cls: str):
@@ -31,5 +29,5 @@ def _lazy(module: str, cls: str):
 # To add a new strategy: append one line and add the matching config in
 # task_configs.py and the matching `if False:` import above.
 TASK_REGISTRY: dict = {
-    # "X-Checks": (X_CHECKS_UPLOAD_CONFIG, _lazy('strategies.x_checks', 'XChecks')),
+    "Grouping By": (GROUPING_BY_UPLOAD_CONFIG, _lazy("strategies.grouping_by", "GroupingBy")),
 }

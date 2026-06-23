@@ -7,11 +7,28 @@ UploadTaskConfig and registers it in task_registry.py.
 """
 from file_upload_config import UploadTaskConfig, FileFieldConfig  # noqa: F401
 
-# Each strategy branch adds its own config here, e.g.:
-#
-# X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
-#     task_name="X-Checks",
-#     window_title="X-Check Files",
-#     requires_output_directory=True,
-#     file_fields=[...],
-# )
+GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="Grouping By",
+    window_title="Grouping By Files",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALFLDGR)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="FIP download from ZQ9_VALFLDGR",
+            default_sheet="Sheet1",
+        ),
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all",
+        ),
+        FileFieldConfig(
+            label="Mapping File",
+            file_types=[("CSV Files", "*.csv"), ("All Files", "*.*")],
+            description="Mapping file in CSV format (FIP Data, EBS item)",
+            default_sheet="Sheet1",
+        ),
+    ],
+)

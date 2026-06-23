@@ -23,9 +23,16 @@ VERSION = f"v{__version__}"
 BUILDS = [
     {
         "key":         "prod",
-        "name":        f"X-Checks_{VERSION}",
+        "name":        f"X-Checks_GroupingBy_{VERSION}",
         "debug_mode":  False,
         "add_test_data": False,
+    },
+    {
+        "key":          "grouping_by_debug",
+        "name":         f"X-Checks_Debug_GroupingBy_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Grouping By",
+        "add_test_data": True,
     },
 ]
 
@@ -161,6 +168,9 @@ def build(config: dict):
         "win32com",
         "pythoncom",
         "pywintypes",
+        # Grouping By strategy submodules (loaded lazily via task_registry._lazy).
+        "strategies.grouping_by",
+        "strategies.grouping_by.grouping_by",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 

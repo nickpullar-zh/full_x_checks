@@ -6,7 +6,8 @@
 - **Infrastructure branch:** `main` — shared plumbing only, no strategy code
 - **Strategy branches** (each carries its own strategy module + tests + UAT):
   - `obsolete_to_v0.4-X-Checks` — X-Checks comparison (superseded by v0.4; kept for reference)
-  - `v0.2-Grouping_By` — Grouping By comparison
+  - `v0.2-Grouping_By` — Grouping By comparison (old pre-split codebase; superseded by v0.3-Grouping_By)
+  - `v0.3-Grouping_By` — Grouping By comparison (ported to modern branch structure)
   - `v0.5-Accounting-Principles` — Accounting Principles (shipped)
   - `v0.6-Conditions` — Conditions (in progress)
 
@@ -45,6 +46,20 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 ---
 
 ## Change Log
+
+### v0.3.0 — Grouping By strategy (completed 2026-06-23)
+
+Port of the Grouping By strategy from the old pre-split `v0.2-Grouping_By` branch into the modern branch architecture. Compares X-Check grouping data from the publication file against the FIP ZQ9_VALFLDGR extract.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: add `GROUPING_BY_UPLOAD_CONFIG` (3 file fields: FIP File, X-Checks Publication File, Mapping File CSV). | DONE | |
+| 2 | `task_registry.py`: register `"Grouping By"` entry + `if False:` import. | DONE | |
+| 3 | `strategies/grouping_by/grouping_by.py`: `GroupingBy(BaseStrategy)` with `_process_fip`, `_process_ebs`, `_process_compare`. Ported from `v0.2` with `process(loaded_files, files)` signature, no `app_state`, no `output_directory` param. | DONE | |
+| 4 | `strategies/grouping_by/__init__.py`: re-exports `GroupingBy` for lazy import. | DONE | |
+| 5 | `main.py`: add `_DEBUG_FILES_GROUPING_BY` dict + entry in `_DEBUG_FILES_MAP`. | DONE | |
+| 6 | `build.py`: add `grouping_by_debug` BUILDS entry + hidden imports; rename prod EXE to `X-Checks_GroupingBy_{VERSION}`. | DONE | |
+| 7 | `version.py`: set to `0.3.0`. | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
