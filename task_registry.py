@@ -7,7 +7,7 @@ own entries here and a matching config in task_configs.py.
 """
 import importlib
 
-from task_configs import CONDITIONS_UPLOAD_CONFIG
+from task_configs import CONDITIONS_UPLOAD_CONFIG, _build_full_run_config
 
 # PyInstaller dependency hints — never executed at runtime, but scanned by the
 # static analyser so strategy modules are bundled even though they are
@@ -15,6 +15,7 @@ from task_configs import CONDITIONS_UPLOAD_CONFIG
 # import alongside its TASK_REGISTRY entry.
 if False:
     from strategies.conditions import Conditions  # noqa: F401
+    from strategies.full_run import FullRun       # noqa: F401
 
 
 def _lazy(module: str, cls: str):
@@ -31,3 +32,9 @@ def _lazy(module: str, cls: str):
 TASK_REGISTRY: dict = {
     "Conditions": (CONDITIONS_UPLOAD_CONFIG, _lazy("strategies.conditions", "Conditions")),
 }
+
+# Full Run is registered last so _build_full_run_config sees all other entries.
+TASK_REGISTRY["Full Run"] = (
+    _build_full_run_config(TASK_REGISTRY),
+    _lazy("strategies.full_run", "FullRun"),
+)

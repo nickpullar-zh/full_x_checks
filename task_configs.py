@@ -7,6 +7,29 @@ UploadTaskConfig and registers it in task_registry.py.
 """
 from file_upload_config import UploadTaskConfig, FileFieldConfig  # noqa: F401
 
+
+def _build_full_run_config(registry: dict) -> UploadTaskConfig:
+    """
+    Build a merged UploadTaskConfig from all registered strategies, deduplicating
+    file fields by label. Called after the registry is fully populated.
+    """
+    seen: set = set()
+    merged: list = []
+    for task_name, (config, _) in registry.items():
+        if task_name == "Full Run":
+            continue
+        for field in config.file_fields:
+            if field.label not in seen:
+                seen.add(field.label)
+                merged.append(field)
+    return UploadTaskConfig(
+        task_name="Full Run",
+        window_title="Full Run — All Strategies",
+        requires_output_directory=True,
+        file_fields=merged,
+    )
+
+
 CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
     task_name="Conditions",
     window_title="Conditions Files",

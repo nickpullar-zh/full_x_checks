@@ -34,6 +34,13 @@ BUILDS = [
         "debug_task":   "Conditions",
         "add_test_data": True,
     },
+    {
+        "key":          "full_run_debug",
+        "name":         f"X-Checks_Debug_Full_Run_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Full Run",
+        "add_test_data": True,
+    },
 ]
 
 PROJECT_ROOT    = os.path.dirname(os.path.abspath(__file__))
@@ -174,6 +181,9 @@ def build(config: dict):
         "strategies.conditions.extract",
         "strategies.conditions.fip",
         "strategies.conditions.compare",
+        # Full Run strategy submodules.
+        "strategies.full_run",
+        "strategies.full_run.full_run",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 

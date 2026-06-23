@@ -9,6 +9,7 @@
   - `v0.2-Grouping_By` — Grouping By comparison
   - `v0.5-Accounting-Principles` — Accounting Principles (shipped)
   - `v0.6-Conditions` — Conditions (in progress)
+  - `v0.7-Full-Run` — Full Run (in progress)
 
 ## Branch architecture
 
@@ -103,6 +104,21 @@ When the checkbox is **checked**: collect only condition cells that are yellow o
 |---|--------|--------|-------|
 | 1 | `docs/generate_uat.py`: self-contained openpyxl script generating the Conditions UAT workbook in the Zurich reference format (Overview + Test Cases + Sign-off). 22 test cases covering launch, file selection, differences-only mode, full-file mode, output structure, data accuracy, sensitivity label, stop/return-to-form, and error handling. | DONE | |
 | 2 | `docs/20260623 Conditions_v0.6.3 Test Plan.xlsx`: generated output committed to repo. | DONE | |
+
+### v0.7.0 — Full Run strategy (completed 2026-06-23)
+
+Adds a new "Full Run" task that runs every registered strategy sequentially, combining all output sheets into a single colour-coded workbook with one shared Processing Log.
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/full_run/full_run.py`: `FullRun(BaseStrategy)` — iterates `TASK_REGISTRY`, partitions inputs per strategy, monkey-patches `write_excel_output` to capture sheets, prefixes tab names, applies per-strategy tab colours in `apply_output_formatting`. | DONE | |
+| 2 | `strategies/full_run/__init__.py`: re-exports `FullRun`. | DONE | |
+| 3 | `task_configs.py`: add `_build_full_run_config(registry)` — builds merged `UploadTaskConfig` from all registered strategies, deduplicating file fields by label. | DONE | |
+| 4 | `task_registry.py`: register `"Full Run"` entry (added last so `_build_full_run_config` sees all other entries) + `if False:` import. | DONE | |
+| 5 | `main.py`: add `_DEBUG_FILES_FULL_RUN` dict (reuses Conditions test files) + entry in `_DEBUG_FILES_MAP`. | DONE | |
+| 6 | `build.py`: add `full_run_debug` BUILDS entry + hidden imports for `strategies.full_run` and `strategies.full_run.full_run`. | DONE | |
+| 7 | `tests/test_full_run.py`: 17 unit tests covering `_unique_name`, `_build_full_run_config`, `FullRun.process` (sheet capture, prefixing, skip self, exception resilience, deduplication), and `apply_output_formatting` (tab colours). All pass. | DONE | |
+| 8 | `version.py`: bump to `0.7.0`. | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
