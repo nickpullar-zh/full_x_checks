@@ -3,7 +3,7 @@
 ## Repository
 
 - **Repo:** https://github.com/nickpullar-zh/full_x_checks
-- **Working branch:** `v0.3-X-Checks`
+- **Working branch:** `obsolete_to_v0.4-X-Checks` (superseded by `v0.4-X-Check-No-Selection`)
 - **Archive branch (read-only):** `X-Checks_v0.3_Parity_with_Original_X-Checks_Archive`
 
 ---
