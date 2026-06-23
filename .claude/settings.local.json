@@ -10,7 +10,18 @@
       "mcp__ide__executeCode",
       "Bash(claude mcp *)",
       "Bash(gh *)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(git rm *)",
+      "Bash(rmdir /s /q x_checks)",
+      "Bash(rmdir /s /q collect_live_x_checks)",
+      "Bash(rmdir /s /q __pycache__)",
+      "Bash(git clean *)",
+      "Bash(git ls-tree *)",
+      "Bash(cp \"C:/Users/NICK.PULLAR/OneDrive - Zurich Insurance/Projects/2026 Testing/06 2026/Q2 X-Checks/2026Q1 Xchecks for use as templates, no need to keep/validation methods.xlsx\" \"C:/Users/NICK.PULLAR/OneDrive - Zurich Insurance/Projects/Testing Automation/Python Files/Full_X-Checks/test_data/validation methods.xlsx\")",
+      "Bash(cp \"C:/Users/NICK.PULLAR/OneDrive - Zurich Insurance/Projects/2026 Testing/06 2026/Q2 X-Checks/20260602 VALMSG \\(Accounting Principle\\).XLSX\" \"C:/Users/NICK.PULLAR/OneDrive - Zurich Insurance/Projects/Testing Automation/Python Files/Full_X-Checks/test_data/20260602 VALMSG \\(Accounting Principle\\).xlsx\")",
+      "Bash(git cherry-pick *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)"
     ]
   }
 }
