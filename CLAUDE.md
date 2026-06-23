@@ -97,6 +97,13 @@ When the checkbox is **checked**: collect only condition cells that are yellow o
 | 3 | `tests/test_conditions.py`: added 2 tests for both modes in `TestExtractionRule`. | DONE | |
 | 4 | `version.py`: bump to `0.6.3`. | DONE | |
 
+### v0.6.3 (UAT) — Conditions UAT Test Plan workbook (completed 2026-06-23)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_uat.py`: self-contained openpyxl script generating the Conditions UAT workbook in the Zurich reference format (Overview + Test Cases + Sign-off). 22 test cases covering launch, file selection, differences-only mode, full-file mode, output structure, data accuracy, sensitivity label, stop/return-to-form, and error handling. | DONE | |
+| 2 | `docs/20260623 Conditions_v0.6.3 Test Plan.xlsx`: generated output committed to repo. | DONE | |
+
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
 Ported from `v0.5-Accounting-Principles` (commit `e17698d`) so every strategy on every branch automatically applies a Microsoft Information Protection sensitivity label to the Excel workbooks it produces.
