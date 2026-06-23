@@ -6,7 +6,8 @@
 - **Infrastructure branch:** `main` — shared plumbing only, no strategy code
 - **Strategy branches** (each carries its own strategy module + tests + UAT):
   - `obsolete_to_v0.4-X-Checks` — X-Checks comparison (superseded by v0.4; kept for reference)
-  - `v0.2-Grouping_By` — Grouping By comparison
+  - `v0.2-Grouping_By` — Grouping By comparison (old pre-split codebase; superseded by v0.3-Grouping_By)
+  - `v0.3-Grouping_By` — Grouping By comparison (ported to modern branch structure)
   - `v0.5-Accounting-Principles` — Accounting Principles (in progress)
 
 ## Branch architecture
