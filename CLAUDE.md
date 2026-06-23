@@ -5,7 +5,7 @@
 - **Repo:** https://github.com/nickpullar-zh/full_x_checks
 - **Infrastructure branch:** `main` — shared plumbing only, no strategy code
 - **Strategy branches** (each carries its own strategy module + tests + UAT):
-  - `v0.3-X-Checks` — X-Checks comparison + Collect Live X-Checks (X-Checks family)
+  - `obsolete_to_v0.4-X-Checks` — X-Checks comparison (superseded by v0.4; kept for reference)
   - `v0.2-Grouping_By` — Grouping By comparison
   - `v0.5-Accounting-Principles` — Accounting Principles (in progress)
 
@@ -194,7 +194,7 @@ This commit ports every infrastructure improvement made on the v0.3 / v0.4 branc
 | 6 | Branding: Zurich brand fonts (Light/Regular/Medium/Semibold/Bold + Ogg-Regular) bundled under `templates/fonts/`; brand colours applied across UI surfaces (forms, progress dialog, splash). | DONE | |
 | 7 | `task_configs.py` + `task_registry.py` reduced to empty scaffolds. | DONE | |
 | 8 | `version.py` set to `0.4.6` to match the last released version of the combined codebase before the split. | DONE | |
-| 9 | All strategy modules removed: `strategies/x_checks/`, `strategies/accounting_principles.py`, `strategies/conditions.py`, `strategies/grouping_by.py`. All strategy tests removed: `tests/test_compare.py`, `tests/test_ebx_extraction.py`, `tests/test_fip_extraction.py`, `tests/test_integration.py`, `tests/test_load_known_exceptions.py`, `tests/test_variable_builder.py`, `tests/fixtures/`, `tests/generate_golden_fixtures.py`. | DONE | These remain on `v0.3-X-Checks` (along with `v0.4`'s extensions) where they belong. |
+| 9 | All strategy modules removed: `strategies/x_checks/`, `strategies/accounting_principles.py`, `strategies/conditions.py`, `strategies/grouping_by.py`. All strategy tests removed: `tests/test_compare.py`, `tests/test_ebx_extraction.py`, `tests/test_fip_extraction.py`, `tests/test_integration.py`, `tests/test_load_known_exceptions.py`, `tests/test_variable_builder.py`, `tests/fixtures/`, `tests/generate_golden_fixtures.py`. | DONE | These remain on `obsolete_to_v0.4-X-Checks` / `v0.4-X-Check-No-Selection` where they belong. |
 
 ---
 
