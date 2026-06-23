@@ -97,6 +97,13 @@ When the checkbox is **checked**: collect only condition cells that are yellow o
 | 3 | `tests/test_conditions.py`: added 2 tests for both modes in `TestExtractionRule`. | DONE | |
 | 4 | `version.py`: bump to `0.6.3`. | DONE | |
 
+### v0.6.4 — Production EXE filename includes strategy name (completed 2026-06-23)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `build.py`: rename prod build from `X-Checks_{VERSION}` to `X-Checks_Conditions_{VERSION}`. | DONE | Matches the debug EXE naming convention. |
+| 2 | `version.py`: bump to `0.6.4`. | DONE | |
+
 ### v0.6.3 (UAT) — Conditions UAT Test Plan workbook (completed 2026-06-23)
 
 | # | Change | Status | Notes |
