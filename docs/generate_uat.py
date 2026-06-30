@@ -36,7 +36,8 @@ WRAP_CENTER    = Alignment(vertical="center", wrap_text=True)
 # Sheet 1 — Instructions (narrative walkthrough)
 # ---------------------------------------------------------------------------
 FEATURES = [
-    "Task selector launcher — dropdown lists all four strategies; Start button disabled until selection made.",
+    "Task selector launcher — dropdown lists all five strategies; Start button disabled until selection made.",
+    "X-Checks strategy — compares EBX cross-check formulas and variables against FIP validation rules; flags differences and known exceptions.",
     "File upload dialog — dynamically built from config; sheet name fields enabled on file select.",
     "Sheet name advisory label — displayed when any field has a sheet name input.",
     "Grouping By strategy — compares X-Check grouping data (EBX publication) against FIP ZQ9_VALFLDGR extract.",
@@ -57,7 +58,7 @@ PLAN_ROWS = [
     ("", "",
      "Splash closes and the task selector dialog opens showing 'X-Check Application v{ver}'."),
     ("", "",
-     "Dropdown lists exactly four options: Grouping By, Accounting Principles, Conditions, Full Run."),
+     "Dropdown lists exactly five options: X-Checks, Grouping By, Accounting Principles, Conditions, Full Run."),
     ("", "",
      "Start button is disabled until an option is selected."),
 
@@ -99,6 +100,23 @@ PLAN_ROWS = [
     ("Cancel dialog",
      "Close the upload dialog using the red X.",
      "Task selector reappears."),
+
+    # --- X-Checks ---
+    ("X-Checks — run (debug EXE)",
+     "Run X-Checks_Debug_XChecks_v{ver}.exe.",
+     "App launches in debug mode; progress dialog opens immediately with pre-loaded test files."),
+    ("", "",
+     "Progress log shows 'Loading files into memory...' then 'Files loaded successfully'."),
+    ("", "",
+     "Log shows EBX extraction steps, FIP extraction steps, then comparison."),
+    ("", "",
+     "Log ends with 'Processing complete. You may close this window.'"),
+    ("", "",
+     "Output workbook written to ~/Downloads/Output/ with timestamp prefix."),
+    ("", "",
+     "Workbook contains 2 sheets: X-Checks Comparison, Processing Log."),
+    ("", "",
+     "X-Checks Comparison sheet has a 'Result' column with colour-coded values (Matched / MisMatch / Not Found etc.)."),
 
     # --- Grouping By ---
     ("Grouping By — run (debug EXE)",
@@ -201,6 +219,11 @@ PLAN_ROWS = [
 # (CaseUI, Field Label, Filename, Sheet, Required)
 # ---------------------------------------------------------------------------
 FILES_ROWS = [
+    # X-Checks
+    ("X-Checks", "FIP file",                  "20260318 FIP X-Checks.txt",              "N/A",              "Yes"),
+    ("X-Checks", "X-Checks Publication File", "20260313 Cross Checks All.xlsx",          "cross checks all", "Yes"),
+    ("X-Checks", "GCoA Publication File",     "GCoA Publication file (optional)",        "GCoA Base account table", "No"),
+    ("X-Checks", "Known Exception List",      "Known Exception List (optional)",         "Known Exceptions", "No"),
     # Grouping By
     ("Grouping By", "FIP File (ZQ9_VALFLDGR)",   "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX", "Sheet1",           "Yes"),
     ("Grouping By", "X-Checks Publication File",  "20260313 Cross Checks All.xlsx",                         "cross checks all", "Yes"),
@@ -213,6 +236,7 @@ FILES_ROWS = [
     ("Conditions", "X-Checks Publication File", "20260313 Cross Checks All - Copy.xlsx", "cross checks all", "Yes"),
     ("Conditions", "FIP File",                  "20260602 VALMETH (Conditions).xlsx",    "FIP Conditions",   "Yes"),
     # Full Run
+    ("Full Run", "FIP file",                   "20260318 FIP X-Checks.txt",                              "N/A",                           "Yes"),
     ("Full Run", "FIP File (ZQ9_VALFLDGR)",    "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX", "Sheet1",                        "Yes"),
     ("Full Run", "X-Checks Publication File",  "20260313 Cross Checks All.xlsx",                         "cross checks all",              "Yes"),
     ("Full Run", "Mapping File",               "Mapping Table with 20 rows.txt",                         "N/A",                           "Yes"),
@@ -234,7 +258,7 @@ GENERAL_UI_CASES = [
      "Title bar and heading both read 'X-Check Application v{ver}'."),
     ("Dropdown population",
      "Open the task selector dropdown.",
-     "Four options present: Grouping By, Accounting Principles, Conditions, Full Run — in that order."),
+     "Five options present: X-Checks, Grouping By, Accounting Principles, Conditions, Full Run — in that order."),
     ("Start button disabled by default",
      "Open the app without selecting a task.",
      "Start button is disabled (greyed out)."),
@@ -246,7 +270,7 @@ GENERAL_UI_CASES = [
      "Application exits cleanly — no error dialogs, no orphaned processes."),
     ("Upload dialog title",
      "Select each strategy in turn and click Start.",
-     "Upload dialog title matches the strategy: 'Grouping By Files', 'Accounting Principles Files', 'Conditions Files', 'Full Run — All Strategies'."),
+     "Upload dialog title matches the strategy: 'X-Check Files', 'Grouping By Files', 'Accounting Principles Files', 'Conditions Files', 'Full Run — All Strategies'."),
     ("Advisory sheet-name label",
      "Open any upload dialog that has sheet name fields.",
      "Centred black label reads 'If the sheet name changes from the current default in the Excel workbook, update it manually.'"),
@@ -306,6 +330,23 @@ FIELD_CASES = [
 # Sheet 2 — Workflow cases  (Workflow, Test, Action, Expected)
 # ---------------------------------------------------------------------------
 WORKFLOW_CASES = [
+    # X-Checks
+    ("X-Checks", "End-to-end run completes",
+     "Run debug EXE with test data.",
+     "Output workbook produced in ~/Downloads/Output; 2 sheets present; no error lines in log."),
+    ("X-Checks", "X-Checks Comparison sheet present",
+     "Open output workbook.",
+     "Sheet named 'X-Checks Comparison' present with rows of comparison data."),
+    ("X-Checks", "Result column colour-coded",
+     "Open X-Checks Comparison sheet.",
+     "Result column contains formatted values (Matched / MisMatch / Not Found); conditional formatting applied."),
+    ("X-Checks", "Optional files handled gracefully",
+     "Run with only required files (no GCoA or Known Exception List).",
+     "Run completes without error; log notes optional files were skipped."),
+    ("X-Checks", "Experimental checkboxes visible",
+     "Open X-Checks upload dialog.",
+     "Two experimental checkboxes present: 'Apply Version Spanning Validation' and 'Apply Prior Year Balance Formula', both unchecked by default."),
+
     # Grouping By
     ("Grouping By", "End-to-end run completes",
      "Run debug EXE with test data.",
@@ -355,21 +396,21 @@ WORKFLOW_CASES = [
     ("Full Run", "End-to-end run completes",
      "Run debug EXE with test data.",
      "Single combined output workbook produced in ~/Downloads/Output; 13 sheets present; no error lines in log."),
-    ("Full Run", "All three strategies execute in order",
+    ("Full Run", "All four strategies execute in order",
      "Check progress log.",
-     "Log shows '— Starting: Grouping By —', then '— Starting: Accounting Principles —', then '— Starting: Conditions —' in sequence."),
+     "Log shows '— Starting: X-Checks —', then '— Starting: Grouping By —', then '— Starting: Accounting Principles —', then '— Starting: Conditions —' in sequence."),
     ("Full Run", "Sheet tab colours",
      "Open combined workbook and inspect tab colours.",
-     "GB tabs = orange; AP tabs = dark blue; Cond tabs = Zurich blue; Processing Log = grey."),
+     "XC tabs = green; GB tabs = orange; AP tabs = dark blue; Cond tabs = Zurich blue; Processing Log = grey."),
     ("Full Run", "Tab prefixes",
      "Inspect sheet tab names.",
-     "Grouping By sheets prefixed 'GB — '; Accounting Principles prefixed 'AP — '; Conditions prefixed 'Cond — '."),
+     "X-Checks prefixed 'XC — '; Grouping By prefixed 'GB — '; Accounting Principles prefixed 'AP — '; Conditions prefixed 'Cond — '."),
     ("Full Run", "Combined workbook sheet count",
      "Count sheets in combined workbook.",
-     "13 sheets: 6 (GB) + 3 (AP) + 3 (Cond) + 1 (Processing Log)."),
+     "15 sheets: 1 (XC) + 6 (GB) + 3 (AP) + 3 (Cond) + 1 (Processing Log) = 14 data sheets + 1 log."),
     ("Full Run", "Processing Log spans all strategies",
      "Open Processing Log sheet.",
-     "Log contains entries from all three strategies in sequence — no gaps or missing strategy sections."),
+     "Log contains entries from all four strategies in sequence — no gaps or missing strategy sections."),
 
     # Sensitivity label
     ("All strategies", "Sensitivity label applied",

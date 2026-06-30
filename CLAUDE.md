@@ -64,6 +64,7 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 | 11 | `version.py` — bumped to `1.0.0`. | DONE | |
 | 12 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — functional test plan covering launch, all four strategies, error handling, and version checks. | DONE | |
 | 13 | `strategies/x_checks/` — ported from `v0.4-X-Check-No-Selection`; registered in `task_configs.py`, `task_registry.py`, `main.py`, `build.py`. X-Checks now included in Full Run (colour: green). | DONE | |
+| 14 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — updated test plan to include X-Checks strategy (5 workflow cases, Files Required rows, dropdown count, Full Run sheet counts). | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
