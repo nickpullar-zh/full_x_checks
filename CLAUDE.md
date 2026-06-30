@@ -47,6 +47,22 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.0 — Full application: all strategies combined (in progress 2026-06-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/grouping_by/` — ported from `v0.3.1-Grouping_By`. | DONE | |
+| 2 | `strategies/accounting_principles/` — ported from `v0.5-Accounting-Principles`. | DONE | |
+| 3 | `strategies/conditions/` — ported from `v0.6-Conditions`. | DONE | |
+| 4 | `strategies/full_run/` — ported from `v0.7-Full-Run`. Dynamically runs all registered strategies and combines output into one workbook with colour-coded tabs. | DONE | |
+| 5 | `strategies/base_strategy.py` — updated to v0.5 version which adds `_detect_header_row()` for dynamic Excel header detection. Used by Accounting Principles. | DONE | |
+| 6 | `task_configs.py` — all four configs combined; `_build_full_run_config()` added. | DONE | |
+| 7 | `task_registry.py` — all four strategies registered; Full Run last. | DONE | |
+| 8 | `main.py` — all four `_DEBUG_FILES_*` dicts added to `_DEBUG_FILES_MAP`. | DONE | |
+| 9 | `build.py` — BUILDS list updated with one prod entry + four debug entries; hidden_imports extended with all strategy submodules. | DONE | |
+| 10 | `file_upload_config.py` — added `header_signals` field to `FileFieldConfig` (ported from v0.5); required by Accounting Principles config. | DONE | |
+| 11 | `version.py` — bumped to `1.0.0`. | DONE | |
+
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
 Ported from `v0.5-Accounting-Principles` (commit `e17698d`) so every strategy on every branch automatically applies a Microsoft Information Protection sensitivity label to the Excel workbooks it produces.

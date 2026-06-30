@@ -1,22 +1,26 @@
 """
 Maps display name in the Application Selector dropdown → (UploadTaskConfig, strategy factory).
 
-This file lives on the infrastructure (`main`) branch with an empty registry —
-each strategy branch (e.g. v0.3-X-Checks, v0.5-Accounting-Principles) adds its
-own entries here and a matching config in task_configs.py.
+All strategies registered here for v1.0. Full Run is registered last so
+_build_full_run_config() sees all other entries.
 """
 import importlib
 
-# from task_configs import (
-#     X_CHECKS_UPLOAD_CONFIG,
-# )
+from task_configs import (
+    GROUPING_BY_UPLOAD_CONFIG,
+    ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,
+    CONDITIONS_UPLOAD_CONFIG,
+    _build_full_run_config,
+)
 
 # PyInstaller dependency hints — never executed at runtime, but scanned by the
 # static analyser so strategy modules are bundled even though they are
-# loaded lazily via _lazy(). Each strategy branch adds a matching `if False`
-# import alongside its TASK_REGISTRY entry.
+# loaded lazily via _lazy().
 if False:
-    pass
+    from strategies.grouping_by import GroupingBy                          # noqa: F401
+    from strategies.accounting_principles import AccountingPrinciples      # noqa: F401
+    from strategies.conditions import Conditions                           # noqa: F401
+    from strategies.full_run import FullRun                                # noqa: F401
 
 
 def _lazy(module: str, cls: str):
@@ -27,9 +31,23 @@ def _lazy(module: str, cls: str):
     return _factory
 
 
-# Registry maps display name → (UI config, processing strategy factory).
-# To add a new strategy: append one line and add the matching config in
-# task_configs.py and the matching `if False:` import above.
 TASK_REGISTRY: dict = {
-    # "X-Checks": (X_CHECKS_UPLOAD_CONFIG, _lazy('strategies.x_checks', 'XChecks')),
+    "Grouping By": (
+        GROUPING_BY_UPLOAD_CONFIG,
+        _lazy("strategies.grouping_by", "GroupingBy"),
+    ),
+    "Accounting Principles": (
+        ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,
+        _lazy("strategies.accounting_principles", "AccountingPrinciples"),
+    ),
+    "Conditions": (
+        CONDITIONS_UPLOAD_CONFIG,
+        _lazy("strategies.conditions", "Conditions"),
+    ),
 }
+
+# Full Run is registered last so _build_full_run_config sees all other entries.
+TASK_REGISTRY["Full Run"] = (
+    _build_full_run_config(TASK_REGISTRY),
+    _lazy("strategies.full_run", "FullRun"),
+)

@@ -27,6 +27,34 @@ BUILDS = [
         "debug_mode":  False,
         "add_test_data": False,
     },
+    {
+        "key":          "grouping_by_debug",
+        "name":         f"X-Checks_Debug_GroupingBy_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Grouping By",
+        "add_test_data": True,
+    },
+    {
+        "key":          "ap_debug",
+        "name":         f"X-Checks_Debug_AccountingPrinciples_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Accounting Principles",
+        "add_test_data": True,
+    },
+    {
+        "key":          "conditions_debug",
+        "name":         f"X-Checks_Debug_Conditions_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Conditions",
+        "add_test_data": True,
+    },
+    {
+        "key":          "full_run_debug",
+        "name":         f"X-Checks_Debug_FullRun_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Full Run",
+        "add_test_data": True,
+    },
 ]
 
 PROJECT_ROOT    = os.path.dirname(os.path.abspath(__file__))
@@ -161,6 +189,20 @@ def build(config: dict):
         "win32com",
         "pythoncom",
         "pywintypes",
+        # Strategy submodules (loaded lazily via task_registry._lazy).
+        "strategies.grouping_by",
+        "strategies.grouping_by.grouping_by",
+        "strategies.accounting_principles",
+        "strategies.accounting_principles.accounting_principles",
+        "strategies.accounting_principles.compare",
+        "strategies.accounting_principles.validation_methods",
+        "strategies.conditions",
+        "strategies.conditions.conditions",
+        "strategies.conditions.compare",
+        "strategies.conditions.extract",
+        "strategies.conditions.fip",
+        "strategies.full_run",
+        "strategies.full_run.full_run",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 

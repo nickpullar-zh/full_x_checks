@@ -26,9 +26,8 @@ def _get_base_path() -> str:
 
 _BASE = _get_base_path()
 
-# Debug-mode test fixtures live on each strategy branch alongside the strategy
-# they exercise. The infra `main` branch ships an empty fallback and an empty
-# map so debug builds compile cleanly even when no strategy is registered.
+# Debug-mode test fixtures — one dict per strategy.
+# build.py patches DEBUG_TASK per build to select the right dict from _DEBUG_FILES_MAP.
 DEBUG_FILES = {
     "files": {},
     "sheet_names": {},
@@ -36,10 +35,77 @@ DEBUG_FILES = {
     "process_only_differences": False,
 }
 
-# Maps each task name to its debug file config — build.py patches DEBUG_TASK per build.
-# Each strategy branch adds its own entry here.
+_DEBUG_FILES_GROUPING_BY = {
+    "files": {
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
+        "X-Checks Publication File":  os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
+        "Mapping File":               os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
+    },
+    "sheet_names": {
+        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "X-Checks Publication File":  "cross checks all",
+        "Mapping File":               "Sheet1",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
+DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
+    "files": {
+        "Validation Methods File":   os.path.join(_BASE, "test_data", "validation methods.xlsx"),
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+        "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+    },
+    "sheet_names": {
+        "Validation Methods File":   "Validation Methods",
+        "X-Checks Publication File": "cross checks all",
+        "FIP File (VALMSG)":          "FIP Methods Rules and Condition",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
+_DEBUG_FILES_CONDITIONS = {
+    "files": {
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All - Copy.xlsx"),
+        "FIP File":                  os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+    },
+    "sheet_names": {
+        "X-Checks Publication File": "cross checks all",
+        "FIP File":                  "FIP Conditions",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
+_DEBUG_FILES_FULL_RUN = {
+    "files": {
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
+        "X-Checks Publication File":  os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
+        "Mapping File":               os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
+        "Validation Methods File":    os.path.join(_BASE, "test_data", "validation methods.xlsx"),
+        "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+        "FIP File":                   os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+    },
+    "sheet_names": {
+        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "X-Checks Publication File":  "cross checks all",
+        "Mapping File":               "Sheet1",
+        "Validation Methods File":    "Validation Methods",
+        "FIP File (VALMSG)":          "FIP Methods Rules and Condition",
+        "FIP File":                   "FIP Conditions",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
 DEBUG_TASK = ""  # ← patched by build.py to match a key in TASK_REGISTRY
-_DEBUG_FILES_MAP: dict = {}
+_DEBUG_FILES_MAP: dict = {
+    "Grouping By":           _DEBUG_FILES_GROUPING_BY,
+    "Accounting Principles": DEBUG_FILES_ACCOUNTING_PRINCIPLES,
+    "Conditions":            _DEBUG_FILES_CONDITIONS,
+    "Full Run":              _DEBUG_FILES_FULL_RUN,
+}
 
 
 def _register_fonts():

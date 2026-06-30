@@ -11,6 +11,10 @@ class FileFieldConfig:
     description: str = ""                   # Helper text shown below the field
     default_sheet: str = "Sheet1"
     required_columns: Optional[list[str]] = None  # None means keep all columns
+    # When provided, _load_files scans rows 1-6 of the sheet for the first row
+    # whose cells contain ALL of these names (case-insensitive, stripped) and
+    # uses that as the header row. Defaults to None = treat row 1 as header.
+    header_signals: Optional[list[str]] = None
 
     @property
     def show_sheet(self) -> bool:

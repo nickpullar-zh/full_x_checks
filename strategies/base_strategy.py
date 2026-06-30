@@ -261,6 +261,10 @@ class BaseStrategy(ABC):
             f.label: f.required_columns
             for f in file_fields
         }
+        signals_map = {
+            f.label: f.header_signals
+            for f in file_fields
+        }
 
         for label, path in files.items():
             if path is None:
@@ -284,7 +288,8 @@ class BaseStrategy(ABC):
                             f"Please check the file and sheet name then try again."
                         )
 
-                    df = pd.read_excel(path, sheet_name=sheet)
+                    header_row = self._detect_header_row(path, sheet, signals_map.get(label))
+                    df = pd.read_excel(path, sheet_name=sheet, header=header_row)
                     df = self._select_columns(df, label, column_map.get(label), path)
                     if df is None:
                         return None
@@ -324,6 +329,40 @@ class BaseStrategy(ABC):
                 )
             
         return loaded
+
+
+    _HEADER_SCAN_ROWS = 6  # how many top rows to inspect when looking for the header
+
+    def _detect_header_row(self, filepath: str, sheet_name: str,
+                           header_signals: Optional[list[str]]) -> int:
+        """
+        Returns the 0-indexed row to pass as `header=` to pd.read_excel.
+
+        If `header_signals` is None or empty, returns 0 (treat row 1 as header).
+        Otherwise scans the first _HEADER_SCAN_ROWS rows of the sheet for the
+        first row whose cells contain ALL signal names (case-insensitive,
+        stripped). If none match, falls back to 0 so the caller still gets a
+        DataFrame and the strategy can surface its own 'column not found' error.
+        """
+        if not header_signals:
+            return 0
+
+        try:
+            wb = openpyxl.load_workbook(filepath, data_only=True, read_only=True)
+            ws = wb[sheet_name]
+            wanted = {s.strip().casefold() for s in header_signals}
+            for row_idx, row in enumerate(
+                ws.iter_rows(min_row=1, max_row=self._HEADER_SCAN_ROWS, values_only=True),
+                start=0,
+            ):
+                cells = {str(v).strip().casefold() for v in row if v is not None}
+                if wanted.issubset(cells):
+                    wb.close()
+                    return row_idx
+            wb.close()
+        except Exception:
+            pass
+        return 0
 
 
     def _select_columns(self, df: pd.DataFrame, label: str, required_columns: Optional[list[str]], filepath: str) -> Optional[pd.DataFrame]:
