@@ -63,6 +63,7 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 | 10 | `file_upload_config.py` — added `header_signals` field to `FileFieldConfig` (ported from v0.5); required by Accounting Principles config. | DONE | |
 | 11 | `version.py` — bumped to `1.0.0`. | DONE | |
 | 12 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — functional test plan covering launch, all four strategies, error handling, and version checks. | DONE | |
+| 13 | `strategies/x_checks/` — ported from `v0.4-X-Check-No-Selection`; registered in `task_configs.py`, `task_registry.py`, `main.py`, `build.py`. X-Checks now included in Full Run (colour: green). | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 

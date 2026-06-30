@@ -28,6 +28,13 @@ BUILDS = [
         "add_test_data": False,
     },
     {
+        "key":          "xc_debug",
+        "name":         f"X-Checks_Debug_XChecks_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "X-Checks",
+        "add_test_data": True,
+    },
+    {
         "key":          "grouping_by_debug",
         "name":         f"X-Checks_Debug_GroupingBy_{VERSION}",
         "debug_mode":   True,
@@ -190,6 +197,13 @@ def build(config: dict):
         "pythoncom",
         "pywintypes",
         # Strategy submodules (loaded lazily via task_registry._lazy).
+        "strategies.x_checks",
+        "strategies.x_checks.x_checks",
+        "strategies.x_checks.compare",
+        "strategies.x_checks.ebx_extraction",
+        "strategies.x_checks.fip_extraction",
+        "strategies.x_checks.variable_builder",
+        "strategies.x_checks.x_check_no_selection",
         "strategies.grouping_by",
         "strategies.grouping_by.grouping_by",
         "strategies.accounting_principles",

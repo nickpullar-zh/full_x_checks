@@ -1,0 +1,496 @@
+"""
+EBX Excel File Extraction
+
+Reads the EBX 'cross checks all' sheet and extracts:
+- X-Check Number
+- EBX Formula
+- EBX Variables (pipe-delimited string of variable definitions)
+"""
+
+import re
+
+import pandas as pd
+
+from .variable_builder import build_variables_string
+
+# Maps Version Spanning Validation version number → GAAP prefix used in FIP variable names
+_VERSION_GAAP_PREFIX = {'100': 'IFRSN', '190': 'IFRSN', '600': 'SLST', '800': 'SST'}
+
+
+def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
+                apply_version_spanning: bool = False,
+                apply_prior_year_balance: bool = False) -> list[dict]:
+    """
+    Main entry point. Processes the EBX DataFrame and returns a list of dicts:
+    [{"X-Check Number": ..., "EBX Formula": ..., "EBX Variables": ...}, ...]
+
+    Args:
+        df: DataFrame from the 'cross checks all' sheet
+
+    Returns:
+        List of dicts, one per X-Check number found in the EBX file
+    """
+    # Normalise — fillna before astype so NaN becomes '' not the string 'nan'
+    df = df.fillna('')
+    df = df.astype(str)
+    df = df.reset_index()
+
+    # Pre-pass: determine suffix vs prefix mode per X-Check for version spanning.
+    # suffix mode: same base account appears with multiple different versions (e.g. A800_00)
+    #              → account name gets 'v{N}' appended
+    # prefix mode: each base account appears with only one version (e.g. AS601_60)
+    #              → account name gets GAAP prefix prepended
+    xcheck_version_mode: dict = {}
+    if apply_version_spanning:
+        for xcheck_no, group in df.groupby('X-Check No.', sort=False):
+            vsv = group['Version Spanning Validation'].astype(str).str.strip()
+            vsv_rows = group[~vsv.isin(['', 'nan'])]
+            if vsv_rows.empty:
+                continue
+            base_versions: dict = {}
+            for _, r in vsv_rows.iterrows():
+                ba = str(r['Account No.']).strip()
+                base_versions.setdefault(ba, set()).add(vsv[r.name])
+            mode = 'suffix' if any(len(v) > 1 for v in base_versions.values()) else 'prefix'
+            xcheck_version_mode[xcheck_no] = mode
+
+    results = []
+    str_name = ''
+    dict_account = {}
+    dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
+    bool_absolute_x = False
+    # Tracks (acct_no, subA_no, operator) tuples where Ending Balance Prior Year = X.
+    # Using a fine-grained key avoids false positives when the same account appears
+    # in both X-flagged rows (no SubA) and non-X rows (with SubA).
+    py_subaccount_keys: set = set()
+    # Tracks the Exclude Account Type suffix per Account No. for the current X-Check.
+    # Each row may set it for one account; only variables whose accounts have a
+    # non-empty entry here should receive the excl suffix.
+    excl_by_account: dict = {}
+
+    for index, row in df.iterrows():
+        # Skip rows without an account number
+        if row['Account No.'] == '':
+            continue
+
+        # Determine the effective account key (may be modified by version spanning)
+        acct_no = str(row['Account No.']).strip()
+        if apply_version_spanning:
+            vsv = str(row.get('Version Spanning Validation', '')).strip()
+            if vsv and vsv not in ('', 'nan'):
+                version_int = str(int(float(vsv)))
+                mode = xcheck_version_mode.get(str(row['X-Check No.']).strip(), 'suffix')
+                acct_no = (acct_no + 'v' + version_int) if mode == 'suffix' else (_VERSION_GAAP_PREFIX.get(version_int, '') + acct_no)
+
+        # New X-Check number detected
+        if str_name != row['X-Check No.']:
+            bool_absolute_x = row['Absolute (result)'] == 'X'
+            dict_account = {}
+            dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
+            py_subaccount_keys = set()
+            excl_by_account = {}
+            str_name = row['X-Check No.']
+            dict_sub_accounts['SubAccounts'] = [[row['SubA No.'], row['Operator (X-Check Term)']]]
+            dict_sub_accounts['Operators'] = [row['Operator (X-Check Term)']]
+            dict_account[acct_no] = dict_sub_accounts
+        else:
+            # New account number within same X-Check
+            if acct_no not in dict_account:
+                dict_sub_accounts = {'SubAccounts': [], 'Operators': []}
+            dict_sub_accounts['SubAccounts'].append([row['SubA No.'], row['Operator (X-Check Term)']])
+            if row['Operator (X-Check Term)'] not in dict_sub_accounts['Operators']:
+                dict_sub_accounts['Operators'].append(row['Operator (X-Check Term)'])
+            dict_account[acct_no] = dict_sub_accounts
+
+        # Track Exclude Account Type per account (a single row defines it for one account)
+        row_excl = _get_excl_acc_type_suffix(row)
+        if row_excl:
+            excl_by_account[acct_no] = row_excl
+
+        # Track prior year balance at the (account, subA, operator) level
+        if apply_prior_year_balance and str(row.get('Ending Balance Prior Year', '')).strip() == 'X':
+            py_subaccount_keys.add((
+                acct_no,
+                str(row.get('SubA No.', '')).strip(),
+                str(row.get('Operator (X-Check Term)', '')).strip(),
+            ))
+
+        # Process when we reach the last row of the current X-Check
+        if len(df) - 1 == index or str_name != str(df['X-Check No.'][index + 1]):
+            # Group accounts into variables
+            dict_variables = _group_accounts(dict_account)
+            # Create variable definitions from groups
+            dict_variables_output = _create_variable(dict_variables)
+
+            dict_formula_variables = []
+
+            for value in dict_variables_output.values():
+                accts = value.get('Accounts', [])
+                group_sub_accounts = value.get('SubAccounts', []) or ['']
+                group_operator = str(value.get('Operator', ''))
+                # A group uses P_VAL_PER only if every (account, subA, operator)
+                # combination in the group was flagged as Ending Balance Prior Year = X
+                is_py_group = (
+                    apply_prior_year_balance
+                    and bool(accts)
+                    and all(
+                        (acct, subA, group_operator) in py_subaccount_keys
+                        for acct in accts
+                        for subA in group_sub_accounts
+                    )
+                )
+                # PY suffix: appended when not a Shareholders' Equity check
+                needs_py_suffix = (
+                    is_py_group
+                    and str(row.get('Category', '')).strip() != "Shareholders' Equity"
+                )
+                dict_formula_variables.append({
+                    'Name':          str_name,
+                    'Variable-Name': value['Variable-Name'],
+                    'Operator':      value['Operator'],
+                    'use_p_val_per': is_py_group,
+                    'py_suffix':     needs_py_suffix,
+                })
+
+            use_lc      = _should_use_lc(row)
+            use_qu      = _should_use_qu(dict_account, qu_accounts)
+            use_pct     = _should_use_pct(row)
+            str_formula = _create_formula(dict_formula_variables, bool_absolute_x, row, use_lc, use_qu, use_pct)
+
+            # Per-variable excl suffix: a variable inherits a suffix only if at least
+            # one of its constituent accounts had Exclude Account Type set in its row.
+            # Variables whose accounts all have no excl entry are left as-is.
+            excl_by_variable: dict = {}
+            for value in dict_variables_output.values():
+                vname = value['Variable-Name']
+                for acct in value.get('Accounts', []):
+                    if acct in excl_by_account:
+                        excl_by_variable[vname] = excl_by_account[acct]
+                        break
+
+            if excl_by_variable:
+                def _rewrite(_m, _map=excl_by_variable):
+                    fn, arg = _m.group(1), _m.group(2)
+                    sfx = _map.get(arg, '')
+                    return f'{fn}({_insert_excl_suffix(arg, sfx)})' if sfx else _m.group(0)
+                str_formula_excl = re.sub(
+                    r'(VAL_YTD|QU_YTD|LC_YTD)\(([^)]+)\)',
+                    _rewrite,
+                    str_formula
+                )
+            else:
+                str_formula_excl = str_formula
+
+            raw_variables = [
+                {'fs_accounts': item['Accounts'], 'movement_types': item['SubAccounts']}
+                for item in dict_variables.values()
+            ]
+            str_output_string = build_variables_string(raw_variables)
+
+            results.append({
+                "X-Check Number":     str_name,
+                "EBX Formula":        str_formula,
+                "EBX Formula (Excl)": str_formula_excl,
+                "EBX Variables":      str_output_string,
+            })
+
+    return results
+
+
+def _should_use_qu(dict_account: dict, qu_accounts: set | None) -> bool:
+    """Returns True if any account for this X-Check has Data type QU in the GCoA file."""
+    if not qu_accounts:
+        return False
+    return any(acct in qu_accounts for acct in dict_account)
+
+
+def _should_use_pct(row) -> bool:
+    """Returns True when the '%' column is marked X, meaning the limit is a percentage."""
+    return str(row.get('%', '')).strip() == 'X'
+
+
+def _should_use_lc(row) -> bool:
+    """
+    Returns True when the formula should use LC_YTD/CONST_LC instead of VAL_YTD/CONST.
+    Triggered by Category = "Shareholders' Equity".
+
+    Note: Version Spanning Validation is NOT a reliable trigger — it is populated for
+    Reinsurance Asset Check and SST-only categories that correctly use VAL_YTD in FIP.
+    """
+    category = str(row.get('Category', '')).strip()
+    return category == "Shareholders' Equity"
+
+
+def _get_excl_acc_type_suffix(row) -> str:
+    """Returns 'excl.acc.type=N' when Exclude Account Type column has a value, else ''."""
+    val = str(row.get('Exclude Account Type', '')).strip()
+    if not val or val == 'nan':
+        return ''
+    m = re.match(r'([\d,]+)', val.replace(' ', ''))
+    return f'excl.acc.type={m.group(1)}' if m else ''
+
+
+def _insert_excl_suffix(var_name: str, suffix: str) -> str:
+    """
+    Inserts the excl.acc.type=N suffix into the variable name immediately after
+    the FS Account portion — i.e. before any ToM/TOM movement-type segment.
+    Mirrors FIP placement (e.g. OAN_00277ffexcl.acc.type=2ToM660ff).
+    """
+    m = re.search(r'ToM|TOM', var_name)
+    if m:
+        return var_name[:m.start()] + suffix + var_name[m.start():]
+    return var_name + suffix
+
+
+def _create_formula(dict_formula_variables: list, bool_absolute_x: bool, row,
+                    use_lc: bool = False, use_qu: bool = False, use_pct: bool = False) -> str:
+    """
+    Builds the formula string from the variable list and row operators/limits.
+    use_qu takes priority: QU accounts use QU_YTD.
+    use_lc (Shareholders' Equity) uses LC_YTD and CONST_LC.
+    use_pct ('%%' column == X): right-hand side formatted as '<limit>,000000%%' instead of CONST().
+    Default uses VAL_YTD and CONST.
+    """
+    # Prior year balance formulas use VAL_YTD even for Shareholders' Equity,
+    # because P_VAL_PER handles its own function selection.
+    has_p_val_per = any(item.get('use_p_val_per') for item in dict_formula_variables)
+    if has_p_val_per:
+        use_lc = False
+    val_fn   = 'QU_YTD'  if use_qu else ('LC_YTD'   if use_lc else 'VAL_YTD')
+    const_fn = 'CONST_LC' if use_lc else 'CONST'
+
+    str_left_side = ''
+    str_right_side = ''
+    str_comparator = ''
+    log_left_side_abs = False
+
+    # Build left hand side
+    for item in dict_formula_variables:
+        operator = item.get('Operator', '+')
+        variable_name = item.get('Variable-Name', '')
+        if item.get('use_p_val_per'):
+            vname = variable_name + ('PY' if item.get('py_suffix') else '')
+            term = f"P_VAL_PER({vname},'0','1')"
+        else:
+            term = val_fn + '(' + variable_name + ')'
+        if str_left_side == '':
+            str_left_side = term
+        else:
+            str_left_side += operator + term
+
+    # Build right hand side
+    if row['Operator 2'] == '':
+        str_comparator = row['Operator 1']
+    else:
+        str_comparator = row['Operator 2']
+        log_left_side_abs = True
+
+    if use_pct:
+        # Read raw float so decimal precision is preserved (e.g. 1.5 → '1,500000%')
+        if row['Limit 2'] != '':
+            raw_limit = float(row['Limit 2'])
+        elif row['Limit 1'] != '':
+            raw_limit = float(row['Limit 1'])
+        else:
+            raw_limit = 0.0
+        str_right_side = f"'{raw_limit:.6f}%'".replace('.', ',')
+    else:
+        if row['Limit 2'] != '':
+            str_right_side = str(int(float(row['Limit 2'])))
+        else:
+            if row['Limit 1'] == '':
+                str_right_side = '0'
+            else:
+                str_right_side = str(int(float(row['Limit 1'])))
+
+        str_right_side = str_right_side.replace(',', '')
+
+        if str_right_side != '0':
+            str_right_side = const_fn + "(" + str_right_side + ",'USD','E')"
+
+    if log_left_side_abs:
+        str_left_side = 'ABS(' + str_left_side + ')'
+
+    return str_left_side + str_comparator + str_right_side
+
+
+def _group_accounts(dict_account: dict) -> dict:
+    """
+    Groups accounts by their sub-assignment patterns.
+    Preserves original logic from group_accounts() exactly.
+    """
+    counter = 0
+    bool_found = False
+    dict_groups = {}
+    dict_one_group = {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+    bool_two_operators = False
+
+    # Handle empty subassignment with +
+    if any(['', '+'] in value['SubAccounts'] for value in list(dict_account.values())):
+        for key, value in dict_account.items():
+            if value['SubAccounts'].__contains__(['', '+']):
+                dict_one_group['Accounts'].append(key)
+                dict_one_group['SubAccounts'] = []
+                dict_one_group['Operators'].append('+')
+                value['SubAccounts'].remove(['', '+'])
+                if not any('+' in x for x in value['SubAccounts']):
+                    value['Operators'].remove('+')
+        dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
+        dict_one_group['Operators'] = '+'
+        dict_groups[counter] = dict_one_group
+        dict_one_group = {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+        counter += 1
+
+    # Handle empty subassignment with -
+    if any(['', '-'] in value['SubAccounts'] for value in list(dict_account.values())):
+        for key, value in dict_account.items():
+            if value['SubAccounts'].__contains__(['', '-']):
+                dict_one_group['Accounts'].append(key)
+                dict_one_group['SubAccounts'] = []
+                dict_one_group['Operators'].append('-')
+                value['SubAccounts'].remove(['', '-'])
+                if not any('-' in x for x in value['SubAccounts']):
+                    value['Operators'].remove('-')
+        dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
+        dict_one_group['Operators'] = '-'
+        dict_groups[counter] = dict_one_group
+        dict_one_group = {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+        counter += 1
+
+    # All other cases
+    for key, value in dict_account.items():
+        bool_found = False
+        if dict_one_group['Accounts'] == [] and not value['SubAccounts'] == []:
+            if value['Operators'].__contains__('+') and value['Operators'].__contains__('-'):
+                bool_two_operators = True
+                for mtype in value['SubAccounts']:
+                    if mtype[1] == '-':
+                        dict_one_group['Accounts'].append(key)
+                        dict_one_group['SubAccounts'].append(mtype[0])
+                        dict_one_group['Operators'] = ['-']
+                        value['SubAccounts'].remove(mtype)
+                dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
+                dict_groups[counter] = dict_one_group
+                dict_one_group = {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+                counter += 1
+            dict_one_group['Accounts'] = [key]
+            dict_one_group['SubAccounts'] = sorted([sublist[0] for sublist in value['SubAccounts']])
+            arr_operators = [*set(sublist[1] for sublist in value['SubAccounts'])]
+            dict_one_group['Operators'] = arr_operators
+
+        elif not value['SubAccounts'] == []:
+            if bool_two_operators:
+                for mtype in value['SubAccounts']:
+                    if dict_one_group['SubAccounts'].__contains__(mtype[0]):
+                        dict_one_group['Accounts'].append(key)
+                        dict_one_group['SubAccounts'].append(mtype[0])
+                        dict_one_group['Operators'].append(mtype[1])
+                    else:
+                        for group_value in dict_groups.values():
+                            if group_value['SubAccounts'].__contains__(mtype[0]):
+                                group_value['Accounts'].append(key)
+                                group_value['SubAccounts'].append(mtype[0])
+                                group_value['Operators'].append(mtype[1])
+                                group_value['SubAccounts'] = list(dict.fromkeys(group_value['SubAccounts']))
+            else:
+                if sorted(dict_one_group['SubAccounts']) == sorted([sublist[0] for sublist in value['SubAccounts']]) and dict_one_group['Operators'] == value['Operators']:
+                    dict_one_group['Accounts'].append(key)
+                    bool_found = True
+                for group_key, group_value in dict_groups.items():
+                    if sorted(group_value['SubAccounts']) == sorted([sublist[0] for sublist in value['SubAccounts']]) and group_value['Operators'] == value['Operators']:
+                        dict_groups[group_key]['Accounts'].append(key)
+                        bool_found = True
+                if not bool_found:
+                    dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
+                    dict_groups[counter] = dict_one_group
+                    dict_one_group = {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+                    counter += 1
+                    dict_one_group['Accounts'] = [key]
+                    dict_one_group['SubAccounts'] = sorted([sublist[0] for sublist in value['SubAccounts']])
+                    arr_operators = [*set(sublist[1] for sublist in value['SubAccounts'])]
+                    dict_one_group['Operators'] = arr_operators
+
+    # Add last group if not empty
+    dict_one_group['SubAccounts'] = [*set(sublist for sublist in dict_one_group['SubAccounts'])]
+    if dict_one_group['Accounts'] != []:
+        bool_found = False
+        for key, value in dict_groups.items():
+            if value['SubAccounts'] == dict_one_group['SubAccounts'] and dict_one_group['Operators'] == value['Operators']:
+                value['Accounts'] = value['Accounts'] + dict_one_group['Accounts']
+                bool_found = True
+                break
+        if not bool_found:
+            dict_groups[counter] = dict_one_group
+
+    # Remove empty groups
+    dict_groups = {
+        k: v for k, v in dict_groups.items()
+        if v != {'Accounts': [], 'SubAccounts': [], 'Operators': []}
+    }
+
+    return dict_groups
+
+
+def _create_variable(dict_groups: dict) -> dict:
+    """
+    Creates variable definitions from grouped accounts.
+    Preserves original logic from create_variable() exactly.
+    """
+    dict_output = {}
+    this_variable = {
+        'Variable': '', 'Variable-Name': '', 'Variable-Output': '',
+        'Accounts': [], 'Accounts-Output': [],
+        'SubAccounts': [], 'SubAccounts-Output': [], 'Operator': ''
+    }
+    counter = 0
+
+    for item in dict_groups.values():
+        str_variable_name = sorted(item['Accounts'])[0]
+
+        # Add ff if more than one account
+        if len(item['Accounts']) > 1:
+            str_variable_name = str_variable_name + 'ff'
+
+        # Add ToM if subassignment exists
+        if item['SubAccounts'] != ['']:
+            if item['SubAccounts'] != []:
+                str_variable_name = str_variable_name + 'ToM' + sorted(item['SubAccounts'])[0].replace('.0', '')
+            if len(item['SubAccounts']) > 1:
+                str_variable_name = str_variable_name + 'ff'
+
+        this_variable['Variable-Name'] = str_variable_name
+        this_variable['Variable-Output'] = 'Name:' + str_variable_name
+        this_variable['Accounts'] = item['Accounts']
+
+        if this_variable['Accounts']:
+            this_variable['Accounts-Output'] = 'FS Account:' + '^'.join(sorted(item['Accounts']))
+        else:
+            this_variable['Accounts-Output'] = '<blank>'
+
+        this_variable['SubAccounts'] = item['SubAccounts']
+
+        if this_variable['SubAccounts']:
+            this_variable['SubAccounts-Output'] = 'Movement Types:' + '^'.join(sorted(item['SubAccounts']))
+        else:
+            this_variable['SubAccounts-Output'] = 'Movement Types:<blank>'
+
+        if item['Operators']:
+            this_variable['Operator'] = str(item['Operators'][0])
+        else:
+            this_variable['Operator'] = ''
+
+        this_variable['Variable'] = (
+            this_variable['Variable-Output'] + ';' +
+            this_variable['Accounts-Output'] + ';' +
+            this_variable['SubAccounts-Output']
+        )
+
+        dict_output[counter] = this_variable
+        this_variable = {
+            'Variable': '', 'Variable-Name': '', 'Variable-Output': '',
+            'Accounts': [], 'Accounts-Output': [],
+            'SubAccounts': [], 'SubAccounts-Output': [], 'Operator': ''
+        }
+        counter += 1
+
+    return dict(sorted(dict_output.items()))
