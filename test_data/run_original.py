@@ -9,7 +9,7 @@ from EBXExtraction1 import EBXExtraction1
 from Compare_Files import Compare_Files
 from OutputExcel_Formating import Format_Excel_File
 
-arrEBXPaths = [r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20251205 EPM X-Checks - Original.xlsx"]
+arrEBXPaths = [r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20251205 EBX X-Checks - Original.xlsx"]
 arrFIPPaths = [r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\20251205 FIP X-Checks - Original.txt"]
 output_dir  = r"C:\Users\NICK.PULLAR\OneDrive - Zurich Insurance\Projects\Testing Automation\Python Files\Full_X-Checks\test_data\X-Checks Output"
 

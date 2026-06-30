@@ -600,7 +600,7 @@ _BASE = _get_base_path()
 DEBUG_FILES = {
     "files": {
         "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
-        "X-Checks Publication File":   os.path.join(_BASE, "test_data", "EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx"),
+        "X-Checks Publication File":   os.path.join(_BASE, "test_data", "EBX X-Checks file with 3345 Data rows on sheet cross checks all.xlsx"),
         "Mapping File":                os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
     },
     "sheet_names": {

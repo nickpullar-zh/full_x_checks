@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v0.3.1 — UI hint for sheet name fields (in progress 2026-06-26)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add advisory label "If the sheet name changes from the current default in the Excel workbook, update it manually." after the file/folder rows and before the output-directory separator. Only rendered when at least one field has `show_sheet=True`. | DONE | |
+| 2 | `version.py`: bump to `0.3.1`. | DONE | |
+| 3 | `main.py`: fix `_DEBUG_FILES_GROUPING_BY` paths — subfolder `test_data/grouping_by/` never existed; point at the actual test files already in `test_data/`. Output directory corrected to `~/Downloads/Output` to match other strategy branches. | DONE | |
+| 4 | `strategies/grouping_by/grouping_by.py` + `task_configs.py`: rename all instances of `EBS`/`ebs` to `EBX`/`ebx` — sheet names, log step labels, variable names, column names, method name, comments. | DONE | |
+
 ### v0.3.0 — Grouping By strategy (completed 2026-06-23)
 
 Port of the Grouping By strategy from the old pre-split `v0.2-Grouping_By` branch into the modern branch architecture. Compares X-Check grouping data from the publication file against the FIP ZQ9_VALFLDGR extract.

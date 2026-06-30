@@ -10,7 +10,7 @@ The new X-Checks application (`strategies/x_checks/`) has been verified to produ
 
 | Test | Files | Old Rows | New Rows | Differences |
 |------|-------|----------|----------|-------------|
-| Test 1 | 20251205 EPM X-Checks - Original.xlsx / 20251205 FIP X-Checks - Original.txt | 653 | 653 | **0** |
+| Test 1 | 20251205 EBX X-Checks - Original.xlsx / 20251205 FIP X-Checks - Original.txt | 653 | 653 | **0** |
 | Test 2 | 20260313 Cross Checks All.xlsx / 20260318 FIP X-Checks.txt | 189 | 189 | **0** |
 
 Both tests produced zero field-level differences across all rows and columns.
@@ -56,7 +56,7 @@ The comparison (`run_compare_outputs.py`) reads the **All Data** sheet from the 
 
 | File | Description |
 |------|-------------|
-| `20251205 EPM X-Checks - Original.xlsx` | EBX input file |
+| `20251205 EBX X-Checks - Original.xlsx` | EBX input file |
 | `20251205 FIP X-Checks - Original.txt` | FIP input file |
 | `X-Checks Output/ComparedFiles 20260512 113929.xlsx` | Original app output |
 | `X-Checks Output/20260512_113951_X-Checks Comparison.xlsx` | New app output |

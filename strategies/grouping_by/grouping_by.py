@@ -5,10 +5,10 @@ file against the FIP ZQ9_VALFLDGR extract.
 Output workbook (6 sheets + Processing Log):
   Mapping File    — the CSV mapping loaded as a DataFrame
   FIP - Original  — raw FIP data as loaded
-  FIP - Processed — FIP with EBS Item mapped + Key column built
-  EBS - Original  — raw EBS (publication) data as loaded
-  EBS - Processed — EBS filtered, split, stacked, with Key column
-  Compare         — EBS Key vs FIP lookup: Matched / Not in FIP
+  FIP - Processed — FIP with EBX Item mapped + Key column built
+  EBX - Original  — raw EBX (publication) data as loaded
+  EBX - Processed — EBX filtered, split, stacked, with Key column
+  Compare         — EBX Key vs FIP lookup: Matched / Not in FIP
   Processing Log  — standard BaseStrategy log (always written automatically)
 """
 
@@ -28,18 +28,18 @@ class GroupingBy(BaseStrategy):
             self.log_step(self.log, "Grouping By", "FIP processing failed — aborting.", 0)
             return False
 
-        df_ebs_original, df_ebs_processed = self._process_ebs(loaded_files)
-        if df_ebs_original is None:
-            self.log_step(self.log, "Grouping By", "EBS processing failed — aborting.", 0)
+        df_ebx_original, df_ebx_processed = self._process_ebx(loaded_files)
+        if df_ebx_original is None:
+            self.log_step(self.log, "Grouping By", "EBX processing failed — aborting.", 0)
             return False
 
-        df_comparison = self._process_compare(df_fip_processed, df_ebs_processed)
+        df_comparison = self._process_compare(df_fip_processed, df_ebx_processed)
 
         matched     = (df_comparison["Result"] == "Matched").sum()
         not_matched = (df_comparison["Result"] == "Not in FIP").sum()
 
         fip_path = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label]
-        ebs_path = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label]
+        ebx_path = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label]
 
         output_path = self.build_output_path(
             files["output_directory"],
@@ -51,16 +51,16 @@ class GroupingBy(BaseStrategy):
             ("Mapping File",    df_mapping_file),
             ("FIP - Original",  df_fip_original),
             ("FIP - Processed", df_fip_processed),
-            ("EBS - Original",  df_ebs_original),
-            ("EBS - Processed", df_ebs_processed),
+            ("EBX - Original",  df_ebx_original),
+            ("EBX - Processed", df_ebx_processed),
             ("Compare",         df_comparison),
         ])
 
         summaries = {
             "FIP - Original":  OrderedDict([("Source filename:", fip_path), ("Number of rows:", len(df_fip_original))]),
             "FIP - Processed": OrderedDict([("Source filename:", fip_path), ("Number of rows:", len(df_fip_processed))]),
-            "EBS - Original":  OrderedDict([("Source filename:", ebs_path), ("Number of rows:", len(df_ebs_original))]),
-            "EBS - Processed": OrderedDict([("Source filename:", ebs_path), ("Number of rows:", len(df_ebs_processed))]),
+            "EBX - Original":  OrderedDict([("Source filename:", ebx_path), ("Number of rows:", len(df_ebx_original))]),
+            "EBX - Processed": OrderedDict([("Source filename:", ebx_path), ("Number of rows:", len(df_ebx_processed))]),
             "Compare":         OrderedDict([("Number of rows:", len(df_comparison)), ("Matched:", matched), ("Not in FIP:", not_matched)]),
         }
 
@@ -89,7 +89,7 @@ class GroupingBy(BaseStrategy):
 
             df_mapping_file = pd.DataFrame(
                 [line.split(",", maxsplit=1) for line in mapping_content.splitlines()[1:] if line.strip()],
-                columns=["FIP Data", "EBS item"]
+                columns=["FIP Data", "EBX item"]
             )
             self.log_step(self.log, "Mapping File", "Finished processing", len(mapping_dict))
 
@@ -98,13 +98,13 @@ class GroupingBy(BaseStrategy):
             df_fip = df_original.copy()
             self.log_step(self.log, "FIP", "Original file loaded", len(df_original))
 
-            df_fip["EBS Item"] = df_fip["Field name"].map(mapping_dict)
-            self.log_step(self.log, "FIP", "Mapped 'Field name' to 'EBS Item'", len(df_fip))
+            df_fip["EBX Item"] = df_fip["Field name"].map(mapping_dict)
+            self.log_step(self.log, "FIP", "Mapped 'Field name' to 'EBX Item'", len(df_fip))
 
             df_fip = df_fip[
-                df_fip["EBS Item"].notna() &
-                (df_fip["EBS Item"].str.strip() != "") &
-                (df_fip["EBS Item"].str.strip().str.lower() != "ignore")
+                df_fip["EBX Item"].notna() &
+                (df_fip["EBX Item"].str.strip() != "") &
+                (df_fip["EBX Item"].str.strip().str.lower() != "ignore")
             ]
             df_fip = df_fip[
                 df_fip["ValidRule"].notna() &
@@ -113,7 +113,7 @@ class GroupingBy(BaseStrategy):
             self.log_step(self.log, "FIP", "Removed unmapped and blank rows", len(df_fip))
 
             df_fip["Key"] = df_fip.apply(
-                lambda row: f"{row['ValidRule']}|{row['EBS Item']}"
+                lambda row: f"{row['ValidRule']}|{row['EBX Item']}"
                 if pd.notna(row["ValidRule"]) and str(row["ValidRule"]).strip() != ""
                 else "",
                 axis=1
@@ -128,44 +128,44 @@ class GroupingBy(BaseStrategy):
             return None, None, None
 
     # ------------------------------------------------------------------
-    # EBS processing
+    # EBX processing
     # ------------------------------------------------------------------
 
-    def _process_ebs(self, loaded_files) -> tuple:
+    def _process_ebx(self, loaded_files) -> tuple:
         try:
-            self.log_step(self.log, "EBS", "Started processing", 0)
+            self.log_step(self.log, "EBX", "Started processing", 0)
 
-            df_ebs_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label].copy()
-            df_ebs = df_ebs_original.copy()
-            self.log_step(self.log, "EBS", "Original file loaded", len(df_ebs_original))
+            df_ebx_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label].copy()
+            df_ebx = df_ebx_original.copy()
+            self.log_step(self.log, "EBX", "Original file loaded", len(df_ebx_original))
 
-            df_ebs = df_ebs[df_ebs["Grouping By"].notna() & (df_ebs["Grouping By"].str.strip() != "")]
-            self.log_step(self.log, "EBS", "Filtered to rows with 'Grouping By'", len(df_ebs))
+            df_ebx = df_ebx[df_ebx["Grouping By"].notna() & (df_ebx["Grouping By"].str.strip() != "")]
+            self.log_step(self.log, "EBX", "Filtered to rows with 'Grouping By'", len(df_ebx))
 
-            df_ebs = df_ebs.drop_duplicates(subset=["X-Check No."], keep="first").reset_index(drop=True)
-            self.log_step(self.log, "EBS", "Removed duplicate X-Check No. rows", len(df_ebs))
+            df_ebx = df_ebx.drop_duplicates(subset=["X-Check No."], keep="first").reset_index(drop=True)
+            self.log_step(self.log, "EBX", "Removed duplicate X-Check No. rows", len(df_ebx))
 
-            split_cols = df_ebs["Grouping By"].str.split(",", expand=True)
+            split_cols = df_ebx["Grouping By"].str.split(",", expand=True)
             split_cols.columns = [f"Grouping By {i + 1}" for i in range(split_cols.shape[1])]
             split_cols = split_cols.apply(lambda col: col.str.strip())
-            self.log_step(self.log, "EBS", f"Split 'Grouping By' into {split_cols.shape[1]} columns", split_cols.notna().sum().sum())
+            self.log_step(self.log, "EBX", f"Split 'Grouping By' into {split_cols.shape[1]} columns", split_cols.notna().sum().sum())
 
-            col_position = df_ebs.columns.get_loc("Grouping By")
-            df_ebs = df_ebs.drop(columns=["Grouping By"])
+            col_position = df_ebx.columns.get_loc("Grouping By")
+            df_ebx = df_ebx.drop(columns=["Grouping By"])
             for col in reversed(split_cols.columns.tolist()):
-                df_ebs.insert(col_position, col, split_cols[col])
-            self.log_step(self.log, "EBS", "Replaced 'Grouping By' with split columns", len(df_ebs))
+                df_ebx.insert(col_position, col, split_cols[col])
+            self.log_step(self.log, "EBX", "Replaced 'Grouping By' with split columns", len(df_ebx))
 
-            df_ebs["_base_key"] = df_ebs["Reference  X-Check (Condition)"].where(
-                df_ebs["Reference  X-Check (Condition)"].notna() &
-                (df_ebs["Reference  X-Check (Condition)"].str.strip() != ""),
-                other=df_ebs["X-Check No."].astype(str).str.strip()
+            df_ebx["_base_key"] = df_ebx["Reference  X-Check (Condition)"].where(
+                df_ebx["Reference  X-Check (Condition)"].notna() &
+                (df_ebx["Reference  X-Check (Condition)"].str.strip() != ""),
+                other=df_ebx["X-Check No."].astype(str).str.strip()
             )
-            self.log_step(self.log, "EBS", "Constructed base key column", df_ebs["_base_key"].notna().sum())
+            self.log_step(self.log, "EBX", "Constructed base key column", df_ebx["_base_key"].notna().sum())
 
-            for col in [c for c in df_ebs.columns if c.startswith("Grouping By ")]:
+            for col in [c for c in df_ebx.columns if c.startswith("Grouping By ")]:
                 key_col = col.replace("Grouping By ", "Grouping By Key ")
-                df_ebs[key_col] = df_ebs.apply(
+                df_ebx[key_col] = df_ebx.apply(
                     lambda row, c=col: (
                         f"{row['_base_key']}|{str(row[c]).strip()}"
                         if pd.notna(row[c]) and str(row[c]).strip() != ""
@@ -173,14 +173,14 @@ class GroupingBy(BaseStrategy):
                     ),
                     axis=1
                 )
-            self.log_step(self.log, "EBS", "Constructed 'Grouping By Key n' columns", len(df_ebs))
+            self.log_step(self.log, "EBX", "Constructed 'Grouping By Key n' columns", len(df_ebx))
 
-            df_ebs = df_ebs.drop(columns=["_base_key"])
+            df_ebx = df_ebx.drop(columns=["_base_key"])
 
-            key_cols = [c for c in df_ebs.columns if c.startswith("Grouping By Key ")]
-            index_cols = [c for c in df_ebs.columns if c not in key_cols]
+            key_cols = [c for c in df_ebx.columns if c.startswith("Grouping By Key ")]
+            index_cols = [c for c in df_ebx.columns if c not in key_cols]
             stacked = (
-                df_ebs.set_index(index_cols)
+                df_ebx.set_index(index_cols)
                 .stack()
                 .reset_index()
                 .rename(columns={0: "Key"})
@@ -188,33 +188,33 @@ class GroupingBy(BaseStrategy):
             level_col = f"level_{len(index_cols)}"
             if level_col in stacked.columns:
                 stacked = stacked.drop(columns=[level_col])
-            self.log_step(self.log, "EBS", "Stacked key columns into single 'Key' column", len(stacked))
+            self.log_step(self.log, "EBX", "Stacked key columns into single 'Key' column", len(stacked))
 
-            df_ebs = stacked[stacked["Key"].str.strip() != ""].reset_index(drop=True)
-            self.log_step(self.log, "EBS", "Finished processing", len(df_ebs))
-            return df_ebs_original, df_ebs
+            df_ebx = stacked[stacked["Key"].str.strip() != ""].reset_index(drop=True)
+            self.log_step(self.log, "EBX", "Finished processing", len(df_ebx))
+            return df_ebx_original, df_ebx
 
         except Exception as exc:
             import traceback
-            self.log_step(self.log, "EBS", f"Exception: {exc}", 0)
-            self.log_step(self.log, "EBS", traceback.format_exc(), 0)
+            self.log_step(self.log, "EBX", f"Exception: {exc}", 0)
+            self.log_step(self.log, "EBX", traceback.format_exc(), 0)
             return None, None
 
     # ------------------------------------------------------------------
     # Compare
     # ------------------------------------------------------------------
 
-    def _process_compare(self, df_fip: pd.DataFrame, df_ebs: pd.DataFrame) -> pd.DataFrame:
+    def _process_compare(self, df_fip: pd.DataFrame, df_ebx: pd.DataFrame) -> pd.DataFrame:
         self.log_step(self.log, "Compare", "Started comparison", 0)
 
         fip_keys = df_fip[["Key"]].drop_duplicates().copy()
         fip_keys["In FIP"] = True
         self.log_step(self.log, "Compare", "FIP key lookup built", len(fip_keys))
 
-        ebs_keys = df_ebs[["Key"]].drop_duplicates().copy()
-        self.log_step(self.log, "Compare", "EBS keys extracted", len(ebs_keys))
+        ebx_keys = df_ebx[["Key"]].drop_duplicates().copy()
+        self.log_step(self.log, "Compare", "EBX keys extracted", len(ebx_keys))
 
-        df_compare = ebs_keys.merge(fip_keys, on="Key", how="left")
+        df_compare = ebx_keys.merge(fip_keys, on="Key", how="left")
         df_compare["In FIP"] = df_compare["In FIP"].fillna(False)
         df_compare["Result"] = df_compare["In FIP"].map({True: "Matched", False: "Not in FIP"})
 
@@ -225,8 +225,8 @@ class GroupingBy(BaseStrategy):
         df_compare = (
             df_compare
             .drop(columns=["In FIP"])
-            .rename(columns={"Key": "EBS Key"})
-            .sort_values("EBS Key")
+            .rename(columns={"Key": "EBX Key"})
+            .sort_values("EBX Key")
             .reset_index(drop=True)
         )
         self.log_step(self.log, "Compare", "Finished comparison", len(df_compare))

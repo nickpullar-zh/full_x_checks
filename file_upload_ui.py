@@ -269,6 +269,18 @@ class FileUploadUI:
 
             current_row += 1
 
+        # --- Sheet name advisory note ---
+        if self.sheet_names:
+            ttk.Label(
+                main_frame,
+                text="If the sheet name changes from the current default in the Excel workbook, update it manually.",
+                foreground="black",
+                font=("Zurich Sans", 9),
+                wraplength=HINT_WRAP_LENGTH,
+                justify="center"
+            ).grid(row=current_row, column=0, columnspan=3, padx=5, pady=(4, 4))
+            current_row += 1
+
         ttk.Separator(main_frame, orient="horizontal").grid(
             row=current_row, column=0, columnspan=3, sticky="ew", pady=5
         )
