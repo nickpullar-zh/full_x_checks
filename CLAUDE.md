@@ -62,6 +62,7 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 | 9 | `build.py` — BUILDS list updated with one prod entry + four debug entries; hidden_imports extended with all strategy submodules. | DONE | |
 | 10 | `file_upload_config.py` — added `header_signals` field to `FileFieldConfig` (ported from v0.5); required by Accounting Principles config. | DONE | |
 | 11 | `version.py` — bumped to `1.0.0`. | DONE | |
+| 12 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — functional test plan covering launch, all four strategies, error handling, and version checks. | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
