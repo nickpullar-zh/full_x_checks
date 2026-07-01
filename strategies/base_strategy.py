@@ -138,6 +138,7 @@ class BaseStrategy(ABC):
         that was already running completes before the halt takes effect.
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ui_timestamp = datetime.now().strftime("%Y%m%d %H%M%S")
         print(f"  [{timestamp}] {file} — {step} ({count})")
         log.append({
             "Timestamp": timestamp,
@@ -149,7 +150,7 @@ class BaseStrategy(ABC):
 
         # Push to UI dialog if attached
         if self._progress_dialog is not None:
-            self._progress_dialog.append_entry(file, step, count, notes)
+            self._progress_dialog.append_entry(file, step, count, notes, timestamp=ui_timestamp)
 
         # Check stop event AFTER completing this step
         if self._stop_event is not None and self._stop_event.is_set():

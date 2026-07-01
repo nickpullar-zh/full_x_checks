@@ -47,6 +47,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.8 — Progress dialog: timestamp on each line; fix false-positive red colouring (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: removed `"exception"` from `_ERROR_KEYWORDS` — it matched `"Known Exception List"` causing informational lines to appear red. Lines that reference the exception list are not errors. | DONE | |
+| 2 | `progress_dialog.py` + `base_strategy.py`: timestamp `[yyyymmdd hhmmss]` appended after the step description on each progress dialog line. | DONE | |
+| 3 | `version.py`: bump to `1.0.8`. | DONE | |
+
 ### v1.0.7 — Sheet name field: combobox populated from workbook (2026-07-01)
 
 | # | Change | Status | Notes |

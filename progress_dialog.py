@@ -153,9 +153,12 @@ class ProgressDialog:
     # Public interface — called from background thread
     # =========================================================
 
-    _ERROR_KEYWORDS = ("error", "failed", "failure", "exception", "traceback")
+    _ERROR_KEYWORDS = ("error", "failed", "failure", "traceback")
+    # "exception" is intentionally excluded — it appears in "Known Exception List"
+    # which is not an error condition.
 
-    def append_entry(self, file: str, step: str, count: int = 0, notes: str = ""):
+    def append_entry(self, file: str, step: str, count: int = 0, notes: str = "",
+                     timestamp: str = ""):
         """
         Thread-safe method to append a log line to the text area.
         Uses root.after() to marshal the update onto the main thread.
@@ -166,6 +169,8 @@ class ProgressDialog:
             line += f"  ({count})"
         if notes:
             line += f"  — {notes}"
+        if timestamp:
+            line += f"  [{timestamp}]"
         line += "\n"
 
         haystack = f"{file} {step} {notes}".casefold()
