@@ -18,7 +18,7 @@ class XChecks(BaseStrategy):
         # 0. X-Check No Selection — write the list of changed X-Check Nos to a .txt
         #    file the user can paste into FIP. Only runs when "Process only differences"
         #    is enabled, since otherwise every X-Check would be listed.
-        if self.process_only_differences:
+        if files.get("process_only_differences", False):
             self._write_x_check_no_list(loaded_files, files)
 
         # 1. Load GCoA QU accounts (optional)

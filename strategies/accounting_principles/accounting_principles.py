@@ -82,7 +82,7 @@ class AccountingPrinciples(BaseStrategy):
                           f"Required column '{x_check_col}' not found — aborting", 0)
             return
 
-        if self.process_only_differences:
+        if files.get("process_only_differences", False):
             ebx_path  = files["files"].get("X-Checks Publication File")
             ebx_sheet = files["sheet_names"].get("X-Checks Publication File",
                                                  "cross checks all")

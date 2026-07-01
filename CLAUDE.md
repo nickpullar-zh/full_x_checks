@@ -47,6 +47,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.6 — Fix process_only_differences coupling in strategies (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `x_checks.py`, `accounting_principles.py`: replace `self.process_only_differences` with `files.get("process_only_differences", False)`. Strategies now read directly from the `files` dict and are no longer coupled to `execute()` having been called first. | DONE | |
+| 2 | `full_run.py`: remove workaround that manually set `strategy.process_only_differences` before calling `process()` — no longer needed. | DONE | |
+| 3 | `version.py`: bump to `1.0.6`. | DONE | |
+
 ### v1.0.5 — Full Run bug fixes (2026-07-01)
 
 | # | Change | Status | Notes |
