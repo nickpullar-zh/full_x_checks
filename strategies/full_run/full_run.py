@@ -79,6 +79,9 @@ class FullRun(BaseStrategy):
             strategy._stop_event = self._stop_event
             # Share the cached COM labeler — only one Excel session for the run.
             strategy._sensitivity_labeler = self._sensitivity_labeler
+            # Set process_only_differences — normally set by execute(), but Full Run
+            # calls process() directly so we must set it manually.
+            strategy.process_only_differences = strategy_files.get("process_only_differences", False)
 
             # Capture sheets rather than writing a separate file.
             captured_sheets: OrderedDict = OrderedDict()

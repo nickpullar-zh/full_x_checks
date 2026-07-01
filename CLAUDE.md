@@ -47,6 +47,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.5 — Full Run bug fixes (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `full_run.py`: set `strategy.process_only_differences` before calling `strategy.process()`. Full Run bypasses `execute()` which normally sets this attribute, causing `AttributeError` on X-Checks and Accounting Principles. | DONE | |
+| 2 | `grouping_by.py`: cast `"Reference  X-Check (Condition)"` column to string before `.str.strip()` to handle NaN/float values that caused `AttributeError: Can only use .str accessor with string values`. | DONE | |
+| 3 | `version.py`: bump to `1.0.5`. | DONE | |
+
 ### v1.0.4 — Mapping File accepts .txt extension (2026-07-01)
 
 | # | Change | Status | Notes |

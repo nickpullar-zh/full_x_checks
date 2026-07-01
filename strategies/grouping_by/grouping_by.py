@@ -175,9 +175,10 @@ class GroupingBy(BaseStrategy):
                 df_ebx.insert(col_position, col, split_cols[col])
             self.log_step(self.log, "EBX", "Replaced 'Grouping By' with split columns", len(df_ebx))
 
-            df_ebx["_base_key"] = df_ebx["Reference  X-Check (Condition)"].where(
+            ref_col = df_ebx["Reference  X-Check (Condition)"].astype(str).str.strip()
+            df_ebx["_base_key"] = ref_col.where(
                 df_ebx["Reference  X-Check (Condition)"].notna() &
-                (df_ebx["Reference  X-Check (Condition)"].str.strip() != ""),
+                (ref_col != "") & (ref_col.str.lower() != "nan"),
                 other=df_ebx["X-Check No."].astype(str).str.strip()
             )
             self.log_step(self.log, "EBX", "Constructed base key column", df_ebx["_base_key"].notna().sum())
