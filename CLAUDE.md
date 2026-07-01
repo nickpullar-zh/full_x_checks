@@ -47,6 +47,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.7 — Sheet name field: combobox populated from workbook (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: replace sheet name `ttk.Entry` with `ttk.Combobox`. On file select, reads all sheet names from the workbook, selects the configured default if present otherwise the first sheet, and populates the dropdown with all available sheets. Prefill path also populates the combobox. | DONE | |
+| 2 | `version.py`: bump to `1.0.7`. | DONE | |
+
 ### v1.0.6 — Fix process_only_differences coupling in strategies (2026-07-01)
 
 | # | Change | Status | Notes |

@@ -167,8 +167,8 @@ class FileUploadUI:
         # ==========================================
         # Constants
         # ==========================================
-        HINT_WRAP_LENGTH = 800  # ← Max width before hint text wraps
-        LABEL_FALLBACK_WIDTH = 400  # ← Fallback if no hints exist
+        HINT_WRAP_LENGTH = 533  # ← Max width before hint text wraps
+        LABEL_FALLBACK_WIDTH = 267  # ← Fallback if no hints exist
 
         current_row = 0
 
@@ -242,15 +242,15 @@ class FileUploadUI:
                 sheet_label.grid(row=current_row, column=0, padx=5, pady=(0, 4), sticky="e")
                 self.sheet_labels[field.label] = sheet_label  # ← Store reference
 
-                sheet_entry = ttk.Entry(
+                sheet_combo = ttk.Combobox(
                     main_frame,
                     textvariable=sheet_var,
-                    width=30,
+                    width=28,
                     font=("Zurich Sans", 9),
                     state="disabled"
                 )
-                sheet_entry.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
-                self.sheet_entries[field.label] = sheet_entry
+                sheet_combo.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
+                self.sheet_entries[field.label] = sheet_combo
 
                 current_row += 1
 
@@ -373,6 +373,10 @@ class FileUploadUI:
         if self.output_label:
             self.output_label.config(wraplength=max_hint_width)
 
+        # Apply same width to all hint labels so descriptions are consistent
+        for hint_label in hint_labels:
+            hint_label.config(wraplength=max_hint_width)
+
 
     def _apply_prefill(self, prefill: dict):
         """Restore a previous run's inputs into the form fields."""
@@ -386,7 +390,14 @@ class FileUploadUI:
                 for field in self.config.file_fields:
                     if field.label == label and field.show_sheet:
                         self.sheet_labels[label].config(foreground="black")
-                        self.sheet_entries[label].config(state="normal")
+                        combo = self.sheet_entries[label]
+                        try:
+                            import pandas as pd
+                            sheet_names = pd.ExcelFile(path).sheet_names
+                            combo["values"] = sheet_names
+                        except Exception:
+                            pass
+                        combo.config(state="readonly")
 
         # Sheet names
         for label, sheet in (prefill.get("sheet_names") or {}).items():
@@ -420,14 +431,26 @@ class FileUploadUI:
         )
         if filepath:
             path_var.set(filepath)
-            # Update the label directly — no StringVar/Entry issues
             self.path_labels[field.label].config(
-                text=os.path.basename(filepath),  # ← Show filename only, not full path
-                foreground="black"  # ← Change from grey to black
+                text=os.path.basename(filepath),
+                foreground="black"
             )
             if field.show_sheet:
                 self.sheet_labels[field.label].config(foreground="black")
-                self.sheet_entries[field.label].config(state="normal")  # ← Enable on file select
+                combo = self.sheet_entries[field.label]
+                # Read sheet names from the workbook
+                try:
+                    import pandas as pd
+                    sheet_names = pd.ExcelFile(filepath).sheet_names
+                except Exception:
+                    sheet_names = []
+                if sheet_names:
+                    combo["values"] = sheet_names
+                    # Use default if present, else first sheet
+                    default = field.default_sheet
+                    selected = default if default in sheet_names else sheet_names[0]
+                    self.sheet_names[field.label].set(selected)
+                combo.config(state="readonly")
             self._check_ready()
 
     def _browse_directory(self):
