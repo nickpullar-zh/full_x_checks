@@ -47,6 +47,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.3 — Fix missing FIP File (ZQ9_VALMETH) in Full Run dialog (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: rename Conditions FIP field label `"FIP File"` → `"FIP File (ZQ9_VALMETH)"` so it is distinct from X-Checks `"FIP File"` and not deduplicated out of the Full Run dialog. | DONE | Caused by v1.0.2 rename of X-Checks "FIP file" → "FIP File" creating a collision. |
+| 2 | `conditions.py`, `main.py`, `docs/generate_uat.py`: update all references to `"FIP File"` (Conditions context) → `"FIP File (ZQ9_VALMETH)"`. | DONE | |
+| 3 | `version.py`: bump to `1.0.3`. | DONE | |
+
 ### v1.0.2 — Naming consistency pass (2026-07-01)
 
 | # | Change | Status | Notes |

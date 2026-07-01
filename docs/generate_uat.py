@@ -234,7 +234,7 @@ FILES_ROWS = [
     ("Accounting Principles", "FIP File (VALMSG)",         "20260602 VALMSG (Accounting Principle).xlsx",            "FIP Methods Rules and Condition","Yes"),
     # Conditions
     ("Conditions", "X-Checks Publication File", "20260313 Cross Checks All - Copy.xlsx", "cross checks all", "Yes"),
-    ("Conditions", "FIP File",                  "20260602 VALMETH (Conditions).xlsx",    "FIP Conditions",   "Yes"),
+    ("Conditions", "FIP File (ZQ9_VALMETH)",     "20260602 VALMETH (Conditions).xlsx",    "FIP Conditions",   "Yes"),
     # Full Run
     ("Full Run", "FIP File",                   "20260318 FIP X-Checks.txt",                              "N/A",                           "Yes"),
     ("Full Run", "FIP File (ZQ9_VALFLDGR)",    "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX", "Sheet1",                        "Yes"),
@@ -242,7 +242,7 @@ FILES_ROWS = [
     ("Full Run", "Mapping File",               "Mapping Table with 20 rows.txt",                         "N/A",                           "Yes"),
     ("Full Run", "Validation Methods File",    "validation methods.xlsx",                                "Validation Methods",            "Yes"),
     ("Full Run", "FIP File (VALMSG)",          "20260602 VALMSG (Accounting Principle).xlsx",            "FIP Methods Rules and Condition","Yes"),
-    ("Full Run", "FIP File",                   "20260602 VALMETH (Conditions).xlsx",                     "FIP Conditions",                "Yes"),
+    ("Full Run", "FIP File (ZQ9_VALMETH)",      "20260602 VALMETH (Conditions).xlsx",                     "FIP Conditions",                "Yes"),
 ]
 
 

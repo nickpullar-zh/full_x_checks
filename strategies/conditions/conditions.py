@@ -25,7 +25,7 @@ class Conditions(BaseStrategy):
     def process(self, loaded_files: dict, files: dict) -> bool:
         pub_path = files["files"]["X-Checks Publication File"]
         pub_sheet = files["sheet_names"].get("X-Checks Publication File", "cross checks all")
-        fip_df = loaded_files["FIP File"]
+        fip_df = loaded_files["FIP File (ZQ9_VALMETH)"]
 
         # ------------------------------------------------------------------
         # 1. Extract yellow/green conditions from publication file

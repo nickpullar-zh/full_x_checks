@@ -68,11 +68,11 @@ DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
 _DEBUG_FILES_CONDITIONS = {
     "files": {
         "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All - Copy.xlsx"),
-        "FIP File":                  os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+        "FIP File (ZQ9_VALMETH)":    os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
     },
     "sheet_names": {
         "X-Checks Publication File": "cross checks all",
-        "FIP File":                  "FIP Conditions",
+        "FIP File (ZQ9_VALMETH)":    "FIP Conditions",
     },
     "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
     "process_only_differences": False,
@@ -85,7 +85,7 @@ _DEBUG_FILES_FULL_RUN = {
         "Mapping File":               os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
         "Validation Methods File":    os.path.join(_BASE, "test_data", "validation methods.xlsx"),
         "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
-        "FIP File":                   os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+        "FIP File (ZQ9_VALMETH)":     os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
     },
     "sheet_names": {
         "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
@@ -93,7 +93,7 @@ _DEBUG_FILES_FULL_RUN = {
         "Mapping File":               "Sheet1",
         "Validation Methods File":    "Validation Methods",
         "FIP File (VALMSG)":          "FIP Methods Rules and Condition",
-        "FIP File":                   "FIP Conditions",
+        "FIP File (ZQ9_VALMETH)":     "FIP Conditions",
     },
     "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
     "process_only_differences": False,

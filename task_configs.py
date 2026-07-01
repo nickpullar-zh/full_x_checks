@@ -149,7 +149,7 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
             default_sheet="cross checks all",
         ),
         FileFieldConfig(
-            label="FIP File",
+            label="FIP File (ZQ9_VALMETH)",
             file_types=[("Excel Files", "*.xlsx")],
             description="FIP download from ZQ9_VALMETH (sheet: FIP Conditions)",
             default_sheet="FIP Conditions",
