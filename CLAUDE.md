@@ -47,6 +47,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.2 — Naming consistency pass (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `x_checks/compare.py`, `ebx_extraction.py`, `fip_extraction.py`, `x_checks.py`: rename column `X-Check Number` → `X-Check No.` throughout to match all other strategies. | DONE | |
+| 2 | `task_configs.py`, `x_checks.py`, `main.py`, `test_data/run_new.py`, `docs/generate_uat.py`: rename field label `"FIP file"` → `"FIP File"` (capitalised, matching all other FIP file labels). | DONE | |
+| 3 | `x_checks.py`, `grouping_by.py`: rename log step label `"Compare"` → `"Comparison"` to match Accounting Principles and Conditions. | DONE | |
+| 4 | `grouping_by.py`: rename output sheet tab `"Compare"` → `"Comparison"` to match the consistent `"[Strategy] Comparison"` naming pattern. | DONE | |
+| 5 | `conditions.py`: rename local variable `process_only_diff` → `process_only_differences` to match standard naming throughout the codebase. | DONE | |
+| 6 | `version.py`: bump to `1.0.2`. | DONE | |
+
 ### v1.0.1 — Shared Known Exception List across all strategies (2026-07-01)
 
 | # | Change | Status | Notes |

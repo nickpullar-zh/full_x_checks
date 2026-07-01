@@ -101,7 +101,7 @@ _DEBUG_FILES_FULL_RUN = {
 
 _DEBUG_FILES_X_CHECKS = {
     "files": {
-        "FIP file":                  os.path.join(_BASE, "test_data", "20260318 FIP X-Checks.txt"),
+        "FIP File":                  os.path.join(_BASE, "test_data", "20260318 FIP X-Checks.txt"),
         "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
     },
     "sheet_names": {

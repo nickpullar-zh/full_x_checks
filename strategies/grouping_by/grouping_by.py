@@ -72,7 +72,7 @@ class GroupingBy(BaseStrategy):
             ("FIP - Processed", df_fip_processed),
             ("EBX - Original",  df_ebx_original),
             ("EBX - Processed", df_ebx_processed),
-            ("Compare",         df_comparison),
+            ("Comparison",         df_comparison),
         ])
 
         summaries = {
@@ -80,7 +80,7 @@ class GroupingBy(BaseStrategy):
             "FIP - Processed": OrderedDict([("Source filename:", fip_path), ("Number of rows:", len(df_fip_processed))]),
             "EBX - Original":  OrderedDict([("Source filename:", ebx_path), ("Number of rows:", len(df_ebx_original))]),
             "EBX - Processed": OrderedDict([("Source filename:", ebx_path), ("Number of rows:", len(df_ebx_processed))]),
-            "Compare":         OrderedDict([("Number of rows:", len(df_comparison)), ("Matched:", matched), ("Not in FIP:", not_matched)]),
+            "Comparison":         OrderedDict([("Number of rows:", len(df_comparison)), ("Matched:", matched), ("Not in FIP:", not_matched)]),
         }
 
         self.write_excel_output(output_path, sheets, self.log, summaries=summaries)
@@ -224,14 +224,14 @@ class GroupingBy(BaseStrategy):
     # ------------------------------------------------------------------
 
     def _process_compare(self, df_fip: pd.DataFrame, df_ebx: pd.DataFrame) -> pd.DataFrame:
-        self.log_step(self.log, "Compare", "Started comparison", 0)
+        self.log_step(self.log, "Comparison", "Started comparison", 0)
 
         fip_keys = df_fip[["Key"]].drop_duplicates().copy()
         fip_keys["In FIP"] = True
-        self.log_step(self.log, "Compare", "FIP key lookup built", len(fip_keys))
+        self.log_step(self.log, "Comparison", "FIP key lookup built", len(fip_keys))
 
         ebx_keys = df_ebx[["Key"]].drop_duplicates().copy()
-        self.log_step(self.log, "Compare", "EBX keys extracted", len(ebx_keys))
+        self.log_step(self.log, "Comparison", "EBX keys extracted", len(ebx_keys))
 
         df_compare = ebx_keys.merge(fip_keys, on="Key", how="left")
         df_compare["In FIP"] = df_compare["In FIP"].fillna(False)
@@ -239,7 +239,7 @@ class GroupingBy(BaseStrategy):
 
         matched     = df_compare["Result"].eq("Matched").sum()
         not_matched = df_compare["Result"].eq("Not in FIP").sum()
-        self.log_step(self.log, "Compare", f"Matched: {matched} | Not in FIP: {not_matched}", len(df_compare))
+        self.log_step(self.log, "Comparison", f"Matched: {matched} | Not in FIP: {not_matched}", len(df_compare))
 
         df_compare = (
             df_compare
@@ -248,5 +248,5 @@ class GroupingBy(BaseStrategy):
             .sort_values("EBX Key")
             .reset_index(drop=True)
         )
-        self.log_step(self.log, "Compare", "Finished comparison", len(df_compare))
+        self.log_step(self.log, "Comparison", "Finished comparison", len(df_compare))
         return df_compare

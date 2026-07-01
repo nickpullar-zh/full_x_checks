@@ -1,12 +1,12 @@
 """
 X-Checks Comparison
 
-Compares EBX and FIP extraction results by X-Check Number.
+Compares EBX and FIP extraction results by X-Check No..
 Returns a list of row dicts ready to be turned into a DataFrame and written
 to Excel via BaseStrategy.write_excel_output().
 
 Columns produced:
-    X-Check Number, Formula Match,
+    X-Check No., Formula Match,
     EBX Formula, FIP Formula,
     Variables Match, EBX Variables, FIP Variables,
     Variables Match (Builder), FIP Variable (Builder)
@@ -33,12 +33,12 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
     # Keep first occurrence per X-Check — matches old Compare_Files.py behaviour (EBXFile.index[...][0])
     ebx_by_xcheck = {}
     for r in ebx_results:
-        if r['X-Check Number'] not in ebx_by_xcheck:
-            ebx_by_xcheck[r['X-Check Number']] = r
+        if r['X-Check No.'] not in ebx_by_xcheck:
+            ebx_by_xcheck[r['X-Check No.']] = r
     matched_xchecks = set()
 
     for fip in fip_results:
-        xcheck      = fip['X-Check Number']
+        xcheck      = fip['X-Check No.']
         fip_formula = fip['FIP Formula'].replace('TOM', 'ToM')
         fip_vars    = fip['FIP Variables']
         fip_builder = fip.get('FIP Variable (Builder)', '')
@@ -75,7 +75,7 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
         )
 
         rows.append({
-            'X-Check Number':            xcheck,
+            'X-Check No.':            xcheck,
             'Formula Match':             'Match' if formula_match else 'MisMatch',
             'EBX Formula':               ebx_formula,
             'FIP Formula':               normalised_fip_formula,
@@ -90,7 +90,7 @@ def compare(ebx_results: list[dict], fip_results: list[dict]) -> list[dict]:
         })
 
     for ebx in ebx_results:
-        xcheck = ebx['X-Check Number']
+        xcheck = ebx['X-Check No.']
         if xcheck not in matched_xchecks:
             rows.append(_not_found_row(
                 xcheck,
@@ -111,7 +111,7 @@ def _not_found_row(
     missing_side: str,
 ) -> dict:
     return {
-        'X-Check Number':            xcheck,
+        'X-Check No.':            xcheck,
         'Formula Match':             'Not Found',
         'EBX Formula':               ebx_formula,
         'FIP Formula':               fip_formula,

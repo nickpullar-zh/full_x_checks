@@ -10,7 +10,7 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
     requires_output_directory=True,
     file_fields=[
         FileFieldConfig(
-            label="FIP file",
+            label="FIP File",
             file_types=[("Text Files", "*.txt")],
             description="Data from the 'Validation Rule' in FIP Consolidation Workbench"
         ),

@@ -220,7 +220,7 @@ PLAN_ROWS = [
 # ---------------------------------------------------------------------------
 FILES_ROWS = [
     # X-Checks
-    ("X-Checks", "FIP file",                  "20260318 FIP X-Checks.txt",              "N/A",              "Yes"),
+    ("X-Checks", "FIP File",                  "20260318 FIP X-Checks.txt",              "N/A",              "Yes"),
     ("X-Checks", "X-Checks Publication File", "20260313 Cross Checks All.xlsx",          "cross checks all", "Yes"),
     ("X-Checks", "GCoA Publication File",     "GCoA Publication file (optional)",        "GCoA Base account table", "No"),
     ("X-Checks", "Known Exception List",      "Known Exception List (optional)",         "Known Exceptions", "No"),
@@ -236,7 +236,7 @@ FILES_ROWS = [
     ("Conditions", "X-Checks Publication File", "20260313 Cross Checks All - Copy.xlsx", "cross checks all", "Yes"),
     ("Conditions", "FIP File",                  "20260602 VALMETH (Conditions).xlsx",    "FIP Conditions",   "Yes"),
     # Full Run
-    ("Full Run", "FIP file",                   "20260318 FIP X-Checks.txt",                              "N/A",                           "Yes"),
+    ("Full Run", "FIP File",                   "20260318 FIP X-Checks.txt",                              "N/A",                           "Yes"),
     ("Full Run", "FIP File (ZQ9_VALFLDGR)",    "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX", "Sheet1",                        "Yes"),
     ("Full Run", "X-Checks Publication File",  "20260313 Cross Checks All.xlsx",                         "cross checks all",              "Yes"),
     ("Full Run", "Mapping File",               "Mapping Table with 20 rows.txt",                         "N/A",                           "Yes"),

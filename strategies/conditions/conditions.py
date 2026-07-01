@@ -30,10 +30,10 @@ class Conditions(BaseStrategy):
         # ------------------------------------------------------------------
         # 1. Extract yellow/green conditions from publication file
         # ------------------------------------------------------------------
-        process_only_diff = files.get("process_only_differences", True)
-        mode = "changed/new rows only" if process_only_diff else "full file"
+        process_only_differences = files.get("process_only_differenceserences", True)
+        mode = "changed/new rows only" if process_only_differences else "full file"
         self.log_step(self.log, "Publication", f"Extracting condition cells ({mode})", 0)
-        working_df, warnings = extract_conditions(pub_path, pub_sheet, process_only_diff)
+        working_df, warnings = extract_conditions(pub_path, pub_sheet, process_only_differences)
 
         for w in warnings:
             self.log_step(self.log, "Publication", f"Warning: {w}", 0)

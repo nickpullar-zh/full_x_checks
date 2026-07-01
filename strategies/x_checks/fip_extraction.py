@@ -2,7 +2,7 @@
 FIP Text File Extraction
 
 Parses the raw FIP Validation Rule text output and extracts:
-- X-Check Number
+- X-Check No.
 - FIP Formula
 - FIP Variables (pipe-delimited string of variable definitions)
 """
@@ -81,7 +81,7 @@ def _build_excl_formula(formula: str, variables: dict) -> str:
 def extract_fip(fip_text: str, x_check_list: list[str]) -> list[dict]:
     """
     Main entry point. Parses FIP text and returns a list of dicts:
-    [{"X-Check Number": ..., "FIP Formula": ..., "FIP Variables": ...}, ...]
+    [{"X-Check No.": ..., "FIP Formula": ..., "FIP Variables": ...}, ...]
 
     Args:
         fip_text:       The raw merged FIP text content (already in memory)
@@ -196,7 +196,7 @@ def _parse_x_checks(clean_lines: dict[int, str], x_check_list: list[str]) -> lis
                 })
 
             results.append({
-                "X-Check Number":      current_x_check,
+                "X-Check No.":      current_x_check,
                 "FIP Formula":         returned_x_check['Formula'],
                 "FIP Formula (Excl)":  _build_excl_formula(returned_x_check['Formula'], returned_x_check['Variables']),
                 "FIP Variables":       str_output[:-1],

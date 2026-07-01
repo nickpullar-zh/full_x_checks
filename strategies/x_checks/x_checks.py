@@ -53,21 +53,21 @@ class XChecks(BaseStrategy):
             if str(x) not in ("nan", "", "NaN", "None")
         ))
         self.log_step(self.log, "FIP", "Extracting from FIP text...", len(x_check_list))
-        fip_results = extract_fip(loaded_files["FIP file"], x_check_list)
+        fip_results = extract_fip(loaded_files["FIP File"], x_check_list)
         self.log_step(self.log, "FIP", "X-Checks extracted", len(fip_results))
 
         # 4. Compare and sort — matches old Compare_Files.py "All Data" sheet sort order
-        self.log_step(self.log, "Compare", "Comparing EBX and FIP...", 0)
+        self.log_step(self.log, "Comparison", "Comparing EBX and FIP...", 0)
         comparison_rows = compare(ebx_results, fip_results)
         if not comparison_rows:
-            self.log_step(self.log, "Compare", "No X-Checks to compare — aborting output", 0)
+            self.log_step(self.log, "Comparison", "No X-Checks to compare — aborting output", 0)
             return
         df_comparison = pd.DataFrame(comparison_rows)
-        df_comparison = df_comparison.sort_values("X-Check Number").reset_index(drop=True)
+        df_comparison = df_comparison.sort_values("X-Check No.").reset_index(drop=True)
 
         # 5. Apply known exceptions if file was provided
         _XC_FINGERPRINT = [
-            "X-Check Number", "EBX Formula", "FIP Formula",
+            "X-Check No.", "EBX Formula", "FIP Formula",
             "EBX Formula (Excl)", "FIP Formula (Excl)",
             "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
         ]

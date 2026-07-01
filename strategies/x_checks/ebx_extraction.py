@@ -2,7 +2,7 @@
 EBX Excel File Extraction
 
 Reads the EBX 'cross checks all' sheet and extracts:
-- X-Check Number
+- X-Check No.
 - EBX Formula
 - EBX Variables (pipe-delimited string of variable definitions)
 """
@@ -22,7 +22,7 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
                 apply_prior_year_balance: bool = False) -> list[dict]:
     """
     Main entry point. Processes the EBX DataFrame and returns a list of dicts:
-    [{"X-Check Number": ..., "EBX Formula": ..., "EBX Variables": ...}, ...]
+    [{"X-Check No.": ..., "EBX Formula": ..., "EBX Variables": ...}, ...]
 
     Args:
         df: DataFrame from the 'cross checks all' sheet
@@ -188,7 +188,7 @@ def extract_ebx(df: pd.DataFrame, qu_accounts: set | None = None,
             str_output_string = build_variables_string(raw_variables)
 
             results.append({
-                "X-Check Number":     str_name,
+                "X-Check No.":     str_name,
                 "EBX Formula":        str_formula,
                 "EBX Formula (Excl)": str_formula_excl,
                 "EBX Variables":      str_output_string,
