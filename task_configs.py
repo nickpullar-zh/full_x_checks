@@ -87,8 +87,8 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
         ),
         FileFieldConfig(
             label="Mapping File",
-            file_types=[("CSV Files", "*.csv"), ("All Files", "*.*")],
-            description="Mapping file in CSV format (FIP Data, EBX item)",
+            file_types=[("CSV / Text Files", "*.csv *.txt"), ("All Files", "*.*")],
+            description="Mapping file in CSV or TXT format (FIP Data, EBX item)",
             default_sheet="Sheet1",
         ),
         FileFieldConfig(

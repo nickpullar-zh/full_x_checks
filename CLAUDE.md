@@ -47,6 +47,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.4 — Mapping File accepts .txt extension (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: Mapping File `file_types` updated to `("CSV / Text Files", "*.csv *.txt")` so both extensions are selectable in the file picker. | DONE | |
+| 2 | `version.py`: bump to `1.0.4`. | DONE | |
+
 ### v1.0.3 — Fix missing FIP File (ZQ9_VALMETH) in Full Run dialog (2026-07-01)
 
 | # | Change | Status | Notes |
