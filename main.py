@@ -99,6 +99,17 @@ _DEBUG_FILES_FULL_RUN = {
     "process_only_differences": False,
 }
 
+_DEBUG_FILES_COLLECT_LIVE_X_CHECKS = {
+    "files": {
+        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
+    },
+    "sheet_names": {
+        "X-Checks Publication File": "cross checks all",
+    },
+    "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
+    "process_only_differences": False,
+}
+
 _DEBUG_FILES_X_CHECKS = {
     "files": {
         "FIP File":                  os.path.join(_BASE, "test_data", "20260318 FIP X-Checks.txt"),
@@ -115,6 +126,7 @@ _DEBUG_FILES_X_CHECKS = {
 
 DEBUG_TASK = ""  # ← patched by build.py to match a key in TASK_REGISTRY
 _DEBUG_FILES_MAP: dict = {
+    "Collect Live X-Checks": _DEBUG_FILES_COLLECT_LIVE_X_CHECKS,
     "X-Checks":              _DEBUG_FILES_X_CHECKS,
     "Grouping By":           _DEBUG_FILES_GROUPING_BY,
     "Accounting Principles": DEBUG_FILES_ACCOUNTING_PRINCIPLES,

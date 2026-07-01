@@ -7,6 +7,7 @@ _build_full_run_config() sees all other entries.
 import importlib
 
 from task_configs import (
+    COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG,
     X_CHECKS_UPLOAD_CONFIG,
     GROUPING_BY_UPLOAD_CONFIG,
     ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG,
@@ -18,6 +19,7 @@ from task_configs import (
 # static analyser so strategy modules are bundled even though they are
 # loaded lazily via _lazy().
 if False:
+    from strategies.collect_live_x_checks import CollectLiveXChecks        # noqa: F401
     from strategies.x_checks import XChecks                                # noqa: F401
     from strategies.grouping_by import GroupingBy                          # noqa: F401
     from strategies.accounting_principles import AccountingPrinciples      # noqa: F401
@@ -34,6 +36,10 @@ def _lazy(module: str, cls: str):
 
 
 TASK_REGISTRY: dict = {
+    "Collect Live X-Checks": (
+        COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG,
+        _lazy("strategies.collect_live_x_checks", "CollectLiveXChecks"),
+    ),
     "X-Checks": (
         X_CHECKS_UPLOAD_CONFIG,
         _lazy("strategies.x_checks", "XChecks"),

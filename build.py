@@ -28,6 +28,13 @@ BUILDS = [
         "add_test_data": False,
     },
     {
+        "key":          "collect_debug",
+        "name":         f"X-Checks_Debug_CollectLiveXChecks_{VERSION}",
+        "debug_mode":   True,
+        "debug_task":   "Collect Live X-Checks",
+        "add_test_data": True,
+    },
+    {
         "key":          "xc_debug",
         "name":         f"X-Checks_Debug_XChecks_{VERSION}",
         "debug_mode":   True,
@@ -197,6 +204,8 @@ def build(config: dict):
         "pythoncom",
         "pywintypes",
         # Strategy submodules (loaded lazily via task_registry._lazy).
+        "strategies.collect_live_x_checks",
+        "strategies.collect_live_x_checks.collect_live_x_checks",
         "strategies.x_checks",
         "strategies.x_checks.x_checks",
         "strategies.x_checks.compare",

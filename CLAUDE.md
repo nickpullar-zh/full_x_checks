@@ -47,6 +47,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.10 — Add Collect Live X-Checks strategy to dropdown (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/collect_live_x_checks/` — ported from `v0.4-X-Check-No-Selection`. Runs the X-Check selection pipeline (Status / Type of Change / Exclude Z-Core / yellow Category), writes a `.txt` file of in-scope X-Check Nos, and copies the list to the Windows clipboard. | DONE | |
+| 2 | `task_configs.py`: add `COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG` (X-Checks Publication File only). | DONE | |
+| 3 | `task_registry.py`: register `"Collect Live X-Checks"` as the first entry — appears at the top of the dropdown above X-Checks. | DONE | |
+| 4 | `main.py`: add `_DEBUG_FILES_COLLECT_LIVE_X_CHECKS` debug dict. | DONE | |
+| 5 | `build.py`: add `collect_debug` build entry + hidden imports. | DONE | |
+| 6 | `version.py`: bump to `1.0.10`. | DONE | |
+
 ### v1.0.9 — Reject FIP files with Key column; fix typo; remove Layout B (2026-07-01)
 
 | # | Change | Status | Notes |

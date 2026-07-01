@@ -4,6 +4,20 @@ Per-strategy file-upload configurations — all strategies combined for v1.0.
 from file_upload_config import UploadTaskConfig, FileFieldConfig  # noqa: F401
 
 
+COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
+    task_name="Collect Live X-Checks",
+    window_title="Collect Live X-Checks",
+    requires_output_directory=True,
+    file_fields=[
+        FileFieldConfig(
+            label="X-Checks Publication File",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="The X-Checks Publication file with the 'cross checks all' sheet",
+            default_sheet="cross checks all",
+        ),
+    ],
+)
+
 X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
     task_name="X-Checks",
     window_title="X-Check Files",
