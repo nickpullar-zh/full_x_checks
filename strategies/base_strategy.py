@@ -460,6 +460,89 @@ class BaseStrategy(ABC):
             worksheet.cell(row=i + 1, column=1, value=label)
             worksheet.cell(row=i + 1, column=2, value=value)
 
+    def _load_known_exceptions(
+        self,
+        path: Optional[str],
+        sheet_name: str,
+        fingerprint_columns: list,
+    ) -> dict:
+        """
+        Load a Known Exception List sheet and return a lookup dict.
+
+        Keys are either plain strings (single fingerprint column) or tuples
+        (multiple columns). Values are the Reason string.
+
+        Row 2 of the sheet is a guidance/example row and is always skipped.
+        Falls back to "Known Exceptions" sheet name if `sheet_name` is not found.
+
+        Returns {} if path is None, sheet is empty, or sheet cannot be read.
+        Raises ValueError if required columns are missing or rows are incomplete.
+        """
+        if not path:
+            return {}
+
+        required_cols = fingerprint_columns + ["Reason"]
+
+        # Try the strategy-specific sheet name first, fall back for backwards compat
+        df = None
+        tried = []
+        for sn in (sheet_name, "Known Exceptions"):
+            if sn in tried:
+                continue
+            tried.append(sn)
+            try:
+                df = pd.read_excel(path, sheet_name=sn, skiprows=[1])
+                break
+            except Exception:
+                df = None
+
+        if df is None:
+            self.log_step(self.log, "Exceptions",
+                          f"Could not read sheet '{sheet_name}' from Known Exception List", 0)
+            return {}
+
+        df = df.dropna(how="all")
+        if df.empty:
+            self.log_step(self.log, "Exceptions", "Known Exception List sheet is empty", 0)
+            return {}
+
+        missing_cols = [c for c in required_cols if c not in df.columns]
+        if missing_cols:
+            raise ValueError(
+                f"Known Exception List sheet '{sheet_name}' is missing columns: {missing_cols}"
+            )
+
+        exceptions = {}
+        invalid_rows = []
+        for i, row in df.iterrows():
+            reason = str(row["Reason"]).strip()
+            if reason in ("", "nan", "NaN", "None"):
+                invalid_rows.append(f"row {i + 2} (missing Reason)")
+                continue
+
+            key_parts = []
+            row_invalid = False
+            for col in fingerprint_columns:
+                val = str(row[col]).strip() if pd.notna(row[col]) else ""
+                if val in ("", "nan", "NaN", "None"):
+                    invalid_rows.append(f"row {i + 2} (missing {col})")
+                    row_invalid = True
+                    break
+                key_parts.append(val)
+            if row_invalid:
+                continue
+
+            key = key_parts[0] if len(key_parts) == 1 else tuple(key_parts)
+            exceptions[key] = reason
+
+        if invalid_rows:
+            raise ValueError(
+                f"Known Exception List has {len(invalid_rows)} incomplete row(s): "
+                f"{'; '.join(invalid_rows)}"
+            )
+
+        return exceptions
+
     @abstractmethod
     def process(self, loaded_files: dict, files: dict):
         """

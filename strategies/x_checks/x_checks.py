@@ -66,21 +66,29 @@ class XChecks(BaseStrategy):
         df_comparison = df_comparison.sort_values("X-Check Number").reset_index(drop=True)
 
         # 5. Apply known exceptions if file was provided
+        _XC_FINGERPRINT = [
+            "X-Check Number", "EBX Formula", "FIP Formula",
+            "EBX Formula (Excl)", "FIP Formula (Excl)",
+            "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
+        ]
         exc_path = files["files"].get("Known Exception List")
         if exc_path:
             try:
-                known_exceptions = self._load_known_exceptions(exc_path)
+                known_exceptions = self._load_known_exceptions(
+                    exc_path, sheet_name="X-Checks", fingerprint_columns=_XC_FINGERPRINT
+                )
             except (ValueError, KeyError) as e:
                 self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
                 return
             self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
-            df_comparison["Known Exception"] = df_comparison["X-Check Number"].map(
-                lambda x: known_exceptions.get(x, "")
+
+            def _xc_key(row):
+                parts = [str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _XC_FINGERPRINT]
+                return tuple(parts)
+
+            df_comparison["Known Exception"] = df_comparison.apply(
+                lambda row: known_exceptions.get(_xc_key(row), ""), axis=1
             )
-            known_mask = df_comparison["Known Exception"].str.strip() != ""
-            for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
-                if col in df_comparison.columns:
-                    df_comparison.loc[known_mask & (df_comparison[col] == "MisMatch"), col] = "Mismatch - Known Exception"
         else:
             self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
 
@@ -128,55 +136,6 @@ class XChecks(BaseStrategy):
         self.log_step(self.log, "X-Check No Selection",
                       f"Wrote {os.path.basename(out_path)}", len(x_check_nos),
                       notes=out_path)
-
-    def _load_known_exceptions(self, path: str) -> dict:
-        """
-        Reads the 'Known Exceptions' sheet from the given file.
-        Returns a dict of {X-Check Number: Reason}.
-        Row 2 of the sheet is a guidance row and is skipped.
-        Raises ValueError if any data row is missing X-Check Number or Reason.
-        """
-        try:
-            df = pd.read_excel(path, sheet_name="Known Exceptions", skiprows=[1])
-        except Exception as e:
-            self.log_step(self.log, "Exceptions", f"Could not read Known Exceptions sheet: {e}", 0)
-            return {}
-
-        # Empty sheet is acceptable
-        df = df.dropna(how="all")
-        if df.empty:
-            return {}
-
-        missing_cols = [c for c in ("X-Check Number", "Reason") if c not in df.columns]
-        if missing_cols:
-            raise ValueError(f"Known Exception List is missing required columns: {missing_cols}")
-
-        invalid_rows = []
-        exceptions = {}
-        for i, row in df.iterrows():
-            xc = str(row["X-Check Number"]).strip()
-            reason = str(row["Reason"]).strip()
-            xc_missing = xc in ("", "nan", "NaN", "None")
-            reason_missing = reason in ("", "nan", "NaN", "None")
-
-            if xc_missing or reason_missing:
-                label = xc if not xc_missing else f"row {i + 2}"
-                missing = []
-                if xc_missing:
-                    missing.append("X-Check Number")
-                if reason_missing:
-                    missing.append("Reason")
-                invalid_rows.append(f"{label} (missing: {', '.join(missing)})")
-                continue
-
-            exceptions[xc] = reason
-
-        if invalid_rows:
-            raise ValueError(
-                f"Known Exception List has {len(invalid_rows)} incomplete row(s): {'; '.join(invalid_rows)}"
-            )
-
-        return exceptions
 
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font

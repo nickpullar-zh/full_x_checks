@@ -73,6 +73,33 @@ class Conditions(BaseStrategy):
         )
 
         # ------------------------------------------------------------------
+        # 3b. Apply known exceptions (annotation only — Comparison boolean unchanged)
+        # ------------------------------------------------------------------
+        import pandas as pd
+        _COND_FINGERPRINT = ["EBX Data", "FIP Data"]
+        exc_path = files["files"].get("Known Exception List")
+        try:
+            known_exceptions = self._load_known_exceptions(
+                exc_path, sheet_name="Conditions", fingerprint_columns=_COND_FINGERPRINT
+            )
+        except (ValueError, KeyError) as e:
+            self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+            return False
+        if known_exceptions:
+            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
+
+            def _cond_key(row):
+                return tuple(str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _COND_FINGERPRINT)
+
+            results_df["Known Exception"] = results_df.apply(
+                lambda row: known_exceptions.get(_cond_key(row), ""), axis=1
+            )
+        elif exc_path:
+            self.log_step(self.log, "Exceptions", "Known Exception List provided but empty — skipping", 0)
+        else:
+            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+
+        # ------------------------------------------------------------------
         # 4. Write output
         # ------------------------------------------------------------------
         output_path = self.build_output_path(

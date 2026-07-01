@@ -24,7 +24,7 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
             label="GCoA Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             required=False,
-            description="The X-Checks Publication file with the 'GCoA Base account table' sheet\n  If the file is not uploaded, no QU values can be returned",
+            description="The X-Checks Publication file with the 'GCoA Base account table' sheet. If the file is not uploaded, no QU values can be returned",
             default_sheet="GCoA Base account table"
         ),
         FileFieldConfig(
@@ -91,6 +91,13 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
             description="Mapping file in CSV format (FIP Data, EBX item)",
             default_sheet="Sheet1",
         ),
+        FileFieldConfig(
+            label="Known Exception List",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False,
+            description="Spreadsheet with a 'Grouping By' sheet listing EBX Keys where differences are expected and documented. If not uploaded, no exception flagging is applied.",
+            default_sheet="Known Exceptions"
+        ),
     ],
 )
 
@@ -120,6 +127,13 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
                         "(rows keyed by '<Method>|<X-Check No.>' and an MT column of W/E).",
             default_sheet="FIP Methods Rules and Condition",
         ),
+        FileFieldConfig(
+            label="Known Exception List",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False,
+            description="Spreadsheet with an 'Accounting Principles' sheet listing rows where differences are expected and documented. If not uploaded, no exception flagging is applied.",
+            default_sheet="Known Exceptions"
+        ),
     ],
 )
 
@@ -139,6 +153,13 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
             file_types=[("Excel Files", "*.xlsx")],
             description="FIP download from ZQ9_VALMETH (sheet: FIP Conditions)",
             default_sheet="FIP Conditions",
+        ),
+        FileFieldConfig(
+            label="Known Exception List",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False,
+            description="Spreadsheet with a 'Conditions' sheet listing EBX/FIP pairs where differences are expected and documented. If not uploaded, no exception flagging is applied.",
+            default_sheet="Known Exceptions"
         ),
     ],
 )

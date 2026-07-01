@@ -109,6 +109,30 @@ class AccountingPrinciples(BaseStrategy):
         df_compare = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
         self.log_step(self.log, "Compare", "Comparison rows produced", len(df_compare))
 
+        # 5b. Apply known exceptions (annotation only — Match column unchanged)
+        _AP_FINGERPRINT = ["X-Check No.", "Event", "Expected", "FIP", "Actual", "Method"]
+        exc_path = files["files"].get("Known Exception List")
+        try:
+            known_exceptions = self._load_known_exceptions(
+                exc_path, sheet_name="Accounting Principles", fingerprint_columns=_AP_FINGERPRINT
+            )
+        except (ValueError, KeyError) as e:
+            self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+            return
+        if known_exceptions:
+            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
+
+            def _ap_key(row):
+                return tuple(str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _AP_FINGERPRINT)
+
+            df_compare["Known Exception"] = df_compare.apply(
+                lambda row: known_exceptions.get(_ap_key(row), ""), axis=1
+            )
+        elif exc_path:
+            self.log_step(self.log, "Exceptions", "Known Exception List provided but empty — skipping", 0)
+        else:
+            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+
         # 6. EBX sheet: cross-checks-all rows for in-scope X-Checks only
         in_scope_set = set(xchecks)
         ebx_mask = cc_df[x_check_col].astype(str).str.strip().isin(in_scope_set)

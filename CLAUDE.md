@@ -47,6 +47,18 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.1 — Shared Known Exception List across all strategies (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `base_strategy.py`: add shared `_load_known_exceptions(path, sheet_name, fingerprint_columns)`. One workbook, one sheet per strategy; exception fires only when all fingerprint column values match exactly; annotation-only (result columns unchanged). Falls back to `"Known Exceptions"` sheet name for X-Checks backwards compatibility. | DONE | |
+| 2 | `x_checks.py`: replace private `_load_known_exceptions()` with call to base; change to full-fingerprint tuple key (8 columns); remove result-column rewriting — now annotation-only. | DONE | |
+| 3 | `task_configs.py`: add optional `Known Exception List` field to `GROUPING_BY_UPLOAD_CONFIG`, `ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG`, `CONDITIONS_UPLOAD_CONFIG`. Full Run deduplicates to one field automatically. | DONE | |
+| 4 | `grouping_by.py`: add exception annotation after compare; fingerprint = `["EBX Key"]`. | DONE | |
+| 5 | `accounting_principles.py`: add exception annotation after compare; fingerprint = `["X-Check No.", "Event", "Expected", "FIP", "Actual", "Method"]`. | DONE | |
+| 6 | `conditions.py`: add exception annotation after compare; fingerprint = `["EBX Data", "FIP Data"]`; `Comparison` boolean unchanged. | DONE | |
+| 7 | `version.py`: bump to `1.0.1`. | DONE | |
+
 ### v1.0.0 — Full application: all strategies combined (in progress 2026-06-30)
 
 | # | Change | Status | Notes |
@@ -65,6 +77,9 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 | 12 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — functional test plan covering launch, all four strategies, error handling, and version checks. | DONE | |
 | 13 | `strategies/x_checks/` — ported from `v0.4-X-Check-No-Selection`; registered in `task_configs.py`, `task_registry.py`, `main.py`, `build.py`. X-Checks now included in Full Run (colour: green). | DONE | |
 | 14 | `docs/generate_uat.py` + `docs/20260630 X-Checks_v1.0.0 Test Plan.xlsx` — updated test plan to include X-Checks strategy (5 workflow cases, Files Required rows, dropdown count, Full Run sheet counts). | DONE | |
+| 15 | `file_upload_ui.py`: hint labels (field descriptions) now all wrap at the same width — Pass 2 applies `max_hint_width` as `wraplength` to every hint label so all descriptions are consistent and none overflow past the Browse button. | DONE | |
+| 16 | `task_configs.py`: GCoA Publication File description — removed `\n` line break, added full stop after "sheet" so it reads as a single sentence. | DONE | |
+| 17 | `file_upload_ui.py`: reduced `HINT_WRAP_LENGTH` from 800 → 533 (and fallback 400 → 267) to make the dialog ~1/3 narrower. | DONE | |
 
 ### v0.4.7 — Sensitivity-label hook in BaseStrategy (completed 2026-06-19)
 
