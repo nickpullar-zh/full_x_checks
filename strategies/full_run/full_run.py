@@ -46,8 +46,11 @@ class FullRun(BaseStrategy):
         strategy_sheet_names: dict[str, list[str]] = {}
         fallback_idx = 0
 
+        # Strategies that produce no output sheets and should not run in Full Run
+        _EXCLUDED = {"Full Run", "Collect Live X-Checks"}
+
         for task_name, (config, strategy_factory) in TASK_REGISTRY.items():
-            if task_name == "Full Run":
+            if task_name in _EXCLUDED:
                 continue
 
             self.log_step(self.log, "Full Run", f"— Starting: {task_name} —", 0)
@@ -94,13 +97,20 @@ class FullRun(BaseStrategy):
             strategy._apply_sensitivity_label = lambda path: None
 
             try:
-                strategy.process(strategy_loaded, strategy_files)
+                result = strategy.process(strategy_loaded, strategy_files)
             except StopIteration:
                 raise
             except Exception as exc:
                 self.log_step(self.log, task_name, f"Exception: {exc}", 0)
                 self.log_step(self.log, task_name, traceback.format_exc(), 0)
-                continue
+                self.log_step(self.log, "Full Run",
+                              f"Aborting Full Run — {task_name} encountered an error.", 0)
+                return False
+
+            if result is False:
+                self.log_step(self.log, "Full Run",
+                              f"Aborting Full Run — {task_name} failed.", 0)
+                return False
 
             if not captured_sheets:
                 self.log_step(self.log, "Full Run",

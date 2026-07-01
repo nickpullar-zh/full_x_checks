@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.11 — Full Run: abort on strategy failure; exclude Collect Live X-Checks (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `full_run.py`: check return value of `strategy.process()` — if `False`, log an abort message and return `False` immediately. Previously ignored. | DONE | |
+| 2 | `full_run.py`: exceptions inside a sub-strategy now also abort Full Run rather than continuing. | DONE | |
+| 3 | `full_run.py`: exclude `"Collect Live X-Checks"` from Full Run iteration (alongside `"Full Run"` itself) — it produces no output sheets and should not run as part of a Full Run. | DONE | |
+| 4 | `version.py`: bump to `1.0.11`. | DONE | |
+
 ### v1.0.10 — Add Collect Live X-Checks strategy to dropdown (2026-07-01)
 
 | # | Change | Status | Notes |
