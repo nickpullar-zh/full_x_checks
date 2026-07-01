@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.9 — Reject FIP files with Key column; fix typo; remove Layout B (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `conditions.py`: add guard — if the FIP file's first column is `"Key"`, log an error and abort. Users must upload the raw ZQ9_VALMETH extract, not a pre-processed file. | DONE | |
+| 2 | `conditions/fip.py`: remove Layout B (pre-processed Key column path) entirely — the raw 8-column layout is the only supported input. | DONE | |
+| 3 | `conditions.py`: fix typo `process_only_differenceserences` → `process_only_differences`. | DONE | |
+| 4 | `version.py`: bump to `1.0.9`. | DONE | |
+
 ### v1.0.8 — Progress dialog: timestamp on each line; fix false-positive red colouring (2026-07-01)
 
 | # | Change | Status | Notes |
