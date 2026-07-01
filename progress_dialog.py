@@ -81,6 +81,24 @@ class ProgressDialog:
             foreground="#C00000",
             font=("Courier", 9, "bold"),
         )
+        # Green for matched/complete lines.
+        self.text_area.tag_configure(
+            "matched",
+            foreground="#276221",
+            font=("Courier", 9),
+        )
+        # Orange for not-found / not-matched lines.
+        self.text_area.tag_configure(
+            "mismatch",
+            foreground="#9C6500",
+            font=("Courier", 9),
+        )
+        # Bold dark-blue separator line (dashes).
+        self.text_area.tag_configure(
+            "separator",
+            foreground="#23366F",
+            font=("Courier", 9, "bold"),
+        )
 
         # --- Stop / Close + Exit buttons ---
         btn_frame = ttk.Frame(outer_frame)
@@ -153,32 +171,38 @@ class ProgressDialog:
     # Public interface — called from background thread
     # =========================================================
 
-    _ERROR_KEYWORDS = ("error", "failed", "failure", "traceback")
-    # "exception" is intentionally excluded — it appears in "Known Exception List"
-    # which is not an error condition.
+    _ERROR_KEYWORDS    = ("error", "failed", "failure", "traceback")
+    _MATCHED_KEYWORDS  = ("matched:", "matched ", "complete", "successfully",
+                          "copied to clipboard", "applied label")
+    _MISMATCH_KEYWORDS = ("not in fip", "not matched", "mismatch", "not found")
+    # "exception" excluded — appears in "Known Exception List" (not an error).
 
     def append_entry(self, file: str, step: str, count: int = 0, notes: str = "",
                      timestamp: str = ""):
         """
         Thread-safe method to append a log line to the text area.
-        Uses root.after() to marshal the update onto the main thread.
-        Lines whose file or step indicate an error are styled bold red.
+        Format: [File]  [yyyymmdd hhmmss]  step  (count)  — notes
         """
-        line = f"[{file}]  {step}"
+        ts_part = f"  [{timestamp}]" if timestamp else ""
+        line = f"[{file}]{ts_part}  {step}"
         if count:
             line += f"  ({count})"
         if notes:
             line += f"  — {notes}"
-        if timestamp:
-            line += f"  [{timestamp}]"
         line += "\n"
 
         haystack = f"{file} {step} {notes}".casefold()
-        is_error = any(kw in haystack for kw in self._ERROR_KEYWORDS)
+        is_error    = any(kw in haystack for kw in self._ERROR_KEYWORDS)
+        is_matched  = not is_error and any(kw in haystack for kw in self._MATCHED_KEYWORDS)
+        is_mismatch = not is_error and not is_matched and any(
+            kw in haystack for kw in self._MISMATCH_KEYWORDS
+        )
+
+        tag = "error" if is_error else ("matched" if is_matched else ("mismatch" if is_mismatch else None))
 
         if is_error:
             self._play_error_sound()
-        self.root.after(0, self._write_line, line, is_error)
+        self.root.after(0, self._write_line, line, tag)
 
     @staticmethod
     def _play_error_sound() -> None:
@@ -190,14 +214,25 @@ class ProgressDialog:
         except Exception:
             pass
 
-    def _write_line(self, line: str, is_error: bool = False):
+    def _write_line(self, line: str, tag: str = None):
         """Must only be called on the main thread via root.after()."""
         self.text_area.config(state="normal")
-        if is_error:
-            self.text_area.insert("end", line, "error")
+        if tag:
+            self.text_area.insert("end", line, tag)
         else:
             self.text_area.insert("end", line)
         self.text_area.see("end")          # Auto-scroll to latest entry
+        self.text_area.config(state="disabled")
+
+    def append_separator(self):
+        """Writes two blank lines then a dashed separator line."""
+        self.root.after(0, self._write_separator)
+
+    def _write_separator(self):
+        self.text_area.config(state="normal")
+        self.text_area.insert("end", "\n\n")
+        self.text_area.insert("end", "-" * 60 + "\n", "separator")
+        self.text_area.see("end")
         self.text_area.config(state="disabled")
 
     def is_stopped(self) -> bool:

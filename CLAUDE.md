@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.12 — Progress dialog: colour coding, timestamp format, completion separator (2026-07-01)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: restore colour coding — green for matched/complete/success lines, orange for not-found/not-matched/mismatch lines, red (bold) for errors. | DONE | |
+| 2 | `progress_dialog.py` + `base_strategy.py`: reorder line format to `[File]  [yyyymmdd hhmmss]  step  (count)`. | DONE | |
+| 3 | `progress_dialog.py` + `main.py`: add `append_separator()` — writes two blank lines then a `----` separator line before "Processing complete". | DONE | |
+| 4 | `version.py`: bump to `1.0.12`. | DONE | |
+
 ### v1.0.11 — Full Run: abort on strategy failure; exclude Collect Live X-Checks (2026-07-01)
 
 | # | Change | Status | Notes |

@@ -269,6 +269,7 @@ class TaskSelectorUI:
                 success = strategy.execute(files)
                 if success and not dialog.is_stopped():
                     dialog.mark_success()
+                    dialog.append_separator()
                     dialog.append_entry("System", "Processing complete. You may close this window.")
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
@@ -327,6 +328,7 @@ class TaskSelectorUI:
                 success = strategy.execute(files)
                 if success and not dialog.is_stopped():
                     dialog.mark_success()
+                    dialog.append_separator()
                     dialog.append_entry("System", "Processing complete. You may close this window.")
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
