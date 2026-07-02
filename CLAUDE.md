@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.19 — Progress dialog: only final completion message is green (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: `_MATCHED_KEYWORDS` reduced to `("processing complete",)` — intermediate lines containing "complete", "successfully", "matched" etc. were incorrectly turning green. Only the final completion message is green. | DONE | |
+| 2 | `version.py`: bump to `1.0.19`. | DONE | |
+
 ### v1.0.18 — Architecture refactor: centralise colours, exception annotation, Full Run formatting (2026-07-02)
 
 | # | Change | Status | Notes |
