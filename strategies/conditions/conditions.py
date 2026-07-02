@@ -27,12 +27,6 @@ class Conditions(BaseStrategy):
         pub_sheet = files["sheet_names"].get("X-Checks Publication File", "cross checks all")
         fip_df = loaded_files["FIP File (ZQ9_VALMETH)"]
 
-        # Guard: reject pre-processed files with a leading "Key" column
-        if str(fip_df.columns[0]).strip() == "Key":
-            self.log_step(self.log, "FIP",
-                          "Error: FIP file has a 'Key' column — upload the raw ZQ9_VALMETH extract, not a pre-processed file.", 0)
-            return False
-
         # ------------------------------------------------------------------
         # 1. Extract yellow/green conditions from publication file
         # ------------------------------------------------------------------

@@ -47,6 +47,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.13 — Remove FIP Key column guard from Conditions (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `conditions.py`: remove the `"Key"` first-column guard — it was causing Conditions to abort even with correct ZQ9_VALMETH files. `process_fip()` already raises a clear ValueError if the file has the wrong structure. | DONE | |
+| 2 | `version.py`: bump to `1.0.13`. | DONE | |
+
 ### v1.0.12 — Progress dialog: colour coding, timestamp format, completion separator (2026-07-01)
 
 | # | Change | Status | Notes |
