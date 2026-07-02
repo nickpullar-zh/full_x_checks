@@ -47,6 +47,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.14 — Update all debug dicts to use Q2 X-Checks Data test files (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: all `_DEBUG_FILES_*` dicts updated to use files from `test_data/Q2 X-Checks Data/`. Correct sheet names set for each file. | DONE | |
+| 2 | `version.py`: bump to `1.0.14`. | DONE | |
+
 ### v1.0.13 — Remove FIP Key column guard from Conditions (2026-07-02)
 
 | # | Change | Status | Notes |

@@ -35,16 +35,18 @@ DEBUG_FILES = {
     "process_only_differences": False,
 }
 
+_Q2 = os.path.join(_BASE, "test_data", "Q2 X-Checks Data")
+
 _DEBUG_FILES_GROUPING_BY = {
     "files": {
-        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
-        "X-Checks Publication File":  os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
-        "Mapping File":               os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_Q2, "20260602 VALFLDGR (Grouping By).XLSX"),
+        "X-Checks Publication File":  os.path.join(_Q2, "cross checks all (2).xlsx"),
+        "Mapping File":               os.path.join(_Q2, "Mapping Table with 20 rows.txt"),
     },
     "sheet_names": {
-        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "FIP File (ZQ9_VALFLDGR)":    "grouping by",
         "X-Checks Publication File":  "cross checks all",
-        "Mapping File":               "Sheet1",
+        "Mapping File":               "",
     },
     "output_directory": os.path.join(os.path.expanduser("~"), "Downloads", "Output"),
     "process_only_differences": False,
@@ -52,9 +54,9 @@ _DEBUG_FILES_GROUPING_BY = {
 
 DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
     "files": {
-        "Validation Methods File":   os.path.join(_BASE, "test_data", "validation methods.xlsx"),
-        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
-        "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
+        "Validation Methods File":   os.path.join(_Q2, "validation methods.xlsx"),
+        "X-Checks Publication File": os.path.join(_Q2, "cross checks all (2).xlsx"),
+        "FIP File (VALMSG)":          os.path.join(_Q2, "20260602 VALMSG (Accounting Principle).XLSX"),
     },
     "sheet_names": {
         "Validation Methods File":   "Validation Methods",
@@ -67,8 +69,8 @@ DEBUG_FILES_ACCOUNTING_PRINCIPLES = {
 
 _DEBUG_FILES_CONDITIONS = {
     "files": {
-        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All - Copy.xlsx"),
-        "FIP File (ZQ9_VALMETH)":    os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+        "X-Checks Publication File": os.path.join(_Q2, "cross checks all (2).xlsx"),
+        "FIP File (ZQ9_VALMETH)":    os.path.join(_Q2, "20260602 VALMETH (Conditions).xlsx"),
     },
     "sheet_names": {
         "X-Checks Publication File": "cross checks all",
@@ -80,17 +82,19 @@ _DEBUG_FILES_CONDITIONS = {
 
 _DEBUG_FILES_FULL_RUN = {
     "files": {
-        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_BASE, "test_data", "VALFLDGR file with 12348 Data rows on sheet Sheet1.XLSX"),
-        "X-Checks Publication File":  os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
-        "Mapping File":               os.path.join(_BASE, "test_data", "Mapping Table with 20 rows.txt"),
-        "Validation Methods File":    os.path.join(_BASE, "test_data", "validation methods.xlsx"),
-        "FIP File (VALMSG)":          os.path.join(_BASE, "test_data", "20260602 VALMSG (Accounting Principle).xlsx"),
-        "FIP File (ZQ9_VALMETH)":     os.path.join(_BASE, "test_data", "20260602 VALMETH (Conditions).xlsx"),
+        "FIP File":                   os.path.join(_Q2, "20260602 FIP X-checks.txt"),
+        "FIP File (ZQ9_VALFLDGR)":    os.path.join(_Q2, "20260602 VALFLDGR (Grouping By).XLSX"),
+        "X-Checks Publication File":  os.path.join(_Q2, "cross checks all (2).xlsx"),
+        "Mapping File":               os.path.join(_Q2, "Mapping Table with 20 rows.txt"),
+        "Validation Methods File":    os.path.join(_Q2, "validation methods.xlsx"),
+        "FIP File (VALMSG)":          os.path.join(_Q2, "20260602 VALMSG (Accounting Principle).XLSX"),
+        "FIP File (ZQ9_VALMETH)":     os.path.join(_Q2, "20260602 VALMETH (Conditions).xlsx"),
     },
     "sheet_names": {
-        "FIP File (ZQ9_VALFLDGR)":    "Sheet1",
+        "FIP File":                   "",
+        "FIP File (ZQ9_VALFLDGR)":    "grouping by",
         "X-Checks Publication File":  "cross checks all",
-        "Mapping File":               "Sheet1",
+        "Mapping File":               "",
         "Validation Methods File":    "Validation Methods",
         "FIP File (VALMSG)":          "FIP Methods Rules and Condition",
         "FIP File (ZQ9_VALMETH)":     "FIP Conditions",
@@ -101,7 +105,7 @@ _DEBUG_FILES_FULL_RUN = {
 
 _DEBUG_FILES_COLLECT_LIVE_X_CHECKS = {
     "files": {
-        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
+        "X-Checks Publication File": os.path.join(_Q2, "cross checks all (2).xlsx"),
     },
     "sheet_names": {
         "X-Checks Publication File": "cross checks all",
@@ -112,8 +116,8 @@ _DEBUG_FILES_COLLECT_LIVE_X_CHECKS = {
 
 _DEBUG_FILES_X_CHECKS = {
     "files": {
-        "FIP File":                  os.path.join(_BASE, "test_data", "20260318 FIP X-Checks.txt"),
-        "X-Checks Publication File": os.path.join(_BASE, "test_data", "20260313 Cross Checks All.xlsx"),
+        "FIP File":                  os.path.join(_Q2, "20260602 FIP X-checks.txt"),
+        "X-Checks Publication File": os.path.join(_Q2, "cross checks all (2).xlsx"),
     },
     "sheet_names": {
         "X-Checks Publication File": "cross checks all",
