@@ -47,6 +47,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.16 — Fix comparison column colour coding in Full Run output (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `full_run.py`: `apply_output_formatting` now applies match/mismatch colour coding to all `"— Comparison"` sheets in the combined workbook. Sheet names are prefixed so exact-name checks in individual strategies don't fire. | DONE | |
+| 2 | `version.py`: bump to `1.0.16`. | DONE | |
+
 ### v1.0.15 — Comparison sheet named "Comparison" and always last in all strategies (2026-07-02)
 
 | # | Change | Status | Notes |

@@ -145,6 +145,8 @@ class FullRun(BaseStrategy):
         return True
 
     def apply_output_formatting(self, workbook):
+        from openpyxl.styles import PatternFill, Font
+
         strategy_sheet_names = getattr(self, "_strategy_sheet_names", {})
         fallback_idx = 0
 
@@ -159,6 +161,45 @@ class FullRun(BaseStrategy):
 
         if "Processing Log" in workbook.sheetnames:
             workbook["Processing Log"].sheet_properties.tabColor = "808080"
+
+        # Apply comparison column formatting to all "— Comparison" sheets.
+        # Sheets are prefixed (e.g. "XC — Comparison") so we match by suffix.
+        green_fill  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        green_font  = Font(color="276221")
+        red_fill    = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        red_font    = Font(color="9C0006")
+        orange_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+        orange_font = Font(color="9C6500")
+        blue_fill   = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
+        blue_font   = Font(color="23366F")
+
+        for sheet_name in workbook.sheetnames:
+            if not sheet_name.endswith("— Comparison"):
+                continue
+            ws = workbook[sheet_name]
+            prefix = sheet_name.split(" — ")[0]
+
+            if prefix == "XC":
+                for col in ("Formula Match", "Formula Match (Excl)",
+                            "Variables Match", "Variables Match (Builder)"):
+                    self.apply_conditional_formatting(ws, col, {
+                        "Match":    (green_fill,  green_font),
+                        "MisMatch": (red_fill,    red_font),
+                        "Not Found":(orange_fill, orange_font),
+                    })
+            elif prefix in ("AP", "GB"):
+                self.apply_conditional_formatting(ws, "Match" if prefix == "AP" else "Result", {
+                    "Match":      (green_fill,  green_font),
+                    "Matched":    (green_fill,  green_font),
+                    "MisMatch":   (red_fill,    red_font),
+                    "Not in FIP": (orange_fill, orange_font),
+                    "Not Found":  (orange_fill, orange_font),
+                })
+            elif prefix == "Cond":
+                self.apply_conditional_formatting(ws, "Comparison", {
+                    True:  (green_fill, green_font),
+                    False: (red_fill,   red_font),
+                })
 
 
 def _unique_name(name: str, existing: dict, max_len: int = 31) -> str:
