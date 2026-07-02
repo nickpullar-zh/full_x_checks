@@ -111,27 +111,13 @@ class AccountingPrinciples(BaseStrategy):
 
         # 5b. Apply known exceptions (annotation only — Match column unchanged)
         _AP_FINGERPRINT = ["X-Check No.", "Event", "Expected", "FIP", "Actual", "Method"]
-        exc_path = files["files"].get("Known Exception List")
-        try:
-            known_exceptions = self._load_known_exceptions(
-                exc_path, sheet_name="Accounting Principles", fingerprint_columns=_AP_FINGERPRINT
-            )
-        except (ValueError, KeyError) as e:
-            self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+        result = self._annotate_known_exceptions(
+            df_compare, files["files"].get("Known Exception List"),
+            sheet_name="Accounting Principles", fingerprint_columns=_AP_FINGERPRINT
+        )
+        if result is False:
             return
-        if known_exceptions:
-            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
-
-            def _ap_key(row):
-                return tuple(str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _AP_FINGERPRINT)
-
-            df_compare["Known Exception"] = df_compare.apply(
-                lambda row: known_exceptions.get(_ap_key(row), ""), axis=1
-            )
-        elif exc_path:
-            self.log_step(self.log, "Exceptions", "Known Exception List provided but empty — skipping", 0)
-        else:
-            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+        df_compare = result
 
         # 6. EBX sheet: cross-checks-all rows for in-scope X-Checks only
         in_scope_set = set(xchecks)
@@ -271,23 +257,13 @@ class AccountingPrinciples(BaseStrategy):
         return out
 
     def apply_output_formatting(self, workbook):
-        from openpyxl.styles import PatternFill, Font
-
-        sheet_name = "Comparison"
-        if sheet_name not in workbook.sheetnames:
+        if "Comparison" not in workbook.sheetnames:
             return
-
-        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        green_font = Font(color="276221")
-        red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        red_font   = Font(color="9C0006")
-
-        ws = workbook[sheet_name]
         self.apply_conditional_formatting(
-            worksheet=ws,
+            worksheet=workbook["Comparison"],
             column_name="Match",
             rules={
-                "Match":    (green_fill, green_font),
-                "MisMatch": (red_fill,   red_font),
+                "Match":    (self.FILL_GREEN, self.FONT_GREEN),
+                "MisMatch": (self.FILL_RED,   self.FONT_RED),
             },
         )

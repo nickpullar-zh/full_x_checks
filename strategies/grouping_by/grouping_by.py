@@ -36,23 +36,13 @@ class GroupingBy(BaseStrategy):
         df_comparison = self._process_compare(df_fip_processed, df_ebx_processed)
 
         # Apply known exceptions (annotation only — Result column unchanged)
-        exc_path = files["files"].get("Known Exception List")
-        try:
-            known_exceptions = self._load_known_exceptions(
-                exc_path, sheet_name="Grouping By", fingerprint_columns=["EBX Key"]
-            )
-        except (ValueError, KeyError) as e:
-            self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+        result = self._annotate_known_exceptions(
+            df_comparison, files["files"].get("Known Exception List"),
+            sheet_name="Grouping By", fingerprint_columns=["EBX Key"]
+        )
+        if result is False:
             return False
-        if known_exceptions:
-            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
-            df_comparison["Known Exception"] = df_comparison["EBX Key"].map(
-                lambda k: known_exceptions.get(str(k).strip(), "")
-            )
-        elif exc_path:
-            self.log_step(self.log, "Exceptions", "Known Exception List provided but empty — skipping", 0)
-        else:
-            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+        df_comparison = result
 
         matched     = (df_comparison["Result"] == "Matched").sum()
         not_matched = (df_comparison["Result"] == "Not in FIP").sum()
@@ -89,6 +79,18 @@ class GroupingBy(BaseStrategy):
     # ------------------------------------------------------------------
     # FIP processing
     # ------------------------------------------------------------------
+
+    def apply_output_formatting(self, workbook):
+        if "Comparison" not in workbook.sheetnames:
+            return
+        self.apply_conditional_formatting(
+            worksheet=workbook["Comparison"],
+            column_name="Result",
+            rules={
+                "Matched":    (self.FILL_GREEN,  self.FONT_GREEN),
+                "Not in FIP": (self.FILL_ORANGE, self.FONT_ORANGE),
+            },
+        )
 
     def _process_fip(self, loaded_files) -> tuple:
         try:

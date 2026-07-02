@@ -33,6 +33,17 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ---
 
+## Code Reuse Rule
+
+**Before writing any new function, block, or constant, ask: "Does this already exist in `BaseStrategy` or elsewhere in the codebase?" If yes, reuse it. Never duplicate.**
+
+- Shared colours, fills, and fonts → `BaseStrategy` class constants (`FILL_GREEN`, `FONT_RED`, etc.)
+- Shared loading or annotation logic → `BaseStrategy` method
+- Strategy-specific formatting logic → the strategy's own `apply_output_formatting()`; Full Run delegates via `_PrefixedWorkbook` shim, never reimplements
+- If you find yourself writing the same pattern in two places, stop and centralise it first
+
+---
+
 ## Change Log Policy
 
 **Every change, no matter how small, must be logged here. This is not optional and must never be skipped.**
@@ -46,6 +57,18 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 ---
 
 ## Change Log
+
+### v1.0.18 — Architecture refactor: centralise colours, exception annotation, Full Run formatting (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `base_strategy.py`: add shared colour constants (`FILL_GREEN`, `FONT_GREEN`, `FILL_RED`, `FONT_RED`, `FILL_ORANGE`, `FONT_ORANGE`, `FILL_BLUE`, `FONT_BLUE`) as class-level attributes. All strategies inherit. | DONE | |
+| 2 | `base_strategy.py`: add `_annotate_known_exceptions(df, exc_path, sheet_name, fingerprint_columns)` — encapsulates the full load→key-build→annotate→log pattern. Returns annotated df or `False` on load error. | DONE | |
+| 3 | `x_checks.py`, `grouping_by.py`, `accounting_principles.py`, `conditions.py`: replace ~15-line Known Exception boilerplate blocks with single `_annotate_known_exceptions()` call. Remove all local `PatternFill`/`Font` definitions; reference base constants. | DONE | |
+| 4 | `grouping_by.py`: add missing `apply_output_formatting()` (Result column: green/orange). | DONE | |
+| 5 | `full_run.py`: add `_PrefixedWorkbook` shim that maps unprefixed sheet names to prefixed ones. `apply_output_formatting` now delegates to each strategy instance via the shim — no per-strategy column knowledge in Full Run. Remove all `PatternFill`/`Font` definitions from Full Run. | DONE | |
+| 6 | `CLAUDE.md`: add Code Reuse Rule section above Change Log Policy. | DONE | |
+| 7 | `version.py`: bump to `1.0.18`. | DONE | |
 
 ### v1.0.17 — Conditions Comparison column: string values + colour coding (2026-07-02)
 

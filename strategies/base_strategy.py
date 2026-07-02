@@ -10,6 +10,7 @@ from typing import Optional
 from file_upload_config import UploadTaskConfig
 from datetime import datetime
 from config import OUTPUT_TEMPLATE
+from openpyxl.styles import PatternFill, Font
 
 class BaseStrategy(ABC):
     """
@@ -19,10 +20,20 @@ class BaseStrategy(ABC):
     - Writing Excel output
     - Logging processing steps
     """
-    
+
     # Default sensitivity label applied to every workbook this base writes.
-    # Override per branch / strategy if needed.
     DEFAULT_SENSITIVITY_LEVEL = "Internal_Use_Only"
+
+    # Shared Zurich-brand colour palette used for comparison output formatting.
+    # All strategies reference these constants — define once, inherit everywhere.
+    FILL_GREEN  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    FONT_GREEN  = Font(color="276221")
+    FILL_RED    = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    FONT_RED    = Font(color="9C0006")
+    FILL_ORANGE = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+    FONT_ORANGE = Font(color="9C6500")
+    FILL_BLUE   = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
+    FONT_BLUE   = Font(color="23366F")
 
     def __init__(self, config: UploadTaskConfig):
         self.config = config
@@ -543,6 +554,51 @@ class BaseStrategy(ABC):
             )
 
         return exceptions
+
+    def _annotate_known_exceptions(
+        self,
+        df: "pd.DataFrame",
+        exc_path: Optional[str],
+        sheet_name: str,
+        fingerprint_columns: list,
+    ) -> "pd.DataFrame | bool":
+        """
+        Load the Known Exception List and annotate `df` with a 'Known Exception'
+        column containing the Reason text where a row's fingerprint matches.
+
+        Returns the annotated DataFrame, or False if the file is invalid (caller
+        should abort and return False). Returns df unchanged if exc_path is None
+        or the sheet is empty.
+        """
+        try:
+            known_exceptions = self._load_known_exceptions(
+                exc_path, sheet_name=sheet_name, fingerprint_columns=fingerprint_columns
+            )
+        except (ValueError, KeyError) as e:
+            self.log_step(self.log, "Exceptions",
+                          f"Known Exception List is invalid — aborting: {e}", 0)
+            return False
+
+        if known_exceptions:
+            self.log_step(self.log, "Exceptions", "Known exceptions loaded",
+                          len(known_exceptions))
+
+            def _key(row):
+                parts = [str(row[c]).strip() if pd.notna(row.get(c)) else ""
+                         for c in fingerprint_columns]
+                return parts[0] if len(parts) == 1 else tuple(parts)
+
+            df["Known Exception"] = df.apply(
+                lambda row: known_exceptions.get(_key(row), ""), axis=1
+            )
+        elif exc_path:
+            self.log_step(self.log, "Exceptions",
+                          "Known Exception List provided but empty — skipping", 0)
+        else:
+            self.log_step(self.log, "Exceptions",
+                          "No Known Exception List provided — skipping", 0)
+
+        return df
 
     @abstractmethod
     def process(self, loaded_files: dict, files: dict):

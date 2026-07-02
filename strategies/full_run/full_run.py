@@ -44,6 +44,7 @@ class FullRun(BaseStrategy):
 
         all_sheets: OrderedDict = OrderedDict()
         strategy_sheet_names: dict[str, list[str]] = {}
+        strategy_instances: dict[str, object] = {}
         fallback_idx = 0
 
         # Strategies that produce no output sheets and should not run in Full Run
@@ -126,6 +127,7 @@ class FullRun(BaseStrategy):
                 tab_names.append(combined)
 
             strategy_sheet_names[task_name] = tab_names
+            strategy_instances[task_name] = strategy
             self.log_step(self.log, "Full Run",
                           f"{task_name}: complete ({len(tab_names)} sheet(s))", 0)
 
@@ -141,15 +143,14 @@ class FullRun(BaseStrategy):
                       f"Writing combined workbook ({len(all_sheets)} sheets)", len(all_sheets))
 
         self._strategy_sheet_names = strategy_sheet_names
+        self._strategy_instances = strategy_instances
         self.write_excel_output(output_path, all_sheets, self.log)
         return True
 
     def apply_output_formatting(self, workbook):
-        from openpyxl.styles import PatternFill, Font
-
+        # 1. Tab colours for each strategy group + Processing Log
         strategy_sheet_names = getattr(self, "_strategy_sheet_names", {})
         fallback_idx = 0
-
         for task_name, sheet_names in strategy_sheet_names.items():
             colour = STRATEGY_COLOURS.get(task_name)
             if colour is None:
@@ -158,48 +159,46 @@ class FullRun(BaseStrategy):
             for name in sheet_names:
                 if name in workbook.sheetnames:
                     workbook[name].sheet_properties.tabColor = colour
-
         if "Processing Log" in workbook.sheetnames:
             workbook["Processing Log"].sheet_properties.tabColor = "808080"
 
-        # Apply comparison column formatting to all "— Comparison" sheets.
-        # Sheets are prefixed (e.g. "XC — Comparison") so we match by suffix.
-        green_fill  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        green_font  = Font(color="276221")
-        red_fill    = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        red_font    = Font(color="9C0006")
-        orange_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-        orange_font = Font(color="9C6500")
-        blue_fill   = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
-        blue_font   = Font(color="23366F")
+        # 2. Delegate comparison formatting to each strategy via a prefix shim.
+        # Each strategy's apply_output_formatting checks for e.g. "Comparison" by
+        # name — the shim maps unprefixed names to the real prefixed sheet names so
+        # the strategy never needs to know about prefixes.
+        strategy_instances = getattr(self, "_strategy_instances", {})
+        for task_name, strategy in strategy_instances.items():
+            prefix = _SHEET_PREFIXES.get(task_name, task_name[:4])
+            shim = _PrefixedWorkbook(workbook, prefix)
+            strategy.apply_output_formatting(shim)
 
-        for sheet_name in workbook.sheetnames:
-            if not sheet_name.endswith("— Comparison"):
-                continue
-            ws = workbook[sheet_name]
-            prefix = sheet_name.split(" — ")[0]
 
-            if prefix == "XC":
-                for col in ("Formula Match", "Formula Match (Excl)",
-                            "Variables Match", "Variables Match (Builder)"):
-                    self.apply_conditional_formatting(ws, col, {
-                        "Match":    (green_fill,  green_font),
-                        "MisMatch": (red_fill,    red_font),
-                        "Not Found":(orange_fill, orange_font),
-                    })
-            elif prefix in ("AP", "GB"):
-                self.apply_conditional_formatting(ws, "Match" if prefix == "AP" else "Result", {
-                    "Match":      (green_fill,  green_font),
-                    "Matched":    (green_fill,  green_font),
-                    "MisMatch":   (red_fill,    red_font),
-                    "Not in FIP": (orange_fill, orange_font),
-                    "Not Found":  (orange_fill, orange_font),
-                })
-            elif prefix == "Cond":
-                self.apply_conditional_formatting(ws, "Comparison", {
-                    "Matched":     (green_fill, green_font),
-                    "Not Matched": (red_fill,   red_font),
-                })
+class _PrefixedWorkbook:
+    """
+    Shim that wraps a real openpyxl Workbook and makes prefixed sheet names
+    (e.g. "XC — Comparison") accessible under their unprefixed base names
+    (e.g. "Comparison"). Allows strategy apply_output_formatting methods to
+    work unchanged whether called standalone or from Full Run.
+    """
+
+    def __init__(self, workbook, prefix: str):
+        self._wb = workbook
+        self._prefix = prefix + " — "
+
+    def __getitem__(self, sheet_name: str):
+        prefixed = self._prefix + sheet_name
+        if prefixed in self._wb.sheetnames:
+            return self._wb[prefixed]
+        if sheet_name in self._wb.sheetnames:
+            return self._wb[sheet_name]
+        raise KeyError(sheet_name)
+
+    @property
+    def sheetnames(self):
+        return [
+            name[len(self._prefix):] if name.startswith(self._prefix) else name
+            for name in self._wb.sheetnames
+        ]
 
 
 def _unique_name(name: str, existing: dict, max_len: int = 31) -> str:

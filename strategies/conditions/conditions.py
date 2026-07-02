@@ -73,31 +73,15 @@ class Conditions(BaseStrategy):
         )
 
         # ------------------------------------------------------------------
-        # 3b. Apply known exceptions (annotation only — Comparison boolean unchanged)
+        # 3b. Apply known exceptions (annotation only — Comparison column unchanged)
         # ------------------------------------------------------------------
-        import pandas as pd
-        _COND_FINGERPRINT = ["EBX Data", "FIP Data"]
-        exc_path = files["files"].get("Known Exception List")
-        try:
-            known_exceptions = self._load_known_exceptions(
-                exc_path, sheet_name="Conditions", fingerprint_columns=_COND_FINGERPRINT
-            )
-        except (ValueError, KeyError) as e:
-            self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
+        result = self._annotate_known_exceptions(
+            results_df, files["files"].get("Known Exception List"),
+            sheet_name="Conditions", fingerprint_columns=["EBX Data", "FIP Data"]
+        )
+        if result is False:
             return False
-        if known_exceptions:
-            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
-
-            def _cond_key(row):
-                return tuple(str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _COND_FINGERPRINT)
-
-            results_df["Known Exception"] = results_df.apply(
-                lambda row: known_exceptions.get(_cond_key(row), ""), axis=1
-            )
-        elif exc_path:
-            self.log_step(self.log, "Exceptions", "Known Exception List provided but empty — skipping", 0)
-        else:
-            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+        results_df = result
 
         # ------------------------------------------------------------------
         # 4. Write output
@@ -120,18 +104,13 @@ class Conditions(BaseStrategy):
         return True
 
     def apply_output_formatting(self, workbook):
-        from openpyxl.styles import PatternFill, Font
         if "Comparison" not in workbook.sheetnames:
             return
-        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        green_font = Font(color="276221")
-        red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        red_font   = Font(color="9C0006")
         self.apply_conditional_formatting(
             worksheet=workbook["Comparison"],
             column_name="Comparison",
             rules={
-                "Matched":     (green_fill, green_font),
-                "Not Matched": (red_fill,   red_font),
+                "Matched":     (self.FILL_GREEN, self.FONT_GREEN),
+                "Not Matched": (self.FILL_RED,   self.FONT_RED),
             },
         )

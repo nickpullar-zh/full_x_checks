@@ -71,26 +71,13 @@ class XChecks(BaseStrategy):
             "EBX Formula (Excl)", "FIP Formula (Excl)",
             "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
         ]
-        exc_path = files["files"].get("Known Exception List")
-        if exc_path:
-            try:
-                known_exceptions = self._load_known_exceptions(
-                    exc_path, sheet_name="X-Checks", fingerprint_columns=_XC_FINGERPRINT
-                )
-            except (ValueError, KeyError) as e:
-                self.log_step(self.log, "Exceptions", f"Known Exception List is invalid — aborting: {e}", 0)
-                return
-            self.log_step(self.log, "Exceptions", "Known exceptions loaded", len(known_exceptions))
-
-            def _xc_key(row):
-                parts = [str(row[c]).strip() if pd.notna(row.get(c)) else "" for c in _XC_FINGERPRINT]
-                return tuple(parts)
-
-            df_comparison["Known Exception"] = df_comparison.apply(
-                lambda row: known_exceptions.get(_xc_key(row), ""), axis=1
-            )
-        else:
-            self.log_step(self.log, "Exceptions", "No Known Exception List provided — skipping", 0)
+        result = self._annotate_known_exceptions(
+            df_comparison, files["files"].get("Known Exception List"),
+            sheet_name="X-Checks", fingerprint_columns=_XC_FINGERPRINT
+        )
+        if result is False:
+            return
+        df_comparison = result
 
         # 6. Write Excel output — no summary, headers at row 1
         self.write_excel_output(
@@ -138,41 +125,26 @@ class XChecks(BaseStrategy):
                       notes=out_path)
 
     def apply_output_formatting(self, workbook):
-        from openpyxl.styles import PatternFill, Font
-
         if "Comparison" not in workbook.sheetnames:
             return
-
-        green_fill  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        green_font  = Font(color="276221")
-        red_fill    = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        red_font    = Font(color="9C0006")
-        orange_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-        orange_font = Font(color="9C6500")
-
-        # Zurich brand: Light Blue #91BFE3 fill, Dark Blue #23366F font
-        blue_fill = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
-        blue_font = Font(color="23366F")
-
         ws = workbook["Comparison"]
         for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
             self.apply_conditional_formatting(
                 worksheet=ws,
                 column_name=col,
                 rules={
-                    "Match":                      (green_fill,  green_font),
-                    "MisMatch":                   (red_fill,    red_font),
-                    "Not Found":                  (orange_fill, orange_font),
-                    "Mismatch - Known Exception": (blue_fill,   blue_font),
+                    "Match":                      (self.FILL_GREEN,  self.FONT_GREEN),
+                    "MisMatch":                   (self.FILL_RED,    self.FONT_RED),
+                    "Not Found":                  (self.FILL_ORANGE, self.FONT_ORANGE),
+                    "Mismatch - Known Exception": (self.FILL_BLUE,   self.FONT_BLUE),
                 }
             )
-
-        # Highlight known exceptions in blue — applied to every non-blank cell in the column
+        # Highlight Known Exception column in blue
         header_values = [cell.value for cell in ws[1]]
         if "Known Exception" in header_values:
             col_idx = header_values.index("Known Exception") + 1
             for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
                 cell = row[0]
                 if cell.value and str(cell.value).strip() not in ("", "nan"):
-                    cell.fill = blue_fill
-                    cell.font = blue_font
+                    cell.fill = self.FILL_BLUE
+                    cell.font = self.FONT_BLUE
