@@ -47,7 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
-### v1.0.14 — Update all debug dicts to use Q2 X-Checks Data test files (2026-07-02)
+### v1.0.14 — Full Run debug EXE bundles only Q2 X-Checks Data folder (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `build.py`: add `test_data_subdir` option — when set, only that subfolder of `test_data/` is bundled instead of the whole folder. `full_run_debug` uses `"Q2 X-Checks Data"`. | DONE | |
+| 2 | `main.py`: all `_DEBUG_FILES_*` dicts updated to use files from `test_data/Q2 X-Checks Data/` with correct sheet names. | DONE | |
+| 3 | `version.py`: bump to `1.0.14`. | DONE | |
+
+### v1.0.13 — Remove FIP Key column guard from Conditions (2026-07-02)
 
 | # | Change | Status | Notes |
 |---|--------|--------|-------|

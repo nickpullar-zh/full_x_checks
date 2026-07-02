@@ -68,6 +68,7 @@ BUILDS = [
         "debug_mode":   True,
         "debug_task":   "Full Run",
         "add_test_data": True,
+        "test_data_subdir": "Q2 X-Checks Data",
     },
 ]
 
@@ -184,9 +185,17 @@ def build(config: dict):
         f"(r'{os.path.join(PROJECT_ROOT, 'version.py')}', '.')",
     ]
     if config["add_test_data"]:
-        datas_entries.append(
-            f"(r'{os.path.join(PROJECT_ROOT, 'test_data')}', 'test_data')"
-        )
+        subdir = config.get("test_data_subdir")
+        if subdir:
+            # Bundle only the specified subfolder, preserving its path inside test_data/
+            src = os.path.join(PROJECT_ROOT, "test_data", subdir)
+            datas_entries.append(
+                f"(r'{src}', r'test_data/{subdir}')"
+            )
+        else:
+            datas_entries.append(
+                f"(r'{os.path.join(PROJECT_ROOT, 'test_data')}', 'test_data')"
+            )
     datas_str = "[\n" + ",\n".join(f"        {e}" for e in datas_entries) + "\n    ]"
 
     # Explicit hidden imports: the lazy `_lazy(module, cls)` factory in
