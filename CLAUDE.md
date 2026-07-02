@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.17 — Conditions Comparison column: string values + colour coding (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `conditions/compare.py`: change `Comparison` column from boolean `True`/`False` to strings `"Matched"`/`"Not Matched"`. Update summary keys accordingly. | DONE | Booleans can't be matched by CellIsRule string formulas. |
+| 2 | `conditions.py`: update log step to use new summary keys; add `apply_output_formatting` with green/red conditional formatting on the `Comparison` column. | DONE | |
+| 3 | `full_run.py`: update Cond formatter to use `"Matched"`/`"Not Matched"` strings. | DONE | |
+| 4 | `version.py`: bump to `1.0.17`. | DONE | |
+
 ### v1.0.16 — Fix comparison column colour coding in Full Run output (2026-07-02)
 
 | # | Change | Status | Notes |

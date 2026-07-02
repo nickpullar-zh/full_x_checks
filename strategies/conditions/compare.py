@@ -45,7 +45,7 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
             result_rows.append({
                 "EBX Data":   ebx_val,
                 "FIP Data":   ebx_val if found else "",
-                "Comparison": found,
+                "Comparison": "Matched" if found else "Not Matched",
             })
             if found:
                 matched += 1
@@ -57,8 +57,8 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
 
     summary = {
         "Total Pairs": len(results_df),
-        "Matched (TRUE)": matched,
-        "Not Matched (FALSE)": not_matched,
+        "Matched": matched,
+        "Not Matched": not_matched,
     }
 
     return results_df, summary

@@ -197,8 +197,8 @@ class FullRun(BaseStrategy):
                 })
             elif prefix == "Cond":
                 self.apply_conditional_formatting(ws, "Comparison", {
-                    True:  (green_fill, green_font),
-                    False: (red_fill,   red_font),
+                    "Matched":     (green_fill, green_font),
+                    "Not Matched": (red_fill,   red_font),
                 })
 
 

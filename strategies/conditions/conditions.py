@@ -67,8 +67,8 @@ class Conditions(BaseStrategy):
         self.log_step(
             self.log, "Comparison",
             f"Pairs checked: {summary['Total Pairs']}, "
-            f"Matched: {summary['Matched (TRUE)']}, "
-            f"Not matched: {summary['Not Matched (FALSE)']}",
+            f"Matched: {summary['Matched']}, "
+            f"Not matched: {summary['Not Matched']}",
             summary["Total Pairs"],
         )
 
@@ -120,4 +120,18 @@ class Conditions(BaseStrategy):
         return True
 
     def apply_output_formatting(self, workbook):
-        pass  # reference workbook has no cell fills on the Conditions sheet
+        from openpyxl.styles import PatternFill, Font
+        if "Comparison" not in workbook.sheetnames:
+            return
+        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        green_font = Font(color="276221")
+        red_fill   = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        red_font   = Font(color="9C0006")
+        self.apply_conditional_formatting(
+            worksheet=workbook["Comparison"],
+            column_name="Comparison",
+            rules={
+                "Matched":     (green_fill, green_font),
+                "Not Matched": (red_fill,   red_font),
+            },
+        )
