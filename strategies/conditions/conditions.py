@@ -109,14 +109,14 @@ class Conditions(BaseStrategy):
         )
 
         sheets = OrderedDict([
-            ("Conditions", results_df),
             ("Working Sheet", working_df),
-            ("FIP Data", fip_processed),
+            ("FIP Data",      fip_processed),
+            ("Comparison",    results_df),
         ])
 
         summary_od = OrderedDict(summary)
 
-        self.write_excel_output(output_path, sheets, self.log, summaries={"Summary": summary_od})
+        self.write_excel_output(output_path, sheets, self.log, summaries={"Comparison": summary_od})
         return True
 
     def apply_output_formatting(self, workbook):

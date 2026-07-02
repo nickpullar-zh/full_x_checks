@@ -95,9 +95,9 @@ class XChecks(BaseStrategy):
         # 6. Write Excel output — no summary, headers at row 1
         self.write_excel_output(
             output_path=self.build_output_path(
-                files["output_directory"], "X-Checks Comparison", files["timestamp"]
+                files["output_directory"], "Comparison", files["timestamp"]
             ),
-            sheets={"X-Checks Comparison": df_comparison},
+            sheets={"Comparison": df_comparison},
             log=self.log,
         )
 
@@ -140,7 +140,7 @@ class XChecks(BaseStrategy):
     def apply_output_formatting(self, workbook):
         from openpyxl.styles import PatternFill, Font
 
-        if "X-Checks Comparison" not in workbook.sheetnames:
+        if "Comparison" not in workbook.sheetnames:
             return
 
         green_fill  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -154,7 +154,7 @@ class XChecks(BaseStrategy):
         blue_fill = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
         blue_font = Font(color="23366F")
 
-        ws = workbook["X-Checks Comparison"]
+        ws = workbook["Comparison"]
         for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
             self.apply_conditional_formatting(
                 worksheet=ws,

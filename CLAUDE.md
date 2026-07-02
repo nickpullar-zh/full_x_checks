@@ -47,6 +47,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.15 — Comparison sheet named "Comparison" and always last in all strategies (2026-07-02)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `conditions.py`: rename `"Conditions"` sheet → `"Comparison"`, move it last (after Working Sheet, FIP Data). Update summaries key. | DONE | |
+| 2 | `x_checks.py`: rename `"X-Checks Comparison"` → `"Comparison"` (sheets dict + apply_output_formatting). | DONE | |
+| 3 | Grouping By and Accounting Principles already use `"Comparison"` as the last sheet — no change needed. | DONE | |
+| 4 | `version.py`: bump to `1.0.15`. | DONE | |
+
 ### v1.0.14 — Full Run debug EXE bundles only Q2 X-Checks Data folder (2026-07-02)
 
 | # | Change | Status | Notes |
