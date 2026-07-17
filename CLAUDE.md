@@ -58,6 +58,16 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.20 — Port Conditions fixes from v0.6.11 (2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/fip.py`: rename `CONCAT_COL` `"Concatenated"` → `"Key (Concatenated)"`. | DONE | |
+| 2 | `strategies/conditions/compare.py`: import `CONCAT_COL` from `fip.py`; replace hardcoded `"Concatenated"` string with the constant. | DONE | Hardcoded string would have caused a `KeyError` after the rename. |
+| 3 | `strategies/conditions/extract.py`: when building concat keys, resolve `effective_xc` — use the row's `"Reference  X-Check (Condition)"` value if non-blank, otherwise fall back to `"X-Check No."`. | DONE | |
+| 4 | `strategies/base_strategy.py`: move `df_log` snapshot and `Processing Log` sheet write to end of `with` block, after all `log_step` calls; add "Output written to" inside the block; add expected sensitivity label directly via `log.append()` (Excel log only, not dialog). | DONE | |
+| 5 | `version.py`: bump to `1.0.20`. | DONE | |
+
 ### v1.0.19 — Progress dialog: only final completion message is green (2026-07-02)
 
 | # | Change | Status | Notes |

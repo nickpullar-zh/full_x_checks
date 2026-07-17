@@ -12,6 +12,7 @@ One row per pair (not one row per X-Check).
 
 import pandas as pd
 from strategies.conditions.extract import CONDITION_COLS
+from strategies.conditions.fip import CONCAT_COL
 
 
 def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
@@ -26,7 +27,7 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
         summary     — {"Total Pairs": n, "Matched (TRUE)": n, "Not Matched (FALSE)": n}
     """
     fip_keys: set[str] = set(
-        fip_df["Concatenated"].dropna().astype(str).str.strip()
+        fip_df[CONCAT_COL].dropna().astype(str).str.strip()
     ) - {""}
 
     result_rows = []
