@@ -5,13 +5,14 @@ against the FIP Concatenated key set.
 Output format matches the reference workbook (Q2 2026 Final Cross Checks Summary):
   EBX Data    — XCheck|ConditionValue key from the publication
   FIP Data    — matching FIP key (same value when found, blank when not found)
-  Comparison  — True / False
+  Comparison  — "Matched" / "Not Matched"
 
 One row per pair (not one row per X-Check).
 """
 
 import pandas as pd
 from strategies.conditions.extract import CONDITION_COLS
+from strategies.conditions.fip import CONCAT_COL
 
 
 def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
@@ -23,10 +24,10 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
 
     Returns:
         results_df  — columns: EBX Data, FIP Data, Comparison (one row per pair)
-        summary     — {"Total Pairs": n, "Matched (TRUE)": n, "Not Matched (FALSE)": n}
+        summary     — {"Total Pairs": n, "Matched": n, "Not Matched": n}
     """
     fip_keys: set[str] = set(
-        fip_df["Concatenated"].dropna().astype(str).str.strip()
+        fip_df[CONCAT_COL].dropna().astype(str).str.strip()
     ) - {""}
 
     result_rows = []
@@ -45,7 +46,7 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
             result_rows.append({
                 "EBX Data":   ebx_val,
                 "FIP Data":   ebx_val if found else "",
-                "Comparison": found,
+                "Comparison": "Matched" if found else "Not Matched",
             })
             if found:
                 matched += 1
@@ -57,8 +58,8 @@ def compare(working_df: pd.DataFrame, fip_df: pd.DataFrame) -> tuple[pd.DataFram
 
     summary = {
         "Total Pairs": len(results_df),
-        "Matched (TRUE)": matched,
-        "Not Matched (FALSE)": not_matched,
+        "Matched": matched,
+        "Not Matched": not_matched,
     }
 
     return results_df, summary

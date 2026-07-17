@@ -192,18 +192,26 @@ def extract_conditions(
     # ------------------------------------------------------------------
     # Build working DataFrame
     # ------------------------------------------------------------------
+    _REF_XC_COL = "Reference  X-Check (Condition)"
+
     rows = []
     for xcheck_no, cond_vals in sorted(collected.items()):
         row: dict[str, object] = {"X-Check No.": xcheck_no}
         for cond_col in active_cols:
             val = cond_vals.get(cond_col)
             row[cond_col] = val if val is not None else ""
+
+        # The effective X-Check No. for concat keys: use the "Reference  X-Check
+        # (Condition)" value when present, otherwise fall back to "X-Check No.".
+        ref_val = cond_vals.get(_REF_XC_COL)
+        effective_xc = str(ref_val).strip() if ref_val and str(ref_val).strip() else xcheck_no
+
         # Concatenated columns: "XCheck|value" or "" if no value
         for cond_col in active_cols:
             val = cond_vals.get(cond_col)
             concat_col = cond_col + " (Concat)"
             if val and str(val).strip():
-                row[concat_col] = f"{xcheck_no}|{val}"
+                row[concat_col] = f"{effective_xc}|{val}"
             else:
                 row[concat_col] = ""
         rows.append(row)

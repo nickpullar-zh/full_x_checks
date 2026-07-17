@@ -98,6 +98,61 @@ When the checkbox is **checked**: collect only condition cells that are yellow o
 | 3 | `tests/test_conditions.py`: added 2 tests for both modes in `TestExtractionRule`. | DONE | |
 | 4 | `version.py`: bump to `0.6.3`. | DONE | |
 
+### v0.6.11 — Regenerate UAT test plan for v0.6.10 (completed 2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_uat.py`: rewritten to reference actual test files (`20260313 Cross Checks All.xlsx` / `20260602 VALMETH (Conditions).xlsx`), correct sheet names (`cross checks all` / `FIP Conditions`), and real counts derived by running the app logic against those files (differences mode: 88 X-Checks, 92 pairs, 52 matched, 40 not matched; full-file mode: 92 X-Checks, 130 pairs, 86 matched, 44 not matched; FIP rows: 6 235). Updated all test cases to reflect v0.6.10 features: colour coding, Reference X-Check override, "Key (Concatenated)" column, updated Processing Log entries. Added CON-18 (colour coding), CON-21 (Reference X-Check override), CON-22 (differences count). 24 test cases total. | DONE | |
+| 2 | `docs/20260717 Conditions_v0.6.10 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `0.6.11`. | DONE | |
+
+### v0.6.10 — Separate sensitivity label entries for Excel log vs progress dialog (completed 2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: replace `log_step` for the expected label with a direct `log.append()` — bypasses the progress dialog so the Excel log records intent ("Expected label: …") while the dialog shows only the actual COM outcome from `_apply_sensitivity_label`. | DONE | |
+| 2 | `version.py`: bump to `0.6.10`. | DONE | |
+
+### v0.6.9 — Add expected sensitivity label to Processing Log (completed 2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: add `log_step` inside the `with` block (before the snapshot) recording `"Expected label: {DEFAULT_SENSITIVITY_LEVEL}"` — captures intent in the Excel log. The actual COM outcome still logs to the dialog only, as the file must be closed before COM can run. | DONE | |
+| 2 | `version.py`: bump to `0.6.9`. | DONE | |
+
+### v0.6.8 — Fix Processing Log missing output path entry (completed 2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: move `df_log` snapshot and `Processing Log` sheet write to the end of the `with pd.ExcelWriter` block, after all `log_step` calls including "Output written to". Previously the snapshot was taken before the file was written so those entries appeared in the dialog but never in the Excel log sheet. | DONE | Sensitivity label log still runs after file close (COM requires the file to be closed) so it will not appear in the Excel log, but it was never missing from the dialog. |
+| 2 | `version.py`: bump to `0.6.8`. | DONE | |
+
+### v0.6.7 — Rename FIP concat column to "Key (Concatenated)" (completed 2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/fip.py`: rename `CONCAT_COL` constant from `"Concatenated"` to `"Key (Concatenated)"` — this is the column header shown in the FIP Data output sheet. | DONE | |
+| 2 | `strategies/conditions/compare.py`: import `CONCAT_COL` from `fip.py` and replace hardcoded `"Concatenated"` string with the constant — previously it was not using the constant at all. | DONE | Hardcoded string caused a `KeyError` on the rename. |
+| 3 | `version.py`: bump to `0.6.7`. | DONE | |
+
+### v0.6.6 — Centralised colour constants + Comparison column string values + colour coding (completed 2026-07-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: add `from openpyxl.styles import PatternFill, Font` import and six shared class-level colour constants (`FILL_GREEN`, `FONT_GREEN`, `FILL_RED`, `FONT_RED`, `FILL_ORANGE`, `FONT_ORANGE`, `FILL_BLUE`, `FONT_BLUE`) — matching the v1.0.18 additions on the Full Application branch. | DONE | |
+| 2 | `strategies/conditions/compare.py`: change Comparison column from boolean `True`/`False` to strings `"Matched"`/`"Not Matched"`; update summary keys to `"Matched"` and `"Not Matched"`. | DONE | Strings required for CellIsRule matching in `apply_conditional_formatting`. |
+| 3 | `strategies/conditions/conditions.py`: update summary key references to match; replace `pass` in `apply_output_formatting` with green/red conditional formatting on the Comparison column using inherited `FILL_GREEN`/`FONT_GREEN`/`FILL_RED`/`FONT_RED` constants. | DONE | |
+| 4 | `tests/test_conditions.py`: update `TestCompare` assertions to use `"Matched"`/`"Not Matched"` strings and updated summary keys. | DONE | |
+| 5 | `version.py`: bump to `0.6.6`. | DONE | |
+
+### v0.6.5 — Use Reference X-Check (Condition) as concat key when present (completed 2026-07-16)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/conditions/extract.py`: when building concat keys, resolve `effective_xc` — use the row's "Reference  X-Check (Condition)" value if non-blank, otherwise fall back to "X-Check No.". This means rows that reference another X-Check use that reference's number as the FIP lookup key, not the row's own X-Check No. | DONE | |
+| 2 | `tests/test_conditions.py`: add `test_reference_xcheck_overrides_xcheck_no_in_concat` to `TestExtractionRule` — verifies the effective_xc substitution and that "X-Check No." is unchanged in the output. | DONE | |
+| 3 | `version.py`: bump to `0.6.5`. | DONE | |
+
 ### v0.6.4 — Production EXE filename includes strategy name (completed 2026-06-23)
 
 | # | Change | Status | Notes |

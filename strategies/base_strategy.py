@@ -10,6 +10,7 @@ from typing import Optional
 from file_upload_config import UploadTaskConfig
 from datetime import datetime
 from config import OUTPUT_TEMPLATE
+from openpyxl.styles import PatternFill, Font
 
 class BaseStrategy(ABC):
     """
@@ -19,10 +20,21 @@ class BaseStrategy(ABC):
     - Writing Excel output
     - Logging processing steps
     """
-    
+
     # Default sensitivity label applied to every workbook this base writes.
     # Override per branch / strategy if needed.
     DEFAULT_SENSITIVITY_LEVEL = "Internal_Use_Only"
+
+    # Shared Zurich-brand colour palette used for comparison output formatting.
+    # All strategies reference these constants — define once, inherit everywhere.
+    FILL_GREEN  = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    FONT_GREEN  = Font(color="276221")
+    FILL_RED    = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    FONT_RED    = Font(color="9C0006")
+    FILL_ORANGE = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+    FONT_ORANGE = Font(color="9C6500")
+    FILL_BLUE   = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
+    FONT_BLUE   = Font(color="23366F")
 
     def __init__(self, config: UploadTaskConfig):
         self.config = config
@@ -180,7 +192,6 @@ class BaseStrategy(ABC):
         """
         # Copy pre-labelled template to output path
         shutil.copy(OUTPUT_TEMPLATE, output_path)
-        df_log = pd.DataFrame(log)
 
         with pd.ExcelWriter(output_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
 
@@ -190,9 +201,6 @@ class BaseStrategy(ABC):
                     self.write_sheet_with_summary(writer, sheet_name, df, summaries[sheet_name])
                 else:
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-            # Write log sheet
-            df_log.to_excel(writer, sheet_name="Processing Log", index=False)
 
             # Remove default Sheet1 from template
             if "Sheet1" in writer.book.sheetnames:
@@ -211,10 +219,28 @@ class BaseStrategy(ABC):
             # Allow subclasses to apply strategy-specific formatting
             self.apply_output_formatting(writer.book)
 
-        self.log_step(self.log, "Output", f"Output written to: {output_path}", 0)
+            # Log the output path now — before the snapshot — so it appears in
+            # the Processing Log sheet as well as the progress dialog.
+            self.log_step(self.log, "Output", f"Output written to: {output_path}", 0)
+
+            # Record the expected sensitivity label directly into the log list —
+            # bypassing log_step so this entry appears in the Excel sheet only,
+            # not in the progress dialog. The dialog shows the actual COM result
+            # from _apply_sensitivity_label instead.
+            log.append({
+                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "File": "Sensitivity",
+                "Step": f"Expected label: {self.DEFAULT_SENSITIVITY_LEVEL}",
+                "Count": 0,
+                "Notes": "",
+            })
+
+            # Snapshot the log after all pre-write entries are recorded
+            df_log = pd.DataFrame(log)
+            df_log.to_excel(writer, sheet_name="Processing Log", index=False)
 
         # Apply MIP sensitivity label via Excel COM. Best-effort — failures
-        # are logged but do not abort the strategy.
+        # are logged but do not abort the strategy. (Runs after file is closed.)
         self._apply_sensitivity_label(output_path)
 
     def _apply_sensitivity_label(self, path: str) -> None:

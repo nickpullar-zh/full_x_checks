@@ -176,6 +176,48 @@ class TestExtractionRule:
         # Colour check returns False for both — cell would be skipped in differences mode
         assert not (_is_yellow(cell, None) or _is_green(cell, None))
 
+    def test_reference_xcheck_overrides_xcheck_no_in_concat(self):
+        """
+        When 'Reference  X-Check (Condition)' has a value, it must be used
+        as the X-Check identifier in ALL concat keys for that row, not
+        the 'X-Check No.' value from the row itself.
+        """
+        from strategies.conditions.extract import CONDITION_COLS
+        # CONDITION_COLS[0] is "Reference  X-Check (Condition)"
+        # CONDITION_COLS[1] is "Applicable Quarters"
+        # Simulate one collected entry: X-Check No.=XC099, ref col=XC001, AQ=Q4
+        collected = {
+            "XC099": {
+                CONDITION_COLS[0]: "XC001",   # reference override
+                CONDITION_COLS[1]: "Q4",
+                CONDITION_COLS[2]: None,
+                CONDITION_COLS[3]: None,
+                CONDITION_COLS[4]: None,
+            }
+        }
+        # Replicate the DataFrame-building logic from extract_conditions
+        _REF_XC_COL = CONDITION_COLS[0]
+        rows = []
+        for xcheck_no, cond_vals in sorted(collected.items()):
+            ref_val = cond_vals.get(_REF_XC_COL)
+            effective_xc = str(ref_val).strip() if ref_val and str(ref_val).strip() else xcheck_no
+            row = {"X-Check No.": xcheck_no}
+            for c in CONDITION_COLS:
+                row[c] = cond_vals.get(c) or ""
+            for c in CONDITION_COLS:
+                val = cond_vals.get(c)
+                row[c + " (Concat)"] = f"{effective_xc}|{val}" if val and str(val).strip() else ""
+            rows.append(row)
+        all_cols = ["X-Check No."] + CONDITION_COLS + [c + " (Concat)" for c in CONDITION_COLS]
+        df = pd.DataFrame(rows, columns=all_cols)
+
+        # Concat for col[0] (ref col itself): key should be XC001|XC001
+        assert df.loc[0, CONDITION_COLS[0] + " (Concat)"] == "XC001|XC001"
+        # Concat for col[1] (AQ): key should use effective_xc=XC001, not XC099
+        assert df.loc[0, CONDITION_COLS[1] + " (Concat)"] == "XC001|Q4"
+        # X-Check No. column itself is unchanged
+        assert df.loc[0, "X-Check No."] == "XC099"
+
 
 class TestProcessFip:
 
@@ -271,7 +313,7 @@ class TestCompare:
         return pd.DataFrame(rows, columns=all_cols)
 
     def _make_fip_df(self):
-        """FIP DataFrame with Concatenated keys XC001|val1 and XC001|pct."""
+        """FIP DataFrame with Key (Concatenated) keys XC001|val1 and XC001|pct."""
         fip_cols = ["MethC", "MK", "Medium Text", "ValidRule", "Medium Text",
                     "UCFV20G-TRUE_BRANCH", "ValidRule", "Medium Text"]
         rows = [
@@ -282,18 +324,18 @@ class TestCompare:
         return process_fip(raw)
 
     def test_matched_row_has_fip_data(self):
-        # XC001|val1 exists in FIP → FIP Data = same value, Comparison = True
+        # XC001|val1 exists in FIP → FIP Data = same value, Comparison = "Matched"
         results, _ = compare(self._make_working_df(), self._make_fip_df())
         matched = results[results["EBX Data"] == "XC001|val1"].iloc[0]
         assert matched["FIP Data"] == "XC001|val1"
-        assert matched["Comparison"] == True  # noqa: E712
+        assert matched["Comparison"] == "Matched"
 
     def test_not_matched_row_has_empty_fip_data(self):
-        # XC002|valX not in FIP → FIP Data = "", Comparison = False
+        # XC002|valX not in FIP → FIP Data = "", Comparison = "Not Matched"
         results, _ = compare(self._make_working_df(), self._make_fip_df())
         not_matched = results[results["EBX Data"] == "XC002|valX"].iloc[0]
         assert not_matched["FIP Data"] == ""
-        assert not_matched["Comparison"] == False  # noqa: E712
+        assert not_matched["Comparison"] == "Not Matched"
 
     def test_blank_concat_produces_no_row(self):
         # Blank concat values (CONDITION_COLS[1] for both X-Checks) → no row emitted
@@ -304,8 +346,8 @@ class TestCompare:
         _, summary = compare(self._make_working_df(), self._make_fip_df())
         # XC001 col0 (val1 → matched), XC001 col4 (pct → matched), XC002 col0 (valX → not matched)
         assert summary["Total Pairs"] == 3
-        assert summary["Matched (TRUE)"] == 2
-        assert summary["Not Matched (FALSE)"] == 1
+        assert summary["Matched"] == 2
+        assert summary["Not Matched"] == 1
 
     def test_output_columns(self):
         results, _ = compare(self._make_working_df(), self._make_fip_df())

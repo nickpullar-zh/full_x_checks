@@ -67,8 +67,8 @@ class Conditions(BaseStrategy):
         self.log_step(
             self.log, "Comparison",
             f"Pairs checked: {summary['Total Pairs']}, "
-            f"Matched: {summary['Matched (TRUE)']}, "
-            f"Not matched: {summary['Not Matched (FALSE)']}",
+            f"Matched: {summary['Matched']}, "
+            f"Not matched: {summary['Not Matched']}",
             summary["Total Pairs"],
         )
 
@@ -93,4 +93,13 @@ class Conditions(BaseStrategy):
         return True
 
     def apply_output_formatting(self, workbook):
-        pass  # reference workbook has no cell fills on the Conditions sheet
+        if "Conditions" not in workbook.sheetnames:
+            return
+        self.apply_conditional_formatting(
+            worksheet=workbook["Conditions"],
+            column_name="Comparison",
+            rules={
+                "Matched":     (self.FILL_GREEN, self.FONT_GREEN),
+                "Not Matched": (self.FILL_RED,   self.FONT_RED),
+            },
+        )

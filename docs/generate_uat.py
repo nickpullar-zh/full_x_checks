@@ -30,9 +30,26 @@ OUT_DIR   = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 FILENAME  = f"{TODAY} Conditions_v{VERSION} Test Plan.xlsx"
 OUT_PATH  = os.path.join(OUT_DIR, FILENAME)
 
+# Test files (actual files used for UAT)
+PUB_FILE  = "20260313 Cross Checks All.xlsx"
+FIP_FILE  = "20260602 VALMETH (Conditions).xlsx"
+PUB_SHEET = "cross checks all"
+FIP_SHEET = "FIP Conditions"
+
+# Actual counts derived from the test files
+FIP_ROW_COUNT          = 6235
+DIFF_XCHECKS           = 88
+DIFF_PAIRS             = 92
+DIFF_MATCHED           = 52
+DIFF_NOT_MATCHED       = 40
+FULL_XCHECKS           = 92
+FULL_PAIRS             = 130
+FULL_MATCHED           = 86
+FULL_NOT_MATCHED       = 44
+
 # Zurich brand colours
-DARK_BLUE  = "FF23366F"   # main text / header fill
-LIGHT_BLUE = "FF91BFE3"   # label cell fill
+DARK_BLUE  = "FF23366F"
+LIGHT_BLUE = "FF91BFE3"
 WHITE      = "FFFFFFFF"
 ALT_GREY   = "FFECEEEF"
 BODY_TEXT  = "FF23366F"
@@ -91,18 +108,18 @@ TEST_CASES = [
     (
         "CON-01",
         "Launch & version",
-        "Production EXE present in dist\\.",
-        f"Double-click dist\\X-Checks_v{{{VERSION}}}.exe.",
-        f"Splash screen appears with 'X-Check Application v{{{VERSION}}} Loading...'. "
-        f"After ~2–5 s the task selector form opens with 'X-Check Application v{{{VERSION}}}' "
+        f"Production EXE present in dist\\.",
+        f"Double-click dist\\X-Checks_Conditions_v{VERSION}.exe.",
+        f"Splash screen appears with 'X-Check Application v{VERSION} Loading...'. "
+        f"After ~2–5 s the task selector form opens with 'X-Check Application v{VERSION}' "
         f"in the title bar.",
     ),
     (
         "CON-02",
         "Launch & version",
-        f"App is open at the task selector.",
-        f"Confirm the version shown in the title bar and UI label.",
-        f"Both show v{{{VERSION}}}. Confirms the correct build is under test.",
+        "App is open at the task selector.",
+        "Confirm the version shown in the title bar and UI label.",
+        f"Both show v{VERSION}. Confirms the correct build is under test.",
     ),
     # --- Task selector ---
     (
@@ -116,7 +133,7 @@ TEST_CASES = [
         "CON-04",
         "Task selector",
         "App is open at the task selector.",
-        "Select 'Conditions' and click Proceed (or equivalent launch button).",
+        "Select 'Conditions' and click Proceed.",
         "The Conditions file-selection form opens with the title 'Conditions Files'.",
     ),
     # --- File selection form ---
@@ -126,8 +143,8 @@ TEST_CASES = [
         "Conditions file-selection form is open.",
         "Inspect the form layout.",
         "Two file fields are shown:\n"
-        "1. 'X-Checks Publication File' with default sheet 'cross checks all'\n"
-        "2. 'FIP File' with default sheet 'FIP Conditions'\n"
+        f"1. 'X-Checks Publication File' with default sheet '{PUB_SHEET}'\n"
+        f"2. 'FIP File' with default sheet '{FIP_SHEET}'\n"
         "An output directory picker is present.\n"
         "A 'Process only differences' checkbox is present and checked by default.",
     ),
@@ -135,17 +152,17 @@ TEST_CASES = [
         "CON-06",
         "File selection — browse",
         "Conditions file-selection form is open.",
-        "Click the Browse button next to 'X-Checks Publication File' and select "
-        "'20260602 VALMETH (Conditions).xlsx'.",
-        "The file path populates in the field. The sheet name field pre-fills with "
-        "'cross checks all'.",
+        f"Click the Browse button next to 'X-Checks Publication File' and select "
+        f"'{PUB_FILE}'.",
+        f"The file path populates in the field. The sheet name combobox pre-fills with "
+        f"'{PUB_SHEET}' and lists all available sheets.",
     ),
     (
         "CON-07",
         "File selection — browse",
         "CON-06 complete.",
-        "Click the Browse button next to 'FIP File' and select "
-        "'20260602 VALMETH (Conditions).xlsx'. Confirm the sheet field shows 'FIP Conditions'.",
+        f"Click the Browse button next to 'FIP File' and select '{FIP_FILE}'. "
+        f"Confirm the sheet combobox shows '{FIP_SHEET}'.",
         "Path and sheet both populated correctly.",
     ),
     (
@@ -160,23 +177,24 @@ TEST_CASES = [
         "CON-09",
         "File selection — output directory",
         "Both files selected as per CON-06/07.",
-        "Set the output directory to the test_data\\X-Checks Output\\ folder, "
-        "then click Start.",
+        "Set the output directory to a writable folder, then click Start.",
         "Processing begins and the progress dialog opens.",
     ),
     # --- Process only differences (checkbox checked) ---
     (
         "CON-10",
         "Processing — differences only (checkbox checked)",
-        "'Process only differences' checkbox is checked (default). "
-        "Both files set to '20260602 VALMETH (Conditions).xlsx'.",
+        f"'Process only differences' checkbox is checked (default). "
+        f"Publication file: '{PUB_FILE}' (sheet: '{PUB_SHEET}'). "
+        f"FIP file: '{FIP_FILE}' (sheet: '{FIP_SHEET}').",
         "Click Start and wait for the run to complete.",
         "Progress dialog shows steps:\n"
         "1. Loading files\n"
-        "2. Extracting condition cells (changed/new rows only)\n"
+        f"2. Extracting condition cells (changed/new rows only)\n"
         "3. FIP processed\n"
         "4. Comparison complete\n"
-        "Log reports ~18 X-Checks extracted and ~18 pairs checked.",
+        f"Log reports {DIFF_XCHECKS} unique X-Check entries extracted and "
+        f"{DIFF_PAIRS} pairs checked.",
     ),
     (
         "CON-11",
@@ -184,9 +202,10 @@ TEST_CASES = [
         "CON-10 complete. Output workbook is open.",
         "Open the 'Conditions' sheet of the output workbook.",
         "Sheet has 3 columns: EBX Data | FIP Data | Comparison.\n"
-        "Approximately 18 rows (one per yellow/green condition pair).\n"
-        "All rows show Comparison = True (all pairs found in FIP).\n"
-        "This matches the reference comparison sheet in the VALMETH file.",
+        f"{DIFF_PAIRS} rows (one per yellow/green condition pair).\n"
+        f"Matched (green): {DIFF_MATCHED} rows. Not Matched (red): {DIFF_NOT_MATCHED} rows.\n"
+        "Matched rows show the same value in EBX Data and FIP Data. "
+        "Not Matched rows have a blank FIP Data cell.",
     ),
     # --- Full file (checkbox unchecked) ---
     (
@@ -195,7 +214,8 @@ TEST_CASES = [
         "Return to form. Uncheck 'Process only differences'.",
         "Click Start with the same files as CON-10.",
         "Progress dialog log reports extraction mode 'full file'.\n"
-        "More X-Checks extracted (every non-blank condition cell regardless of colour).\n"
+        f"{FULL_XCHECKS} unique X-Check entries extracted "
+        f"(more than the {DIFF_XCHECKS} in differences mode).\n"
         "Run completes without error.",
     ),
     (
@@ -203,9 +223,9 @@ TEST_CASES = [
         "Processing — full file (result)",
         "CON-12 complete. Output workbook is open.",
         "Open the 'Conditions' sheet.",
-        "More rows than the differences-only run (CON-11).\n"
-        "Mix of True and False in Comparison column.\n"
-        "False rows have a blank FIP Data cell.",
+        f"{FULL_PAIRS} rows (more than the {DIFF_PAIRS} rows in differences mode).\n"
+        f"Matched (green): {FULL_MATCHED} rows. Not Matched (red): {FULL_NOT_MATCHED} rows.\n"
+        "Not Matched rows have a blank FIP Data cell.",
     ),
     # --- Output workbook structure ---
     (
@@ -226,74 +246,86 @@ TEST_CASES = [
         "Open the 'Working Sheet' tab.",
         "Columns: X-Check No. + 5 condition value columns + 5 concat key columns.\n"
         "One row per unique X-Check No.\n"
-        "Concat columns contain 'XCheck|ConditionValue' strings or are blank.",
+        "Concat columns contain 'XCheck|ConditionValue' strings or are blank.\n"
+        "When a row has a value in 'Reference  X-Check (Condition)', the concat keys "
+        "use that reference number, not the row's own X-Check No.",
     ),
     (
         "CON-16",
         "Output — FIP Data",
         "Output workbook open.",
         "Open the 'FIP Data' tab.",
-        "Columns include: Key (Concatenated), MethC, MK, Medium Text MK, "
-        "Normal X-Check No, X-Check Medium Text, UCFV20G-TRUE_BRANCH, "
-        "Condition No, Condition Medium Text.\n"
-        "6 235 rows (matching source FIP Conditions sheet row count).",
+        "First column is labelled 'Key (Concatenated)'.\n"
+        "Remaining columns: MethC, MK, Medium Text MK, Normal X-Check No, "
+        "X-Check Medium Text, UCFV20G-TRUE_BRANCH, Condition No, Condition Medium Text.\n"
+        f"{FIP_ROW_COUNT} data rows (matching source '{FIP_SHEET}' sheet row count).",
     ),
     (
         "CON-17",
         "Output — Processing Log",
         "Output workbook open.",
         "Open the 'Processing Log' tab.",
-        f"Log shows v{{{VERSION}}} in the first entry.\n"
-        "Steps logged include: loading files, extraction mode, FIP processing, "
-        "comparison summary (pairs checked / matched / not matched), output path, "
-        "sensitivity label applied.",
+        f"First entry shows v{VERSION}.\n"
+        "Steps logged include: loading files, extraction mode and X-Check count, "
+        "FIP row count, comparison summary (pairs / matched / not matched), "
+        f"output path, expected sensitivity label (Internal_Use_Only).",
     ),
     (
         "CON-18",
+        "Output — colour coding",
+        "CON-11 output workbook open, 'Conditions' sheet.",
+        "Review the Comparison column.",
+        "Cells showing 'Matched' have a green fill. "
+        "Cells showing 'Not Matched' have a red fill.",
+    ),
+    (
+        "CON-19",
         "Output — sensitivity label",
         "Output workbook saved to disk.",
         "Right-click the output .xlsx in Explorer → Properties → Details tab, "
         "or open in Excel and check the sensitivity bar.",
-        "File carries the 'Internal Use Only' Microsoft Information Protection label.",
+        "File carries the 'Internal Use Only' Microsoft Information Protection label. "
+        "Progress dialog shows 'Applied label: Internal_Use_Only'.",
     ),
-    # --- Concat key format ---
+    # --- Data accuracy ---
     (
-        "CON-19",
+        "CON-20",
         "Data accuracy — concat key format",
         "CON-11 output workbook open, 'Conditions' sheet.",
         "Inspect any EBX Data value.",
         "Format is 'XCheckNo|ConditionValue' with a pipe separator and no spaces, "
-        "e.g. 'SR051_00|CON_Q2_Q4'.\n"
-        "FIP Data cell contains the identical string when Comparison = True.\n"
-        "FIP Data cell is blank when Comparison = False.",
+        "e.g. 'S168_00|CON_Q2_Q4'.\n"
+        "FIP Data cell contains the identical string when Comparison = Matched.\n"
+        "FIP Data cell is blank when Comparison = Not Matched.",
     ),
     (
-        "CON-20",
-        "Data accuracy — match against reference",
-        "CON-11 output open. Reference comparison sheet in "
-        "'20260602 VALMETH (Conditions).xlsx' also open.",
-        "Compare the EBX Data column in the output 'Conditions' sheet against "
-        "the EBX Data column in the reference 'comparison' sheet row-by-row.",
-        "Both sheets contain the same 18 rows in the same order:\n"
-        "AS004_17|CON_Q3_Q4, AS133_00|CON_Q4, AS137_00|CON_Q4, AS139_00|CON_Q4, "
-        "AS142_00|CON_Q4, AS168_00|CON_Q4, LS013_17|CON_Q3_Q4, LS142_00|CON_Q4, "
-        "S281_00|CON_Q4, S285_00|CON_Q4, S287_00|CON_Q4, S289_00|CON_Q4, "
-        "S290_00|CON_Q4, S292_00|CON_Q4, S463_00|CON_Q4, SR051_00|CON_Q2_Q4, "
-        "SR116_00|CON_Q2_Q4, SR117_00|CON_Q2_Q4.",
+        "CON-21",
+        "Data accuracy — Reference X-Check override",
+        "CON-11 output open, 'Working Sheet' tab.",
+        "Find any row where 'Reference  X-Check (Condition)' is non-blank.",
+        "The concat key for that row uses the Reference X-Check value as the "
+        "X-Check identifier, not the row's own X-Check No. value.",
+    ),
+    (
+        "CON-22",
+        "Data accuracy — differences count",
+        "CON-11 output open, 'Conditions' sheet.",
+        f"Count the rows.",
+        f"{DIFF_PAIRS} rows total: {DIFF_MATCHED} Matched, {DIFF_NOT_MATCHED} Not Matched.",
     ),
     # --- Stop and return to form ---
     (
-        "CON-21",
+        "CON-23",
         "Stop / Return to Form",
         "New run started (click Start).",
         "Click Stop during processing.",
         "Processing halts cleanly. Progress dialog shows 'Processing halted by user'. "
-        "A 'Return to Form' button (or equivalent) is available.\n"
+        "A 'Return to Form' button is available.\n"
         "Clicking it reopens the file-selection form with the previously chosen "
         "files pre-filled.",
     ),
     (
-        "CON-22",
+        "CON-24",
         "Error handling — wrong sheet name",
         "Conditions file-selection form is open.",
         "Set the sheet name for the X-Checks Publication File to a sheet that does "
@@ -310,35 +342,35 @@ TEST_CASES = [
 OVERVIEW_ROWS = [
     (
         "Purpose",
-        f"Validate the Conditions strategy end-to-end against the VALMETH test file. "
+        f"Validate the Conditions strategy end-to-end against the actual UAT test files. "
         f"The tester confirms each acceptance criterion in the Test Cases sheet and logs "
         f"the actual result and pass/fail.",
     ),
     (
         "Scope",
-        "Conditions strategy only: launching the app, selecting files, running with the "
-        "'process only differences' checkbox checked (differences mode) and unchecked "
-        "(full-file mode), verifying the output workbook structure, data accuracy against "
-        "the reference comparison sheet, and error/stop handling. "
+        "Conditions strategy only: launching the app, selecting files, running in "
+        "differences mode (checkbox checked) and full-file mode (checkbox unchecked), "
+        "verifying output workbook structure, colour coding, data accuracy (counts and "
+        "Reference X-Check override), and error/stop handling. "
         "Other strategies (X-Checks, Accounting Principles, Grouping By) are NOT in scope.",
     ),
     (
         "Test executable",
-        f"dist\\X-Checks_v{{{VERSION}}}.exe (production build, no test data bundled). "
-        f"Debug build dist\\X-Checks_Debug_Conditions_v{{{VERSION}}}.exe is available "
+        f"dist\\X-Checks_Conditions_v{VERSION}.exe (production build, no test data bundled). "
+        f"Debug build dist\\X-Checks_Debug_Conditions_v{VERSION}.exe is available "
         f"for developer triage but is not part of the UAT pass.",
     ),
     (
         "Test data",
-        "test_data\\20260602 VALMETH (Conditions).xlsx — used for both the "
-        "X-Checks Publication File (sheet: cross checks all) and the FIP File "
-        "(sheet: FIP Conditions). Reference comparison sheet in the same file.",
+        f"Publication file: '{PUB_FILE}' (sheet: '{PUB_SHEET}').\n"
+        f"FIP file: '{FIP_FILE}' (sheet: '{FIP_SHEET}').\n"
+        f"Both files located in the tester's Downloads\\X-Checks Conditions testing\\ folder.",
     ),
     (
         "Pre-conditions",
         "1) Tester is on Windows 10/11 with permission to run unsigned EXEs.\n"
-        "2) No test_data files are open in Excel before launching.\n"
-        "3) Output folder test_data\\X-Checks Output\\ exists and is writable.\n"
+        "2) Neither test file is open in Excel before launching.\n"
+        "3) An output folder is available and writable.\n"
         "4) Microsoft Information Protection client is installed (for sensitivity-label check).",
     ),
     (
@@ -362,7 +394,7 @@ OVERVIEW_ROWS = [
 
 def build():
     wb = Workbook()
-    wb.remove(wb.active)  # remove default sheet
+    wb.remove(wb.active)
 
     _build_overview(wb)
     _build_test_cases(wb)
@@ -383,20 +415,17 @@ def _build_overview(wb):
 
     set_col_widths(ws, {"A": 22, "B": 26, "C": 26, "D": 26, "E": 26})
 
-    # Title row
     title_cell = ws.cell(row=1, column=1,
                          value=f"Conditions Application v{VERSION} — User Acceptance Testing")
-    title_cell.font  = _semibold(size=16, color=DARK_BLUE)
+    title_cell.font      = _semibold(size=16, color=DARK_BLUE)
     title_cell.alignment = TOP_LEFT
     ws.merge_cells("A1:E1")
 
-    # Version row
     ver_cell = ws.cell(row=2, column=1, value=f"Version: v{VERSION}")
-    ver_cell.font = _font(size=11, color=DARK_BLUE)
+    ver_cell.font      = _font(size=11, color=DARK_BLUE)
     ver_cell.alignment = TOP_LEFT
     ws.merge_cells("A2:E2")
 
-    # Content rows
     for i, (label, content) in enumerate(OVERVIEW_ROWS, start=4):
         row = i
         ws.row_dimensions[row].height = 70
@@ -407,8 +436,7 @@ def _build_overview(wb):
         label_cell.border    = ALL_THIN
         label_cell.alignment = TOP_WRAP
 
-        content_cell = ws.cell(row=row, column=2,
-                                value=content.replace("{VERSION}", VERSION))
+        content_cell = ws.cell(row=row, column=2, value=content)
         content_cell.font      = _font(size=10, color=DARK_BLUE)
         content_cell.border    = ALL_THIN
         content_cell.alignment = TOP_WRAP
@@ -431,14 +459,12 @@ def _build_test_cases(wb):
     headers = ["ID", "Area", "Precondition", "Steps",
                "Expected Result", "Actual Result", "Pass / Fail", "Tester", "Date"]
 
-    # Title
     title_cell = ws.cell(row=1, column=1,
                          value=f"Conditions v{VERSION} — UAT Test Cases")
-    title_cell.font = _semibold(size=16, color=DARK_BLUE)
+    title_cell.font      = _semibold(size=16, color=DARK_BLUE)
     title_cell.alignment = TOP_LEFT
     ws.merge_cells("A1:I1")
 
-    # Header row
     ws.row_dimensions[3].height = 28
     hdr_fill = _fill(DARK_BLUE)
     for col_idx, hdr in enumerate(headers, start=1):
@@ -448,17 +474,12 @@ def _build_test_cases(wb):
         cell.border    = ALL_THIN
         cell.alignment = CENTER_WRAP
 
-    # Test case rows
     for row_offset, (tc_id, area, precond, steps, expected) in enumerate(TEST_CASES):
         row = 4 + row_offset
         ws.row_dimensions[row].height = 80
         fill = _fill(ALT_GREY) if row_offset % 2 == 1 else None
 
-        row_values = [tc_id, area, precond,
-                      steps.replace("{VERSION}", VERSION),
-                      expected.replace("{VERSION}", VERSION),
-                      "", "", "", ""]
-        for col_idx, val in enumerate(row_values, start=1):
+        for col_idx, val in enumerate([tc_id, area, precond, steps, expected, "", "", "", ""], start=1):
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.font      = _font(size=10, color=DARK_BLUE)
             cell.border    = ALL_THIN
@@ -477,14 +498,12 @@ def _build_signoff(wb):
 
     set_col_widths(ws, {"A": 22, "B": 26, "C": 26, "D": 26})
 
-    # Title
     title_cell = ws.cell(row=1, column=1,
                          value=f"Conditions v{VERSION} — UAT Sign-off")
     title_cell.font      = _semibold(size=16, color=DARK_BLUE)
     title_cell.alignment = TOP_LEFT
     ws.merge_cells("A1:D1")
 
-    # Outcome header row
     ws.row_dimensions[3].height = 30
     out_label = ws.cell(row=3, column=1, value="Outcome")
     out_label.font      = _semibold(size=10, color=DARK_BLUE)
@@ -499,7 +518,6 @@ def _build_signoff(wb):
     out_val.alignment = TOP_WRAP
     ws.merge_cells("B3:D3")
 
-    # Field rows
     fields = [
         "Tester (name)", "Tester (role)", "Test start date", "Test end date",
         "Pass / Fail", "Failures (count)", "Notes", "Approver (name)",

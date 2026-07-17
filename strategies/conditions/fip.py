@@ -42,7 +42,7 @@ _RENAMED_COLS_8 = [
     "Condition Medium Text",
 ]
 
-CONCAT_COL = "Concatenated"
+CONCAT_COL = "Key (Concatenated)"
 
 
 def process_fip(fip_df: pd.DataFrame) -> pd.DataFrame:
