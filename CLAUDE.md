@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.32 — Update UAT test plan to v1.0.31 (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_full_app_uat.py`: updated AP FIP file reference to `20260728_VALMSG_File_direct_from_FIP.XLSX` (raw ZQ9_VALMSG, 17,184 rows); updated FA-15 to note app builds Key column from MK + ValidRule; updated FA-16 output sheet list (EBX, FIP, Comparison, Processing Log); added FA-26–28 covering Settings gear menu, Known Exception Builder dialog, and KEL build-and-open. Former FA-26–32 renumbered to FA-29–35. | DONE | |
+| 2 | `docs/20260728 Full_Application_v1.0.31 Test Plan.xlsx`: generated output (35 test cases). | DONE | |
+| 3 | `version.py`: bump to `1.0.32`. | DONE | |
+
 ### v1.0.31 — Minimal test fixtures for all four strategies (2026-07-28)
 
 | # | Change | Status | Notes |

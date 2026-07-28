@@ -37,7 +37,7 @@ FILES = {
     "mapping":    "Mapping Table with 20 rows.txt",
     "ap_val_mth": "validation methods.xlsx",
     "ap_pub":     "EPM X-Checks file with 3345 Data rows on sheet cross checks all.xlsx",
-    "ap_fip":     "20260602 VALMSG (Accounting Principle)_Original.XLSX",
+    "ap_fip":     "20260728_VALMSG_File_direct_from_FIP.XLSX",
     "cond_pub":   "20260313 Cross Checks All.xlsx",
     "cond_fip":   "20260602 VALMETH (Conditions).xlsx",
     "known_exc":  "Known_Exception_List.xlsx",
@@ -48,7 +48,7 @@ SHEETS = {
     "gb_pub":     "cross checks all",
     "ap_val_mth": "Validation Methods",
     "ap_pub":     "cross checks all",
-    "ap_fip":     "Sheet1",
+    "ap_fip":     "Sheet1",   # raw ZQ9_VALMSG: MK + ValidRule → Key built at load time
     "cond_pub":   "cross checks all",
     "cond_fip":   "FIP Conditions",
     "known_exc":  "Known Exceptions",
@@ -70,7 +70,7 @@ GB_FIP_PROCESSED     = 6776   # after mapping + filtering
 GB_MAPPING_ROWS      = 19     # mapping dict entries
 
 AP_PUB_ROWS          = 3345   # source rows in AP pub file
-AP_FIP_ROWS          = 17072  # source rows in VALMSG file
+AP_FIP_ROWS          = 17184  # source rows in VALMSG file (20260728 raw ZQ9_VALMSG)
 
 COND_FIP_ROWS        = 4816   # processed rows in VALMETH FIP file
 COND_DIFF_PAIRS      = 92     # comparison rows in differences mode
@@ -264,18 +264,20 @@ TEST_CASES = [
         "Accounting Principles form open.",
         f"Set Validation Methods File to '{FILES['ap_val_mth']}' (sheet: '{SHEETS['ap_val_mth']}'), "
         f"X-Checks Publication File to '{FILES['ap_pub']}' (sheet: '{SHEETS['ap_pub']}'), "
-        f"FIP File (VALMSG) to '{FILES['ap_fip']}' (sheet: '{SHEETS['ap_fip']}'). Click Start.",
+        f"FIP File (VALMSG) to '{FILES['ap_fip']}' (sheet: '{SHEETS['ap_fip']}'). "
+        f"This is the raw ZQ9_VALMSG extract — the app builds the Key column from MK + ValidRule. Click Start.",
         f"Run completes. Progress log confirms {AP_PUB_ROWS} source rows in the "
-        f"publication file and {AP_FIP_ROWS} rows in the VALMSG file.",
+        f"publication file and {AP_FIP_ROWS} rows in the VALMSG file. "
+        f"Log shows 'Built Key column from MK + ValidRule'.",
     ),
     (
         "FA-16", "Accounting Principles — output structure",
         "FA-15 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains:\n"
-        "1. Comparison\n"
-        "2. Working Sheet\n"
-        "3. FIP Data\n"
+        "1. EBX\n"
+        "2. FIP\n"
+        "3. Comparison\n"
         "4. Processing Log",
     ),
 
@@ -363,9 +365,41 @@ TEST_CASES = [
         "'Return to Form' is available.",
     ),
 
+    # ── Settings menu / Known Exception Builder ───────────────────────────────
+    (
+        "FA-26", "Settings — gear menu",
+        "App is open at the task selector.",
+        "Click the ⚙ gear button at the bottom-right of the task selector.",
+        "A popup menu appears below the button containing at least one entry: "
+        "'Build Known Exception List…'. No dialog opens directly.",
+    ),
+    (
+        "FA-27", "Settings — open Known Exception Builder",
+        "Settings popup menu open (FA-26).",
+        "Click 'Build Known Exception List…'.",
+        "The Known Exception Builder dialog opens as a modal window. "
+        "It contains: a 'Save as' path field showing hint text "
+        "'Click Browse and select a folder, then type the filename', "
+        "a Browse button, an optional 'Import from comparison output' section, "
+        "an 'Open file after building' checkbox (checked by default), "
+        "and a Build button.",
+    ),
+    (
+        "FA-28", "Known Exception Builder — build and open",
+        "Known Exception Builder dialog open. An output folder is available.",
+        "Click Browse, select an output folder, type a filename (e.g. 'test_kel'). "
+        "Leave 'Open file after building' checked. Click Build.",
+        "A .xlsx file is created at the chosen path. The dialog closes. "
+        "The file opens automatically in Excel. "
+        "It contains one sheet per strategy (X-Checks, Grouping By, "
+        "Accounting Principles, Conditions) plus an Instructions sheet. "
+        "Row 2 of each strategy sheet is a guidance/example row (skipped by the app). "
+        "The file carries the 'Internal Use Only' sensitivity label.",
+    ),
+
     # ── Processing Log ────────────────────────────────────────────────────────
     (
-        "FA-26", "Processing Log — content",
+        "FA-29", "Processing Log — content",
         "Any completed run. Output workbook open, Processing Log sheet.",
         "Review the log entries.",
         f"First entry shows v{VERSION}. "
@@ -374,7 +408,7 @@ TEST_CASES = [
         "All entries have a Timestamp, File, Step, and Count column.",
     ),
     (
-        "FA-27", "Processing Log — output path entry",
+        "FA-30", "Processing Log — output path entry",
         "Any completed run. Processing Log sheet open.",
         "Find the 'Output written to' entry.",
         "An entry with File='Output' and Step starting 'Output written to:' "
@@ -382,7 +416,7 @@ TEST_CASES = [
         "file was closed.",
     ),
     (
-        "FA-28", "Processing Log — sensitivity label entry",
+        "FA-31", "Processing Log — sensitivity label entry",
         "Any completed run. Processing Log sheet open.",
         "Find the sensitivity label entry.",
         "An entry with File='Sensitivity' and Step='Expected label: Internal_Use_Only' "
@@ -392,7 +426,7 @@ TEST_CASES = [
 
     # ── Sensitivity label ──────────────────────────────────────────────────────
     (
-        "FA-29", "Sensitivity label — applied",
+        "FA-32", "Sensitivity label — applied",
         "Any completed run. Output file saved to disk.",
         "Right-click the output .xlsx in Explorer → Properties → Details, "
         "or open in Excel and check the sensitivity bar.",
@@ -402,7 +436,7 @@ TEST_CASES = [
 
     # ── Stop / error handling ──────────────────────────────────────────────────
     (
-        "FA-30", "Stop / Return to Form",
+        "FA-33", "Stop / Return to Form",
         "Any task started (click Start).",
         "Click Stop during processing.",
         "Processing halts cleanly. Progress dialog shows 'Processing halted by user'. "
@@ -410,14 +444,14 @@ TEST_CASES = [
         "form with previously chosen files pre-filled.",
     ),
     (
-        "FA-31", "Error handling — wrong sheet name",
+        "FA-34", "Error handling — wrong sheet name",
         "Any task's file-selection form open.",
         "Set the sheet name for any file to 'does_not_exist', then click Start.",
         "Run aborts with a clear error identifying the missing sheet. "
         "App returns to form — does not crash or exit.",
     ),
     (
-        "FA-32", "Error handling — missing required file",
+        "FA-35", "Error handling — missing required file",
         "Any task's file-selection form open.",
         "Click Start without selecting any required files.",
         "Start does not begin processing. Form indicates which required fields "
@@ -460,7 +494,7 @@ OVERVIEW_ROWS = [
         f"• Mapping File:            {FILES['mapping']}  ({GB_MAPPING_ROWS} mapping entries)\n"
         f"• AP Validation Methods:   {FILES['ap_val_mth']}  (sheet: {SHEETS['ap_val_mth']})\n"
         f"• AP pub:                  {FILES['ap_pub']}  (sheet: {SHEETS['ap_pub']}, {AP_PUB_ROWS} rows)\n"
-        f"• AP FIP (VALMSG):         {FILES['ap_fip']}  (sheet: {SHEETS['ap_fip']}, {AP_FIP_ROWS} rows)\n"
+        f"• AP FIP (VALMSG):         {FILES['ap_fip']}  (sheet: {SHEETS['ap_fip']}, {AP_FIP_ROWS} rows — raw ZQ9_VALMSG; app builds Key column)\n"
         f"• Conditions pub:          {FILES['cond_pub']}  (sheet: {SHEETS['cond_pub']})\n"
         f"• Conditions FIP (VALMETH):{FILES['cond_fip']}  (sheet: {SHEETS['cond_fip']}, {COND_FIP_ROWS} rows)\n"
         f"• Known Exceptions:        {FILES['known_exc']}  (sheet: {SHEETS['known_exc']}, {KNOWN_EXC_ROWS} rows)",
