@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.35 — Fixture UAT plan expanded to standalone (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: rewritten as a 36-case standalone plan covering all strategies, UI, output structure, colour coding, sensitivity labelling, and error handling. Each case carries a 'Test Type' column: Logic (10 cases, light blue rows — run after every code change) or Whole App (26 cases — run for release sign-off). | DONE | |
+| 2 | `docs/20260728 Fixture_UAT_v1.0.34 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.35`. | DONE | |
+
 ### v1.0.34 — Rename production EXE to X-Checks_FullRun (2026-07-28)
 
 | # | Change | Status | Notes |
