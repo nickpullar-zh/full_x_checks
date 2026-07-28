@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.33 — Fixture-based UAT test plan (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: new generator producing an 8-case UAT plan against the minimal fixture files. Each test case lists the exact fixture files, expected Comparison sheet rows with X-Check ID → result mapping, and colour-coding verification. | DONE | |
+| 2 | `docs/20260728 Fixture_UAT_v1.0.32 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.33`. | DONE | |
+
 ### v1.0.32 — Update UAT test plan to v1.0.31 (2026-07-28)
 
 | # | Change | Status | Notes |
