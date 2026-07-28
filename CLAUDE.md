@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.31 — Minimal test fixtures for all four strategies (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_test_fixtures.py`: new generator script producing 7 minimal fixture files under `test_data/fixtures/`. Each X-Check ID encodes its expected output, covering every comparison outcome per strategy (Match/MisMatch/Not Found for X-Checks; Matched/Not in FIP for GB; Match/MisMatch for AP; Matched/Not Matched for Conditions). Also covers TOM→ToM correction, period-thousands correction, and the Reference X-Check (Condition) key-prefix override. | DONE | XC_REORDER_MATCH produces Formula Match=MisMatch due to a known edge case in the reorder logic (formula produced by string replacement is invalid for simple two-variable addition); documented in the generator. |
+| 2 | `test_data/fixtures/`: 7 generated fixture files committed. | DONE | |
+| 3 | `version.py`: bump to `1.0.31`. | DONE | |
+
 ### v1.0.30 — AP strategy: build Key column from raw ZQ9_VALMSG FIP export (2026-07-28)
 
 | # | Change | Status | Notes |

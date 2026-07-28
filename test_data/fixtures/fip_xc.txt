@@ -1,0 +1,91 @@
+XC_ALL_MATCH XC_ALL_MATCH XC_ALL_MATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC999)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC999
+|
+| 1 | 2 | 3 | FS Account | ACC999 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_VARIABLE_MISMATCH XC_VARIABLE_MISMATCH XC_VARIABLE_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC_WRONG
+|
+| 1 | 2 | 3 | FS Account | ACC_WRONG |
+-|
+|-Segment @28@ * |
+-|
+
+XC_NOT_IN_EBX XC_NOT_IN_EBX XC_NOT_IN_EBX test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_TOM_CORRECTION XC_TOM_CORRECTION XC_TOM_CORRECTION test description
+|Formula String |
+VAL_YTD(ACC001TOMAA)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001TOMAA
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+| |- Movement Type @20@ AA desc |
+-|
+|-Segment @28@ * |
+-|
+
+XC_THOUSANDS_CORR XC_THOUSANDS_CORR XC_THOUSANDS_CORR test description
+|Formula String |
+VAL_YTD(ACC001)<=CONST(1.000,'USD','E')
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_REORDER_MATCH XC_REORDER_MATCH XC_REORDER_MATCH test description
+|Formula String |
+VAL_YTD(B_ACCToMBB)+VAL_YTD(A_ACCToMAA)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+A_ACCToMAA
+|
+| 1 | 2 | 3 | FS Account | A_ACC |
+| |- Movement Type @20@ AA desc |
+|
+B_ACCToMBB
+|
+| 1 | 2 | 3 | FS Account | B_ACC |
+| |- Movement Type @20@ BB desc |
+-|
+|-Segment @28@ * |
+-|
+
