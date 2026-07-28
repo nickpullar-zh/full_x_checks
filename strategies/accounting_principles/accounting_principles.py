@@ -72,6 +72,23 @@ class AccountingPrinciples(BaseStrategy):
                           "Missing required file: FIP File (VALMSG)", 0)
             return
 
+        # Build Key column from raw FIP columns if not already present.
+        # Raw ZQ9_VALMSG export has MK (validation method code, e.g. 'V900A') and
+        # ValidRule (X-Check No., e.g. 'A001_09'); Key = 'MK|ValidRule'.
+        if "Key" not in fip_df.columns:
+            if "MK" in fip_df.columns and "ValidRule" in fip_df.columns:
+                fip_df = fip_df.copy()
+                fip_df["Key"] = (
+                    fip_df["MK"].astype(str).str.strip()
+                    + "|"
+                    + fip_df["ValidRule"].astype(str).str.strip()
+                )
+                self.log_step(self.log, "FIP", "Built 'Key' column from MK + ValidRule", len(fip_df))
+            else:
+                self.log_step(self.log, "FIP",
+                              "FIP file has no 'Key' column and no 'MK'/'ValidRule' columns — aborting", 0)
+                return False
+
         # 4. In-scope X-Checks. When 'Process only differences' is on, use the
         # same pipeline as v0.4.1 X-Check No Selection (drop INACTIVE rows,
         # keep non-blank Type of Change, drop Exclude Z-Core = X, drop yellow

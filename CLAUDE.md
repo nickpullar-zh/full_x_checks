@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.30 — AP strategy: build Key column from raw ZQ9_VALMSG FIP export (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/accounting_principles/accounting_principles.py`: after loading `fip_df`, if no `Key` column is present, build it from `MK + '|' + ValidRule`. Raw ZQ9_VALMSG exports have `MK` (validation method code, e.g. `V900A`) and `ValidRule` (X-Check No., e.g. `A001_09`) but no pre-built `Key`. Files that already have a `Key` column pass through unchanged. If neither column is present, log an error and abort. | DONE | |
+| 2 | `version.py`: bump to `1.0.30`. | DONE | |
+
 ### v1.0.29 — Apply Internal Use Only label to built Known Exception List (2026-07-21)
 
 | # | Change | Status | Notes |
