@@ -449,9 +449,12 @@ def _make_fip_valmeth():
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "FIP Conditions"
+    # Raw ZQ9_VALMETH headers as exported from FIP (positional — duplicate names are normal).
+    # conditions/fip.py renames by position: col3 (ValidRule) → Normal X-Check No,
+    # col6 (ValidRule) → Condition No.
     _write_rows(ws,
-        ["MethC", "MK", "Medium Text MK", "Normal X-Check No",
-         "X-Check Medium Text", "UCFV20G-TRUE_BRANCH", "Condition No", "Condition Medium Text"],
+        ["MethC", "MK", "Medium Text", "ValidRule",
+         "Medium Text", "UCFV20G-TRUE_BRANCH", "ValidRule", "Medium Text"],
         [
             ["1", "MK1", "Test MK", "COND_MATCHED", "Matched test", "X", "Q1", "Quarter 1"],
             ["1", "MK1", "Test MK", "COND_BASE",    "Ref XC test",  "X", "Q1", "Quarter 1"],
