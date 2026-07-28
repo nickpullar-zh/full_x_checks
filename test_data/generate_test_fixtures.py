@@ -185,17 +185,27 @@ def _make_xc_pub():
     # process_only_differences=True → collected. FIP has this key → Matched.
     ws.append(row("COND_DIFF_YELLOW", app_qtrs="Q1"))
 
-    # COND_DIFF_WHITE: plain white cell.
+    # COND_DIFF_GREEN: Applicable Quarters condition cell is green.
+    # extract_conditions: green condition cell → collected in differences mode.
+    # process_only_differences=True → collected. FIP has this key → Matched.
+    ws.append(row("COND_DIFF_GREEN", app_qtrs="Q1"))
+
+    # COND_DIFF_WHITE: plain white cell — no fill anywhere.
     # process_only_differences=True → NOT collected → no output row.
     ws.append(row("COND_DIFF_WHITE", app_qtrs="Q1"))
 
-    # Apply yellow fill to the Applicable Quarters cell of COND_DIFF_YELLOW.
-    # Headers row is row 1; data rows start at row 2.
+    # Apply fills after all rows are appended so row indices are stable.
     # Column R (index 18) = Applicable Quarters.
-    # Find COND_DIFF_YELLOW row index: it is the last-but-one appended row.
+    # Column A (index 1)  = X-Check No.
+    # Row order from bottom: COND_DIFF_WHITE = max_row, COND_DIFF_GREEN = max_row-1,
+    # COND_DIFF_YELLOW = max_row-2.
     yellow_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFFFF00")
-    cond_diff_yellow_row = ws.max_row - 1   # second-to-last row
-    ws.cell(row=cond_diff_yellow_row, column=18).fill = yellow_fill
+    green_fill  = openpyxl.styles.PatternFill("solid", fgColor="FF92D050")
+    cond_diff_white_row  = ws.max_row
+    cond_diff_green_row  = ws.max_row - 1
+    cond_diff_yellow_row = ws.max_row - 2
+    ws.cell(row=cond_diff_yellow_row, column=18).fill = yellow_fill  # Applicable Quarters cell yellow
+    ws.cell(row=cond_diff_green_row,  column=18).fill = green_fill   # Applicable Quarters cell green
 
     wb.save(OUT / "xc_pub.xlsx")
     print("  wrote xc_pub.xlsx")
@@ -482,7 +492,8 @@ def _make_fip_valmeth():
         [
             ["1", "MK1", "Test MK", "COND_MATCHED",    "Matched test",    "X", "Q1", "Quarter 1"],
             ["1", "MK1", "Test MK", "COND_BASE",       "Ref XC test",     "X", "Q1", "Quarter 1"],
-            ["1", "MK1", "Test MK", "COND_DIFF_YELLOW","Diff yellow test", "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_DIFF_YELLOW", "Diff yellow test", "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_DIFF_GREEN",  "Diff green test",  "X", "Q1", "Quarter 1"],
             # COND_NOT_MATCHED and COND_DIFF_WHITE intentionally absent → Not Matched
         ],
     )

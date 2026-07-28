@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.37 — Add green-cell fixture row for Conditions differences mode (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_test_fixtures.py`: add `COND_DIFF_GREEN` row with green fill on the Applicable Quarters condition cell; add matching FIP entry. Fix: green rule checks the condition cell itself, not column A. | DONE | |
+| 2 | `docs/generate_fixture_uat.py`: update FX-21 to expect both yellow and green rows (2 rows) in differences mode. | DONE | |
+| 3 | `docs/20260728 Fixture_UAT_v1.0.36 Test Plan.xlsx`: generated output. | DONE | |
+| 4 | `version.py`: bump to `1.0.37`. | DONE | |
+
 ### v1.0.36 — Add differences-mode test coverage to fixtures and UAT plan (2026-07-28)
 
 | # | Change | Status | Notes |

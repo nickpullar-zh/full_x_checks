@@ -295,13 +295,14 @@ TEST_CASES = [
         "column is itself one of the 5 condition columns.",
     ),
     (
-        "FX-21", "Conditions — differences mode (yellow cell)", "Logic",
+        "FX-21", "Conditions — differences mode (yellow + green cells)", "Logic",
         f"Same files as FX-20. 'Process only differences' checked (default).",
         "Run with 'Process only differences' checked (default).",
-        "Comparison sheet contains exactly 1 row:\n\n"
+        "Comparison sheet contains exactly 2 rows:\n\n"
+        "  COND_DIFF_GREEN|Q1   FIP Data=COND_DIFF_GREEN|Q1   → Matched\n"
         "  COND_DIFF_YELLOW|Q1  FIP Data=COND_DIFF_YELLOW|Q1  → Matched\n\n"
-        "Only the yellow-filled Applicable Quarters cell is collected. "
-        "All other rows (plain white) are not collected.",
+        "Yellow-filled and green-filled Applicable Quarters cells are both collected. "
+        "COND_DIFF_WHITE (plain white cell) is not collected — no output row.",
     ),
     (
         "FX-22", "Conditions — output structure", "Whole App",
