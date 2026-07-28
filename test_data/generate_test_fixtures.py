@@ -79,7 +79,7 @@ def _make_xc_pub():
         "Ending Balance Prior Year",     # N
         "Grouping By",                   # O
         "Reference  X-Check (Condition)",  # P  (two spaces — real file header)
-        "TEST_EVENT",                    # Q  (minimal AP validation event column)
+        "IFRS New RFD",                  # Q  (real AP validation event from validation_methods.xlsx)
         "Applicable Quarters",           # R
         "Included RUs",                  # S
         "Excluded RUs",                  # T
@@ -383,27 +383,11 @@ def _make_mapping():
 # ---------------------------------------------------------------------------
 # 5. Validation Methods (AP)
 # ---------------------------------------------------------------------------
-
+# The real validation_methods.xlsx must be copied into test_data/fixtures/
+# manually (it is the live Zurich reference file, not generated here).
+# Event used by AP fixture rows: 'IFRS New RFD', method V900W (Warning, black font).
 def _make_validation_methods():
-    """
-    Minimal layout matching parse_method_bindings() expectations:
-      Row 1, col C: event name TEST_EVENT
-      Row 4 (Warning), col C: method code line  (black font)
-      Rows 5-6 (Error): blank/dash
-
-    Produces: MethodBinding(method='V900A', event='TEST_EVENT',
-                             severity='Warning', font='black', column=3)
-    """
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Validation Methods"
-    ws.cell(row=1, column=3, value="TEST_EVENT")
-    cell = ws.cell(row=4, column=3, value="V900A - Test warning method")
-    cell.font = Font(color="000000")
-    ws.cell(row=5, column=3, value="-")
-    ws.cell(row=6, column=3, value="-")
-    wb.save(OUT / "validation_methods.xlsx")
-    print("  wrote validation_methods.xlsx")
+    print("  skipped validation_methods.xlsx — use the real file copied into fixtures/")
 
 
 # ---------------------------------------------------------------------------
@@ -415,8 +399,10 @@ def _make_fip_valmsg():
     Raw ZQ9_VALMSG: strategy builds Key = MK|ValidRule at load time.
     MK = validation method code, ValidRule = X-Check No., MT = W/E letter.
 
-    AP_MATCH:    FIP MT='w' == EBX actual 'w' → Match
+    AP_MATCH:    FIP MT='w' == EBX actual 'w' (Warning binding for IFRS New RFD) → Match
     AP_MISMATCH: FIP MT='e' != EBX actual 'w' → MisMatch
+    MK=V900W matches the black-font Warning binding for event 'IFRS New RFD' in the
+    real validation_methods.xlsx. ValidRule = X-Check No. in the EBX pub file.
     """
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -425,8 +411,8 @@ def _make_fip_valmsg():
         ["MethC", "MK", "Medium Text", "ValidRule", "Long Text",
          "UCFV20G-TRUE_BRANCH", "Message class", "Msg.", "MT", "Message Text"],
         [
-            ["1", "V900A", "Test method", "AP_MATCH",    "AP Match",    "X", "CLS", "001", "w", "Test"],
-            ["1", "V900A", "Test method", "AP_MISMATCH", "AP MisMatch", "X", "CLS", "002", "e", "Test"],
+            ["1", "V900W", "Warning method", "AP_MATCH",    "AP Match",    "X", "CLS", "001", "w", "Test"],
+            ["1", "V900W", "Warning method", "AP_MISMATCH", "AP MisMatch", "X", "CLS", "002", "e", "Test"],
         ],
     )
     wb.save(OUT / "fip_ZQ9_VALMSG.xlsx")
