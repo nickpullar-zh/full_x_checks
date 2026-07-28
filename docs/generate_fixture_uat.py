@@ -124,9 +124,10 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
         "Load the files above into X-Checks and click Start.",
-        "Run completes. Comparison sheet contains exactly 9 rows. "
+        "Run completes. Comparison sheet contains exactly 10 rows. "
         "Formula Match column values:\n\n"
         "  XC_ALL_MATCH          → Match\n"
+        "  XC_DIFF_EXCLUDED      → Not Found  (EBX row present, no FIP block)\n"
         "  XC_DIFF_IN_SCOPE      → Match  (also in-scope for differences mode)\n"
         "  XC_FORMULA_MISMATCH   → MisMatch\n"
         "  XC_NOT_IN_EBX         → Not Found\n"
@@ -135,8 +136,9 @@ TEST_CASES = [
         "  XC_THOUSANDS_CORR     → Match  (FIP '1.000' stripped to '1000')\n"
         "  XC_TOM_CORRECTION     → Match  (FIP 'TOM' normalised to 'ToM')\n"
         "  XC_VARIABLE_MISMATCH  → Match\n\n"
-        "Note: XC_DIFF_EXCLUDED has Type of change set but Exclude Z-Core=X — "
-        "it is filtered out and produces no Comparison row.",
+        "Note: XC_DIFF_EXCLUDED appears in the Comparison sheet (Not Found) even "
+        "though it is excluded from the X-Check No Selection .txt output — the "
+        "Comparison always runs against the full EBX file.",
     ),
     (
         "FX-06", "X-Checks — Variables Match", "Logic",
@@ -345,7 +347,7 @@ TEST_CASES = [
         f"• FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    9 rows\n"
+        "  XC — Comparison    10 rows\n"
         "  GB — Comparison    2 rows\n"
         "  AP — Comparison    2 rows\n"
         "  Cond — Comparison  6 rows\n\n"

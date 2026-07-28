@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.38 — Logic tests 34/34 pass; fix X-Checks row count to 10 (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/run_logic_tests.py`: new script running all 12 Logic test cases (FX-05/06/10/12/16/20/21/25) against the fixture files. All 34 assertions pass. | DONE | |
+| 2 | `test_data/run_logic_tests.py` + `docs/generate_fixture_uat.py`: correct X-Checks expected row count from 9 → 10. XC_DIFF_EXCLUDED has an Account No so extract_ebx produces a formula; with no matching FIP block it generates a Not Found row in the Comparison. The X-Check No Selection filter (differences mode) correctly excludes it from the .txt output — these are independent. | DONE | |
+| 3 | `docs/20260728 Fixture_UAT_v1.0.37 Test Plan.xlsx`: regenerated with corrected row counts. | DONE | |
+| 4 | `version.py`: bump to `1.0.38`. | DONE | |
+
 ### v1.0.37 — Add green-cell fixture row for Conditions differences mode (2026-07-28)
 
 | # | Change | Status | Notes |
