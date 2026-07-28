@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.34 — Rename production EXE to X-Checks_FullRun (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `build.py`: production build `name` changed from `X-Checks_{VERSION}` to `X-Checks_FullRun_{VERSION}`. Output: `dist\X-Checks_FullRun_v{VERSION}.exe`. | DONE | |
+| 2 | `version.py`: bump to `1.0.34`. | DONE | |
+
 ### v1.0.33 — Fixture-based UAT test plan (2026-07-28)
 
 | # | Change | Status | Notes |
