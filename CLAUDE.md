@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.36 — Add differences-mode test coverage to fixtures and UAT plan (2026-07-28)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_test_fixtures.py`: add four new rows to `xc_pub.xlsx`: `XC_DIFF_IN_SCOPE` (Status=ACTIVE, Type of change=Changed → survives X-Check No Selection), `XC_DIFF_EXCLUDED` (same but Exclude Z-Core=X → filtered out), `COND_DIFF_YELLOW` (Applicable Quarters cell has yellow openpyxl fill → collected in differences mode), `COND_DIFF_WHITE` (plain white → not collected). Add matching FIP entries. | DONE | |
+| 2 | `docs/generate_fixture_uat.py`: add FX-10 (X-Check No Selection differences mode) and FX-21 (Conditions differences mode with yellow cell); renumber subsequent cases; update row counts in FX-05, FX-20, FX-25. | DONE | |
+| 3 | `docs/20260728 Fixture_UAT_v1.0.35 Test Plan.xlsx`: generated output (37 cases). | DONE | |
+| 4 | `version.py`: bump to `1.0.36`. | DONE | |
+
 ### v1.0.35 — Fixture UAT plan expanded to standalone (2026-07-28)
 
 | # | Change | Status | Notes |

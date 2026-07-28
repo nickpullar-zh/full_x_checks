@@ -89,3 +89,15 @@ B_ACCToMBB
 |-Segment @28@ * |
 -|
 
+XC_DIFF_IN_SCOPE XC_DIFF_IN_SCOPE XC_DIFF_IN_SCOPE test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+

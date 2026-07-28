@@ -124,16 +124,19 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
         "Load the files above into X-Checks and click Start.",
-        "Run completes. Comparison sheet contains exactly 8 rows. "
+        "Run completes. Comparison sheet contains exactly 9 rows. "
         "Formula Match column values:\n\n"
         "  XC_ALL_MATCH          → Match\n"
+        "  XC_DIFF_IN_SCOPE      → Match  (also in-scope for differences mode)\n"
         "  XC_FORMULA_MISMATCH   → MisMatch\n"
         "  XC_NOT_IN_EBX         → Not Found\n"
         "  XC_NOT_IN_FIP         → Not Found\n"
         "  XC_REORDER_MATCH      → MisMatch  (known edge case in reorder logic)\n"
         "  XC_THOUSANDS_CORR     → Match  (FIP '1.000' stripped to '1000')\n"
         "  XC_TOM_CORRECTION     → Match  (FIP 'TOM' normalised to 'ToM')\n"
-        "  XC_VARIABLE_MISMATCH  → Match",
+        "  XC_VARIABLE_MISMATCH  → Match\n\n"
+        "Note: XC_DIFF_EXCLUDED has Type of change set but Exclude Z-Core=X — "
+        "it is filtered out and produces no Comparison row.",
     ),
     (
         "FX-06", "X-Checks — Variables Match", "Logic",
@@ -169,9 +172,21 @@ TEST_CASES = [
         "column populated with the Reason text and a blue cell fill.",
     ),
 
+    (
+        "FX-10", "X-Checks — differences mode (X-Check No Selection)", "Logic",
+        f"FIP File: {F}\\fip_xc.txt\n"
+        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
+        "'Process only differences' checked.",
+        "Check 'Process only differences'. Load files and click Start.",
+        "A .txt file is written alongside the output containing exactly 1 X-Check No:\n\n"
+        "  XC_DIFF_IN_SCOPE\n\n"
+        "XC_DIFF_EXCLUDED is absent (Exclude Z-Core = X). "
+        "All other X-Checks are absent (blank Type of change).",
+    ),
+
     # ── Grouping By ──────────────────────────────────────────────────────────
     (
-        "FX-10", "Grouping By — file fields", "Whole App",
+        "FX-11", "Grouping By — file fields", "Whole App",
         "Grouping By task selected, form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -181,7 +196,7 @@ TEST_CASES = [
         "4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FX-11", "Grouping By — comparison output", "Logic",
+        "FX-12", "Grouping By — comparison output", "Logic",
         f"FIP File (ZQ9_VALFLDGR): {F}\\fip_ZQ9_VALFLDGR.xlsx  (sheet: Sheet1)\n"
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         f"Mapping File: {F}\\mapping.txt",
@@ -191,8 +206,8 @@ TEST_CASES = [
         "  GB_NOT_IN_FIP|GB_GROUPING_ITEM → Not in FIP",
     ),
     (
-        "FX-12", "Grouping By — output structure", "Whole App",
-        "FX-11 complete. Output workbook open.",
+        "FX-13", "Grouping By — output structure", "Whole App",
+        "FX-12 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains:\n"
         "1. Mapping File\n"
@@ -204,8 +219,8 @@ TEST_CASES = [
         "7. Processing Log",
     ),
     (
-        "FX-13", "Grouping By — colour coding", "Whole App",
-        "FX-11 output open, Comparison sheet.",
+        "FX-14", "Grouping By — colour coding", "Whole App",
+        "FX-12 output open, Comparison sheet.",
         "Review the Result column fill colours.",
         "'Matched' → green fill.\n"
         "'Not in FIP' → orange fill.",
@@ -213,7 +228,7 @@ TEST_CASES = [
 
     # ── Accounting Principles ─────────────────────────────────────────────────
     (
-        "FX-14", "Accounting Principles — file fields", "Whole App",
+        "FX-15", "Accounting Principles — file fields", "Whole App",
         "Accounting Principles task selected, form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -223,7 +238,7 @@ TEST_CASES = [
         "4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FX-15", "Accounting Principles — Key column built from raw VALMSG", "Logic",
+        "FX-16", "Accounting Principles — Key column built from raw VALMSG", "Logic",
         f"Validation Methods File: {F}\\validation_methods.xlsx  (sheet: Validation Methods)\n"
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         f"FIP File (VALMSG): {F}\\fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
@@ -235,8 +250,8 @@ TEST_CASES = [
         "  AP_MISMATCH Event=IFRS New RFD  FIP=e  Actual=w  → MisMatch",
     ),
     (
-        "FX-16", "Accounting Principles — output structure", "Whole App",
-        "FX-15 complete. Output workbook open.",
+        "FX-17", "Accounting Principles — output structure", "Whole App",
+        "FX-16 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains:\n"
         "1. EBX\n"
@@ -245,8 +260,8 @@ TEST_CASES = [
         "4. Processing Log",
     ),
     (
-        "FX-17", "Accounting Principles — colour coding", "Whole App",
-        "FX-15 output open, Comparison sheet.",
+        "FX-18", "Accounting Principles — colour coding", "Whole App",
+        "FX-16 output open, Comparison sheet.",
         "Review the Match column fill colours.",
         "'Match' → green fill.\n"
         "'MisMatch' → red fill.",
@@ -254,7 +269,7 @@ TEST_CASES = [
 
     # ── Conditions ────────────────────────────────────────────────────────────
     (
-        "FX-18", "Conditions — file fields", "Whole App",
+        "FX-19", "Conditions — file fields", "Whole App",
         "Conditions task selected, form open.",
         "Inspect the form fields.",
         "Three fields present:\n"
@@ -264,31 +279,33 @@ TEST_CASES = [
         "'Process only differences' checkbox present and checked by default.",
     ),
     (
-        "FX-19", "Conditions — full file run", "Logic",
+        "FX-20", "Conditions — full file run", "Logic",
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         f"FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
         "'Process only differences' unchecked.",
         "Uncheck 'Process only differences'. Load the files and click Start.",
-        "Run completes. Comparison sheet contains exactly 4 rows:\n\n"
-        "  COND_MATCHED|Q1      FIP Data=COND_MATCHED|Q1  → Matched\n"
-        "  COND_NOT_MATCHED|Q2  FIP Data=(blank)           → Not Matched\n"
-        "  COND_BASE|COND_BASE  FIP Data=(blank)           → Not Matched\n"
-        "  COND_BASE|Q1         FIP Data=COND_BASE|Q1      → Matched\n\n"
+        "Run completes. Comparison sheet contains exactly 5 rows:\n\n"
+        "  COND_MATCHED|Q1          FIP Data=COND_MATCHED|Q1      → Matched\n"
+        "  COND_NOT_MATCHED|Q2      FIP Data=(blank)               → Not Matched\n"
+        "  COND_BASE|COND_BASE      FIP Data=(blank)               → Not Matched\n"
+        "  COND_BASE|Q1             FIP Data=COND_BASE|Q1          → Matched\n"
+        "  COND_DIFF_YELLOW|Q1      FIP Data=COND_DIFF_YELLOW|Q1   → Matched\n"
+        "  COND_DIFF_WHITE|Q1       FIP Data=(blank)               → Not Matched\n\n"
         "Note: COND_BASE|COND_BASE is expected — the 'Reference X-Check (Condition)' "
-        "column is itself one of the 5 condition columns. "
-        "COND_BASE|Q1 confirms the key-prefix override works correctly.",
+        "column is itself one of the 5 condition columns.",
     ),
     (
-        "FX-20", "Conditions — differences only", "Logic",
-        f"Same files as FX-19. 'Process only differences' checked (default).",
+        "FX-21", "Conditions — differences mode (yellow cell)", "Logic",
+        f"Same files as FX-20. 'Process only differences' checked (default).",
         "Run with 'Process only differences' checked (default).",
-        "Comparison sheet is empty (0 data rows). "
-        "The fixture EBX rows have no yellow or green cell fill, "
-        "so no rows are collected in differences mode.",
+        "Comparison sheet contains exactly 1 row:\n\n"
+        "  COND_DIFF_YELLOW|Q1  FIP Data=COND_DIFF_YELLOW|Q1  → Matched\n\n"
+        "Only the yellow-filled Applicable Quarters cell is collected. "
+        "All other rows (plain white) are not collected.",
     ),
     (
-        "FX-21", "Conditions — output structure", "Whole App",
-        "FX-19 complete. Output workbook open.",
+        "FX-22", "Conditions — output structure", "Whole App",
+        "FX-20 complete. Output workbook open.",
         "Check the sheet tabs and first column header of the FIP Data sheet.",
         "Workbook contains:\n"
         "1. Working Sheet\n"
@@ -297,8 +314,8 @@ TEST_CASES = [
         "4. Processing Log",
     ),
     (
-        "FX-22", "Conditions — colour coding", "Whole App",
-        "FX-19 output open, Comparison sheet.",
+        "FX-23", "Conditions — colour coding", "Whole App",
+        "FX-20 output open, Comparison sheet.",
         "Review the Comparison column fill colours.",
         "'Matched' → green fill.\n"
         "'Not Matched' → red fill.",
@@ -306,7 +323,7 @@ TEST_CASES = [
 
     # ── Full Run ──────────────────────────────────────────────────────────────
     (
-        "FX-23", "Full Run — file fields", "Whole App",
+        "FX-24", "Full Run — file fields", "Whole App",
         "Full Run task selected, form open.",
         "Count the file fields and verify no duplicates.",
         "All unique fields from every strategy are merged into one form. "
@@ -316,7 +333,7 @@ TEST_CASES = [
         "No field label appears twice.",
     ),
     (
-        "FX-24", "Full Run — all strategies", "Logic",
+        "FX-25", "Full Run — all strategies", "Logic",
         f"All fixture files. 'Process only differences' unchecked.\n"
         f"• FIP File: {F}\\fip_xc.txt\n"
         f"• X-Checks Publication File: {F}\\xc_pub.xlsx\n"
@@ -327,22 +344,22 @@ TEST_CASES = [
         f"• FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    8 rows\n"
+        "  XC — Comparison    9 rows\n"
         "  GB — Comparison    2 rows\n"
         "  AP — Comparison    2 rows\n"
-        "  Cond — Comparison  4 rows\n\n"
-        "Row counts and values match the individual strategy results in FX-05, FX-11, FX-15, FX-19.",
+        "  Cond — Comparison  6 rows\n\n"
+        "Row counts and values match the individual strategy results in FX-05, FX-12, FX-16, FX-20.",
     ),
     (
-        "FX-25", "Full Run — combined output structure", "Whole App",
-        "FX-24 complete. Combined output workbook open.",
+        "FX-26", "Full Run — combined output structure", "Whole App",
+        "FX-25 complete. Combined output workbook open.",
         "Check all sheet tabs and tab colours.",
         "One workbook with all strategy sheets prefixed by strategy name "
         "(e.g. 'XC — Comparison', 'GB — Comparison', 'AP — Comparison', 'Cond — Comparison'). "
         "Tabs are colour-coded by strategy. Single 'Processing Log' sheet at the end.",
     ),
     (
-        "FX-26", "Full Run — abort on strategy failure", "Whole App",
+        "FX-27", "Full Run — abort on strategy failure", "Whole App",
         "Full Run form open.",
         "Set an incorrect sheet name for one file, then click Start.",
         "Failing strategy logs a clear error. Full Run aborts immediately — "
@@ -351,15 +368,15 @@ TEST_CASES = [
 
     # ── Settings / Known Exception Builder ────────────────────────────────────
     (
-        "FX-27", "Settings — gear menu", "Whole App",
+        "FX-28", "Settings — gear menu", "Whole App",
         "App open at task selector.",
         "Click the ⚙ gear button at the bottom-right.",
         "A popup menu appears with at least 'Build Known Exception List…'. "
         "No dialog opens directly.",
     ),
     (
-        "FX-28", "Settings — Known Exception Builder", "Whole App",
-        "Settings popup open (FX-27).",
+        "FX-29", "Settings — Known Exception Builder", "Whole App",
+        "Settings popup open (FX-28).",
         "Click 'Build Known Exception List…'.",
         "Modal dialog opens with: 'Save as' hint text "
         "'Click Browse and select a folder, then type the filename', "
@@ -367,7 +384,7 @@ TEST_CASES = [
         "'Open file after building' checkbox (checked by default), Build button.",
     ),
     (
-        "FX-29", "Settings — build and open KEL", "Whole App",
+        "FX-30", "Settings — build and open KEL", "Whole App",
         "Known Exception Builder dialog open. Output folder available.",
         "Click Browse, select a folder, type a filename. Leave 'Open file after building' checked. Click Build.",
         "File created at the chosen path. Dialog closes. File opens in Excel. "
@@ -378,7 +395,7 @@ TEST_CASES = [
 
     # ── Processing Log ────────────────────────────────────────────────────────
     (
-        "FX-30", "Processing Log — content", "Whole App",
+        "FX-31", "Processing Log — content", "Whole App",
         "Any completed run. Output workbook open, Processing Log sheet.",
         "Review the log entries.",
         f"First entry shows v{VERSION}. "
@@ -386,13 +403,13 @@ TEST_CASES = [
         "All entries have Timestamp, File, Step, Count columns.",
     ),
     (
-        "FX-31", "Processing Log — output path entry", "Whole App",
+        "FX-32", "Processing Log — output path entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the 'Output written to' entry.",
         "Entry with File='Output' and Step starting 'Output written to:' is present.",
     ),
     (
-        "FX-32", "Processing Log — sensitivity label entry", "Whole App",
+        "FX-33", "Processing Log — sensitivity label entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the sensitivity label entry.",
         "Entry with File='Sensitivity' and Step='Expected label: Internal_Use_Only' is present.",
@@ -400,7 +417,7 @@ TEST_CASES = [
 
     # ── Sensitivity label ──────────────────────────────────────────────────────
     (
-        "FX-33", "Sensitivity label", "Whole App",
+        "FX-34", "Sensitivity label", "Whole App",
         "Any completed run. Output .xlsx saved to disk.",
         "Right-click the output file in Explorer → Properties → Details, "
         "or open in Excel and check the sensitivity bar.",
@@ -410,21 +427,21 @@ TEST_CASES = [
 
     # ── Stop / error handling ──────────────────────────────────────────────────
     (
-        "FX-34", "Stop / Return to Form", "Whole App",
+        "FX-35", "Stop / Return to Form", "Whole App",
         "Any task started.",
         "Click Stop during processing.",
         "Processing halts. Dialog shows 'Processing halted by user'. "
         "'Return to Form' reopens the form with previously chosen files pre-filled.",
     ),
     (
-        "FX-35", "Error — wrong sheet name", "Whole App",
+        "FX-36", "Error — wrong sheet name", "Whole App",
         "Any task's file-selection form open.",
         "Set a sheet name to 'does_not_exist', then click Start.",
         "Run aborts with a clear error identifying the missing sheet. "
         "App returns to form — does not crash.",
     ),
     (
-        "FX-36", "Error — missing required file", "Whole App",
+        "FX-37", "Error — missing required file", "Whole App",
         "Any task's file-selection form open.",
         "Click Start without selecting any required files.",
         "Start does not begin processing. Form indicates missing required fields.",

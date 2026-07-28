@@ -167,6 +167,36 @@ def _make_xc_pub():
     # Reference X-Check (Condition)=COND_BASE overrides key prefix → key=COND_BASE|Q1
     ws.append(row("COND_REF_XCHECK", ref_xc_cond="COND_BASE", app_qtrs="Q1"))
 
+    # ------------------------------------------------------------------
+    # "Process only differences" / "Test Changes Only" rows
+    # ------------------------------------------------------------------
+    # XC_DIFF_IN_SCOPE: Status=ACTIVE, Type of change non-blank, no Z-Core exclusion,
+    # Category not yellow → survives the X-Check No Selection filter.
+    # Also has Account No so extract_ebx produces a formula; FIP block present → Match.
+    ws.append(row("XC_DIFF_IN_SCOPE", acct="ACC001", op1="<=", lim1="0",
+                  toc="Changed"))
+
+    # XC_DIFF_EXCLUDED: same Type of change, but Exclude Z-Core = X
+    # → dropped by the filter; should NOT appear in the .txt output.
+    ws.append(row("XC_DIFF_EXCLUDED", acct="ACC001", op1="<=", lim1="0",
+                  toc="Changed", excl_zcore="X"))
+
+    # COND_DIFF_YELLOW: Applicable Quarters cell gets a yellow fill below.
+    # process_only_differences=True → collected. FIP has this key → Matched.
+    ws.append(row("COND_DIFF_YELLOW", app_qtrs="Q1"))
+
+    # COND_DIFF_WHITE: plain white cell.
+    # process_only_differences=True → NOT collected → no output row.
+    ws.append(row("COND_DIFF_WHITE", app_qtrs="Q1"))
+
+    # Apply yellow fill to the Applicable Quarters cell of COND_DIFF_YELLOW.
+    # Headers row is row 1; data rows start at row 2.
+    # Column R (index 18) = Applicable Quarters.
+    # Find COND_DIFF_YELLOW row index: it is the last-but-one appended row.
+    yellow_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFFFF00")
+    cond_diff_yellow_row = ws.max_row - 1   # second-to-last row
+    ws.cell(row=cond_diff_yellow_row, column=18).fill = yellow_fill
+
     wb.save(OUT / "xc_pub.xlsx")
     print("  wrote xc_pub.xlsx")
 
@@ -341,6 +371,14 @@ def _make_fip_xc():
         var2_mt="BB",
     ))
 
+    # XC_DIFF_IN_SCOPE: in-scope for differences mode; FIP matches EBX → Match
+    blocks.append(_fip_block_single(
+        "XC_DIFF_IN_SCOPE",
+        formula="VAL_YTD(ACC001)<=0",
+        var_name="ACC001",
+        fs_accounts=["ACC001"],
+    ))
+
     # XC_NOT_IN_FIP: intentionally omitted → Not Found (FIP side missing)
 
     (OUT / "fip_xc.txt").write_text("".join(blocks), encoding="utf-8")
@@ -442,9 +480,10 @@ def _make_fip_valmeth():
         ["MethC", "MK", "Medium Text", "ValidRule",
          "Medium Text", "UCFV20G-TRUE_BRANCH", "ValidRule", "Medium Text"],
         [
-            ["1", "MK1", "Test MK", "COND_MATCHED", "Matched test", "X", "Q1", "Quarter 1"],
-            ["1", "MK1", "Test MK", "COND_BASE",    "Ref XC test",  "X", "Q1", "Quarter 1"],
-            # COND_NOT_MATCHED intentionally absent → Not Matched
+            ["1", "MK1", "Test MK", "COND_MATCHED",    "Matched test",    "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_BASE",       "Ref XC test",     "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_DIFF_YELLOW","Diff yellow test", "X", "Q1", "Quarter 1"],
+            # COND_NOT_MATCHED and COND_DIFF_WHITE intentionally absent → Not Matched
         ],
     )
     wb.save(OUT / "fip_ZQ9_VALMETH.xlsx")
