@@ -235,6 +235,7 @@ def build(config: dict):
         "strategies.conditions.fip",
         "strategies.full_run",
         "strategies.full_run.full_run",
+        "known_exception_builder",
     ]
     hidden_str = "[" + ", ".join(repr(m) for m in hidden_imports) + "]"
 

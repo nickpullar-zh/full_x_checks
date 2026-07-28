@@ -10,7 +10,9 @@
       "mcp__ide__executeCode",
       "Bash(claude mcp *)",
       "Bash(gh *)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(2>&1)",
+      "mcp__cli-microsoft365__m365_run_command"
     ]
   }
 }

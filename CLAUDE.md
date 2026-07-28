@@ -58,6 +58,74 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.29 — Apply Internal Use Only label to built Known Exception List (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `known_exception_builder.py`: after file is verified on disk, apply the `Internal_Use_Only` MIP sensitivity label via `ExcelLabeler`. Best-effort — failure is silently swallowed so the dialog still closes and the file is still opened. | DONE | |
+| 2 | `version.py`: bump to `1.0.29`. | DONE | |
+
+### v1.0.28 — Centre main window on screen at launch (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: add `_centre_main_window()` — centres the task selector on screen at launch, clamped 60px from every edge. Called after `update_idletasks()` so the window size is known. | DONE | |
+| 2 | `version.py`: bump to `1.0.28`. | DONE | |
+
+### v1.0.27 — Builder dialog: clamp position to screen (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `known_exception_builder.py`: `_centre()` now clamps the dialog position to a 40px margin from every screen edge, preventing it from appearing off-screen when the parent window is near the top-left corner. | DONE | |
+| 2 | `version.py`: bump to `1.0.27`. | DONE | |
+
+### v1.0.26 — Builder "Save as" hint text (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `known_exception_builder.py`: replace "Not set" placeholder with "Click Browse and select a folder, then type the filename". | DONE | |
+| 2 | `version.py`: bump to `1.0.26`. | DONE | |
+
+### v1.0.25 — Settings button opens popup menu (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: `_on_settings()` now opens a `tk.Menu` popup below the ⚙ button rather than launching the builder directly. "Build Known Exception List…" is the first entry; future settings items can be added as `menu.add_command()` calls. Builder moved to `_open_known_exception_builder()`. | DONE | |
+| 2 | `version.py`: bump to `1.0.25`. | DONE | |
+
+### v1.0.24 — Known Exception List Builder refinements (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: Start button restored to `columnspan=2` (centred); ⚙ moved to row 3 `column=1 sticky=e` (below and right). | DONE | |
+| 2 | `known_exception_builder.py`: add "Open file after building" checkbox (on by default); verify file exists on disk after `wb.save()` before closing dialog; open file via `start` shell command if checkbox checked. | DONE | |
+| 3 | `version.py`: bump to `1.0.24`. | DONE | |
+
+### v1.0.23 — Known Exception List Builder (2026-07-21)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `known_exception_builder.py`: new module with `KnownExceptionBuilderDialog` — modal tkinter dialog with output file picker, optional comparison output import, strategy detection, and openpyxl Excel builder. Creates one sheet per strategy with fingerprint-column headers derived from `STRATEGY_DEFINITIONS`, a guidance row (row 2, always skipped by `_load_known_exceptions`), and optionally pre-fills mismatch rows from a comparison output. | DONE | |
+| 2 | `main.py`: restructure button row — Start at `column=0 sticky=ew`, ⚙ at `column=1 sticky=e`. Add `_on_settings()` which opens `KnownExceptionBuilderDialog`. | DONE | |
+| 3 | `build.py`: add `"known_exception_builder"` to `hidden_imports`. | DONE | |
+| 4 | `version.py`: bump to `1.0.23`. | DONE | |
+
+### v1.0.22 — Full Application UAT test plan — complete with all test files (2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_full_app_uat.py`: updated with all 11 test files now confirmed present in `test_data\` (added `validation methods.xlsx`, `20260602 VALMSG (Accounting Principle)_Original.XLSX`, `20260602 VALMETH (Conditions).xlsx`). Correct sheet names throughout. AP FIP 17 072 rows, Conditions FIP 4 816 rows, differences 92 pairs, full 130 pairs. Conditions test cases expanded to FA-18/FA-19 (diff + full runs). All case IDs renumbered sequentially to FA-32. | DONE | |
+| 2 | `docs/20260717 Full_Application_v1.0.21 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.22`. | DONE | |
+
+### v1.0.21 — Full Application UAT test plan (2026-07-17)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_full_app_uat.py`: new generator producing a 30-case UAT test plan covering all 6 tasks, Processing Log entries (output path + expected sensitivity label), colour coding, Full Run combined output, and error/stop handling. All file references and counts derived from `test_data\` files: XC pub 664 extracted / 653 comparison rows (525 formula match, 125 mismatch, 3 not found); GB FIP 12 348 rows / 6 776 processed / 19 mapping entries; AP pub 3 345 rows; Known Exceptions 2 rows. | DONE | |
+| 2 | `docs/20260717 Full_Application_v1.0.20 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.21`. | DONE | |
+
 ### v1.0.20 — Port Conditions fixes from v0.6.11 (2026-07-17)
 
 | # | Change | Status | Notes |

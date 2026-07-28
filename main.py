@@ -175,6 +175,7 @@ class TaskSelectorUI:
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.update_idletasks()
+        self._centre_main_window()
         self.root.config(cursor="")        # restore normal cursor
         # Close the PyInstaller splash screen once the window is ready
         try:
@@ -182,6 +183,17 @@ class TaskSelectorUI:
             pyi_splash.close()
         except ImportError:
             pass
+
+    def _centre_main_window(self):
+        """Centre the main window on screen, clamped 60px from every edge."""
+        w = self.root.winfo_reqwidth()
+        h = self.root.winfo_reqheight()
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        margin = 60
+        x = max(margin, min((sw - w) // 2, sw - w - margin))
+        y = max(margin, min((sh - h) // 2, sh - h - margin))
+        self.root.geometry(f"+{x}+{y}")
 
     def _on_close(self):
         """
@@ -227,13 +239,31 @@ class TaskSelectorUI:
         )
         task_dropdown.grid(row=1, column=1, padx=10, pady=5)
 
-        self.start_btn = ttk.Button(
-            frame,
-            text="Start",
-            command=self._on_start
-        )
-        self.start_btn.grid(row=2, column=0, columnspan=2, pady=15)
+        btn_row = ttk.Frame(frame)
+        btn_row.grid(row=2, column=0, columnspan=2, pady=15, sticky="ew")
+        btn_row.columnconfigure(0, weight=1)
+
+        self.start_btn = ttk.Button(btn_row, text="Start", command=self._on_start)
+        self.start_btn.grid(row=0, column=0)
         self.start_btn.config(state="disabled")  # ← Disabled by default
+
+        self.settings_btn = ttk.Button(btn_row, text="⚙", width=3, command=self._on_settings)
+        self.settings_btn.grid(row=0, column=1, sticky="e")
+
+    def _on_settings(self):
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(
+            label="Build Known Exception List…",
+            command=self._open_known_exception_builder,
+        )
+        # Position menu below the ⚙ button
+        x = self.settings_btn.winfo_rootx()
+        y = self.settings_btn.winfo_rooty() + self.settings_btn.winfo_height()
+        menu.tk_popup(x, y)
+
+    def _open_known_exception_builder(self):
+        from known_exception_builder import KnownExceptionBuilderDialog
+        KnownExceptionBuilderDialog(self.root)
 
     def _on_start(self):
         task_name = self.task_var.get()
