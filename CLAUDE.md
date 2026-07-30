@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.64 — Field label: (optional) on new line; wraplength 180px (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: optional field label now uses `\n(optional)` so the field name and "(optional)" are on separate lines. Required fields keep `*` on the same line. wraplength reduced to 180px. | DONE | |
+| 2 | `version.py`: bump to `1.0.64`. | DONE | |
+
 ### v1.0.63 — Shorten button label; fix field label wrapping (2026-07-30)
 
 | # | Change | Status | Notes |

@@ -222,12 +222,12 @@ class FileUploadUI:
             # --- Field label ---
             label_text = (
                 f"{field.label} *" if field.required
-                else f"{field.label} (optional)"
+                else f"{field.label}\n(optional)"
             )
             ttk.Label(
                 main_frame,
                 text=label_text,
-                wraplength=200,
+                wraplength=180,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
@@ -303,7 +303,7 @@ class FileUploadUI:
             ttk.Label(
                 main_frame,
                 text="Output Directory *",
-                wraplength=200,
+                wraplength=180,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
