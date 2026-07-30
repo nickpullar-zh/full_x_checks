@@ -124,29 +124,47 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
         "Load the files above into X-Checks and click Start.",
-        "Run completes. Comparison sheet contains exactly 11 rows. "
-        "Formula Match column values:\n\n"
+        "Run completes. Comparison sheet contains exactly 26 rows. "
+        "Formula Match column values (sorted alphabetically):\n\n"
+        "  XC_ABS_FORMULA        → Match   (Operator 2 set → ABS() wrapping)\n"
         "  XC_ALL_MATCH          → Match\n"
-        "  XC_DIFF_EXCLUDED      → Not Found  (EBX row present, no FIP block)\n"
-        "  XC_DIFF_IN_SCOPE      → Match  (also in-scope for differences mode)\n"
-        "  XC_FORMULA_MISMATCH   → MisMatch\n"
-        "  XC_KEL_MISMATCH       → MisMatch  (without KEL; annotated when KEL supplied)\n"
+        "  XC_ALL_MISMATCH       → MisMatch (formula AND variables wrong)\n"
+        "  XC_DIFF_EXCLUDED      → Not Found (Exclude Z-Core=X, no FIP block)\n"
+        "  XC_DIFF_INACTIVE      → Not Found (Status=INACTIVE, no FIP block)\n"
+        "  XC_DIFF_IN_SCOPE      → Match\n"
+        "  XC_DIFF_YELLOW_CAT    → Not Found (Category yellow, no FIP block)\n"
+        "  XC_EXCL_MATCH         → Match   (FIP @2A@, EBX excl → Excl cols Match)\n"
+        "  XC_EXCL_MISMATCH      → Match   (Formula Match=Match; Excl=MisMatch — see FX-06c)\n"
+        "  XC_FF_SUFFIX          → Match   (two accounts → ff suffix)\n"
+        "  XC_FORMULA_MISMATCH   → MisMatch (operator differs <=0 vs >=0; vars same)\n"
+        "  XC_GTE_OPERATOR       → Match   (Operator 1 = >=)\n"
+        "  XC_KEL_MISMATCH       → MisMatch (without KEL; annotated when KEL supplied)\n"
+        "  XC_KEL_NO_MATCH       → MisMatch (KEL entry exists but wrong fingerprint)\n"
+        "  XC_LC_CONST           → Match   (Shareholders' Equity + non-zero limit → CONST_LC)\n"
+        "  XC_LC_YTD             → Match   (Shareholders' Equity → LC_YTD)\n"
+        "  XC_NONZERO_LIMIT      → Match   (Limit 1=100 → CONST(100,...))\n"
         "  XC_NOT_IN_EBX         → Not Found\n"
         "  XC_NOT_IN_FIP         → Not Found\n"
-        "  XC_REORDER_MATCH      → MisMatch  (known edge case in reorder logic)\n"
-        "  XC_THOUSANDS_CORR     → Match  (FIP '1.000' stripped to '1000')\n"
-        "  XC_TOM_CORRECTION     → Match  (FIP 'TOM' normalised to 'ToM')\n"
-        "  XC_VARIABLE_MISMATCH  → Match\n\n"
-        "Note: XC_DIFF_EXCLUDED appears in the Comparison sheet (Not Found) even "
-        "though it is excluded from the X-Check No Selection .txt output.",
+        "  XC_PCT_FORMAT         → Match   (% column=X → percentage right-hand side)\n"
+        "  XC_REORDER_MATCH      → MisMatch (known edge case in reorder logic)\n"
+        "  XC_REX_CORRECTION     → Match   (FIP uses REX; parser → ToM)\n"
+        "  XC_SUBTRACT           → Match   (+ and - operators → subtraction formula)\n"
+        "  XC_THOUSANDS_CORR     → Match   (FIP '1.000' stripped to '1000')\n"
+        "  XC_TOM_CORRECTION     → Match   (FIP 'TOM' normalised to 'ToM')\n"
+        "  XC_VARIABLE_MISMATCH  → Match   (formula matches; FS Account differs)\n\n"
+        "X-Check No. column: green for all-Match rows, red for any MisMatch, "
+        "orange for Not Found rows.",
     ),
     (
-        "FX-06", "X-Checks — Variables Match", "Logic",
+        "FX-06", "X-Checks — column-level checks", "Logic",
         "FX-05 output open, Comparison sheet.",
-        "Check the Variables Match column.",
-        "XC_VARIABLE_MISMATCH: Variables Match = MisMatch  "
-        "(formula matched but FS Account differed).\n"
-        "All other rows: Variables Match mirrors Formula Match.",
+        "Check the following specific columns on the rows listed.",
+        "a) XC_VARIABLE_MISMATCH: Variables Match = MisMatch; Formula Match = Match.\n"
+        "b) XC_FORMULA_MISMATCH: Variables Match = Match (operator differs, account same).\n"
+        "c) XC_EXCL_MISMATCH: Formula Match = Match; Formula Match (Excl) = MisMatch "
+        "(EBX has excl.acc.type=2, FIP has no @2A@ row).\n"
+        "d) XC_EXCL_MATCH: Formula Match (Excl) = Match "
+        "(both EBX and FIP carry excl.acc.type=2).",
     ),
     (
         "FX-07", "X-Checks — output structure", "Whole App",
@@ -159,20 +177,23 @@ TEST_CASES = [
     (
         "FX-08", "X-Checks — colour coding", "Whole App",
         "FX-05 output open, Comparison sheet.",
-        "Review fill colours in the Formula Match column.",
-        "Match rows → green fill.\n"
-        "MisMatch rows → red fill.\n"
-        "Not Found rows → orange fill.",
+        "Review fill colours.",
+        "Comparison columns: Match → green, MisMatch → red, Not Found → orange.\n"
+        "X-Check No. column: green when all 4 columns Match; red when any MisMatch; "
+        "orange when any Not Found (and no MisMatch).",
     ),
     (
         "FX-09", "X-Checks — Known Exception annotation", "Logic",
         f"Same files as FX-05. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: X-Checks).\n"
-        "The KEL contains one entry for XC_KEL_MISMATCH.",
+        "The KEL contains 2 entries: one correct fingerprint for XC_KEL_MISMATCH, "
+        "one with wrong fingerprint for XC_KEL_NO_MATCH.",
         "Add the Known Exception List file and run.",
-        "Run completes. Progress log shows 'Known exceptions loaded  (1)'.\n"
-        "XC_KEL_MISMATCH row: Formula Match = MisMatch (unchanged), "
-        "'Known Exception' column = 'Test fixture — expected mismatch' with blue fill.\n"
-        "All other rows: 'Known Exception' column is blank.",
+        "Run completes. Progress log shows 'Known exceptions loaded  (2)'.\n\n"
+        "XC_KEL_MISMATCH: MisMatch cells → 'MisMatch (Excepted)' with blue fill; "
+        "X-Check No. cell blue; Known Exception column = 'Test fixture — expected mismatch'.\n\n"
+        "XC_KEL_NO_MATCH: Formula Match remains MisMatch (red); Known Exception blank "
+        "(fingerprint in KEL does not match the actual row values).\n\n"
+        "All other rows: Known Exception column blank; colours unchanged.",
     ),
 
     (
@@ -181,10 +202,12 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "'Process only differences' checked.",
         "Check 'Process only differences'. Load files and click Start.",
-        "A .txt file is written alongside the output containing exactly 1 X-Check No:\n\n"
+        "A .txt file is written containing exactly 1 X-Check No:\n\n"
         "  XC_DIFF_IN_SCOPE\n\n"
-        "XC_DIFF_EXCLUDED is absent (Exclude Z-Core = X). "
-        "All other X-Checks are absent (blank Type of change).",
+        "XC_DIFF_EXCLUDED absent (Exclude Z-Core = X).\n"
+        "XC_DIFF_INACTIVE absent (Status = INACTIVE).\n"
+        "XC_DIFF_YELLOW_CAT absent (Category cell is yellow).\n"
+        "All other X-Checks absent (blank Type of change).",
     ),
 
     # ── Grouping By ──────────────────────────────────────────────────────────
@@ -348,7 +371,7 @@ TEST_CASES = [
         f"• FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    11 rows\n"
+        "  XC — Comparison    26 rows\n"
         "  GB — Comparison    2 rows\n"
         "  AP — Comparison    2 rows\n"
         "  Cond — Comparison  6 rows\n\n"

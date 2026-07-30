@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.43 — Update fixture UAT test plan for 26-row X-Checks (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-05 updated to list all 26 X-Check fixture rows with descriptions; FX-06 expanded to four column-level checks (Variables Match, operator-only mismatch, excl match, excl mismatch); FX-08 updated for new per-row colour coding; FX-09 updated for 2-entry KEL (XC_KEL_MISMATCH annotated, XC_KEL_NO_MATCH not annotated); FX-10 updated for INACTIVE and yellow-category exclusions; FX-25 row count updated to 26. | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.42 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.43`. | DONE | |
+
 ### v1.0.42 — X-Checks output: per-row colour coding + MisMatch (Excepted) (2026-07-30)
 
 | # | Change | Status | Notes |
