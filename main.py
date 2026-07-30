@@ -250,6 +250,13 @@ class TaskSelectorUI:
         self.settings_btn = ttk.Button(btn_row, text="⚙", width=3, command=self._on_settings)
         self.settings_btn.grid(row=0, column=1, sticky="e")
 
+        tk.Label(
+            frame,
+            text=f"v{__version__}",
+            font=("Zurich Sans", 8),
+            foreground="#999999",
+        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 0))
+
     def _on_settings(self):
         menu = tk.Menu(self.root, tearoff=0)
         menu.add_command(

@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.48 — Version label in grey at bottom-left of every screen (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: add grey `v{VERSION}` label at bottom-left of task selector frame. | DONE | |
+| 2 | `file_upload_ui.py`: add grey `v{VERSION}` label at bottom-left of every file upload form, below the Proceed button. | DONE | |
+| 3 | `version.py`: bump to `1.0.48`. | DONE | |
+
 ### v1.0.47 — Regenerate both UAT test plans at v1.0.46 (2026-07-30)
 
 | # | Change | Status | Notes |

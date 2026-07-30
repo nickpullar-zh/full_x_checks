@@ -351,6 +351,15 @@ class FileUploadUI:
         )
         self.submit_btn.grid(row=current_row, column=0, columnspan=3, pady=15)
         self.submit_btn.config(state="disabled")
+        current_row += 1
+
+        from version import __version__
+        tk.Label(
+            main_frame,
+            text=f"v{__version__}",
+            font=("Zurich Sans", 8),
+            foreground="#999999",
+        ).grid(row=current_row, column=0, columnspan=3, sticky="w", pady=(0, 4))
 
         # ==========================================
         # Pass 2 — Measure hint labels AFTER render
