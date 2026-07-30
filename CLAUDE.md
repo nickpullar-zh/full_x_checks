@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.56 — Progress dialog: copy button right-aligned with tooltip; green separator; fix [[Complete]] (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: copy button moved to its own row right-aligned with the text area (same pattern as settings gear). Tooltip added: "Copy the whole contents of the Processing Log to the clipboard". Add `_Tooltip` class inline. | DONE | |
+| 2 | `progress_dialog.py`: separator — remove blank lines before dashes; colour dashes green (reuse `"matched"` tag). | DONE | |
+| 3 | `main.py`: fix `[[Complete]]` double brackets — was passing `"[Complete]"` as the `file` arg; `append_entry` adds its own brackets. Changed to `"Complete"`. | DONE | |
+| 4 | `version.py`: bump to `1.0.56`. | DONE | |
+
 ### v1.0.55 — File dialogs remember last file location; folder picks don't update it (2026-07-30)
 
 | # | Change | Status | Notes |

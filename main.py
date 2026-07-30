@@ -313,7 +313,7 @@ class TaskSelectorUI:
                     dialog.mark_success()
                     dialog.append_separator()
                     dialog.append_entry(
-                        "[Complete]",
+                        "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
@@ -374,7 +374,7 @@ class TaskSelectorUI:
                     dialog.mark_success()
                     dialog.append_separator()
                     dialog.append_entry(
-                        "[Complete]",
+                        "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )  # noqa: datetime imported at module level
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))

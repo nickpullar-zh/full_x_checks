@@ -4,6 +4,33 @@ from tkinter import ttk
 import threading
 
 
+class _Tooltip:
+    """Simple hover tooltip for a widget."""
+    def __init__(self, widget, text):
+        self._widget = widget
+        self._text   = text
+        self._win    = None
+        widget.bind("<Enter>", self._show)
+        widget.bind("<Leave>", self._hide)
+
+    def _show(self, _=None):
+        if self._win:
+            return
+        x = self._widget.winfo_rootx() + 20
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._win = tk.Toplevel(self._widget)
+        self._win.wm_overrideredirect(True)
+        self._win.wm_geometry(f"+{x}+{y}")
+        tk.Label(self._win, text=self._text, justify="left",
+                 background="#DDE4E3", foreground="#23366F",
+                 relief="solid", borderwidth=1, padx=6, pady=4).pack()
+
+    def _hide(self, _=None):
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+
 class ProgressDialog:
     """
     A scrollable progress log dialog for UAT/debug runs.
@@ -100,9 +127,22 @@ class ProgressDialog:
             font=("Courier", 9, "bold"),
         )
 
-        # --- Stop / Close + Exit + Copy Log buttons ---
+        # --- Copy button — right-aligned to text area, above the btn row ---
+        copy_row = ttk.Frame(outer_frame)
+        copy_row.pack(fill="x", pady=(2, 0))
+        self.copy_btn = ttk.Button(
+            copy_row,
+            text="\U0001f4cb",   # 📋 clipboard icon
+            width=3,
+            command=self._on_copy_log,
+        )
+        self.copy_btn.pack(side="right")
+        _Tooltip(self.copy_btn, "Copy the whole contents of the Processing Log to the clipboard")
+        self._copy_reset_id = None
+
+        # --- Stop / Close + Exit buttons (centred) ---
         btn_frame = ttk.Frame(outer_frame)
-        btn_frame.pack(pady=(10, 0))
+        btn_frame.pack(pady=(6, 0))
 
         self.action_btn = ttk.Button(
             btn_frame,
@@ -118,16 +158,7 @@ class ProgressDialog:
             width=16,
             command=self._on_exit_application
         )
-        self.exit_btn.pack(side="left", padx=(0, 8))
-
-        self.copy_btn = ttk.Button(
-            btn_frame,
-            text="\U0001f4cb",   # 📋 clipboard icon
-            width=3,
-            command=self._on_copy_log
-        )
-        self.copy_btn.pack(side="left")
-        self._copy_reset_id = None
+        self.exit_btn.pack(side="left")
 
     def _centre_on_screen(self):
         self.window.update_idletasks()
@@ -257,8 +288,7 @@ class ProgressDialog:
 
     def _write_separator(self):
         self.text_area.config(state="normal")
-        self.text_area.insert("end", "\n\n")
-        self.text_area.insert("end", "-" * 60 + "\n", "separator")
+        self.text_area.insert("end", "-" * 60 + "\n", "matched")
         self.text_area.see("end")
         self.text_area.config(state="disabled")
 
