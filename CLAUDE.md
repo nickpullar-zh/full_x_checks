@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.45 — Enclose completion timestamp in square brackets (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: completion message timestamp format changed from `%Y%m%d %H%M%S` to `[%Y%m%d %H%M%S]`. | DONE | |
+| 2 | `version.py`: bump to `1.0.45`. | DONE | |
+
 ### v1.0.44 — Green completion message with timestamp on all strategies (2026-07-30)
 
 | # | Change | Status | Notes |

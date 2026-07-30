@@ -306,7 +306,7 @@ class TaskSelectorUI:
                     dialog.append_separator()
                     dialog.append_entry(
                         "[Complete]",
-                        datetime.now().strftime("%Y%m%d %H%M%S") + "  Processing has completed successfully",
+                        datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
@@ -368,7 +368,7 @@ class TaskSelectorUI:
                     dialog.append_separator()
                     dialog.append_entry(
                         "[Complete]",
-                        datetime.now().strftime("%Y%m%d %H%M%S") + "  Processing has completed successfully",
+                        datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
