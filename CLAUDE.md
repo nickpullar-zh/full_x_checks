@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.42 — X-Checks output: per-row colour coding + MisMatch (Excepted) (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/x_checks/x_checks.py`: `apply_output_formatting` rewritten as a single per-row pass. Rules: all Match → X-Check No. green; any MisMatch → red (beats Not Found); any Not Found (no MisMatch) → orange; any MisMatch with valid KEL annotation → rewrite cell to "MisMatch (Excepted)", colour blue; X-Check No. blue when all bad columns are excepted. Removes the old conditional-formatting approach for comparison columns. | DONE | |
+| 2 | `version.py`: bump to `1.0.42`. | DONE | |
+
 ### v1.0.41 — Comprehensive X-Checks fixtures + KEL fingerprint no-match test (2026-07-30)
 
 | # | Change | Status | Notes |

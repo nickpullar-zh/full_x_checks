@@ -128,29 +128,85 @@ class XChecks(BaseStrategy):
         if "Comparison" not in workbook.sheetnames:
             return
         ws = workbook["Comparison"]
-        for col in ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)"):
-            self.apply_conditional_formatting(
-                worksheet=ws,
-                column_name=col,
-                rules={
-                    "Match":                      (self.FILL_GREEN,  self.FONT_GREEN),
-                    "MisMatch":                   (self.FILL_RED,    self.FONT_RED),
-                    "Not Found":                  (self.FILL_ORANGE, self.FONT_ORANGE),
-                    "Mismatch - Known Exception": (self.FILL_BLUE,   self.FONT_BLUE),
-                }
-            )
-        # Highlight Known Exception column and X-Check No. cell in blue
+
+        COMPARISON_COLS = (
+            "Formula Match", "Formula Match (Excl)",
+            "Variables Match", "Variables Match (Builder)",
+        )
+
         header_values = [cell.value for cell in ws[1]]
-        if "Known Exception" in header_values:
-            kel_col_idx = header_values.index("Known Exception") + 1
-            xc_col_idx  = (header_values.index("X-Check No.") + 1
-                           if "X-Check No." in header_values else None)
-            for row in ws.iter_rows(min_row=2, min_col=1, max_col=ws.max_column):
+
+        def _col(name):
+            return header_values.index(name) + 1 if name in header_values else None
+
+        xc_col_idx  = _col("X-Check No.")
+        kel_col_idx = _col("Known Exception")
+        cmp_col_idxs = [_col(c) for c in COMPARISON_COLS if _col(c) is not None]
+
+        for row in ws.iter_rows(min_row=2, min_col=1, max_col=ws.max_column):
+
+            # Is there a valid Known Exception annotation on this row?
+            kel_val = ""
+            if kel_col_idx:
+                raw = row[kel_col_idx - 1].value
+                kel_val = str(raw).strip() if raw and str(raw).strip() not in ("", "nan") else ""
+
+            has_excepted  = False   # any MisMatch turned Excepted
+            has_mismatch  = False   # any MisMatch remaining (not excepted)
+            has_not_found = False
+
+            # Style each comparison cell; rewrite MisMatch → MisMatch (Excepted) when KEL present
+            for idx in cmp_col_idxs:
+                cell = row[idx - 1]
+                val  = str(cell.value).strip() if cell.value is not None else ""
+
+                if val == "MisMatch" and kel_val:
+                    cell.value = "MisMatch (Excepted)"
+                    cell.fill  = self.FILL_BLUE
+                    cell.font  = self.FONT_BLUE
+                    has_excepted = True
+                elif val == "MisMatch":
+                    cell.fill = self.FILL_RED
+                    cell.font = self.FONT_RED
+                    has_mismatch = True
+                elif val == "Not Found":
+                    cell.fill = self.FILL_ORANGE
+                    cell.font = self.FONT_ORANGE
+                    has_not_found = True
+                elif val == "Match":
+                    cell.fill = self.FILL_GREEN
+                    cell.font = self.FONT_GREEN
+                elif val == "MisMatch (Excepted)":
+                    # Already written (e.g. re-formatting after reload)
+                    cell.fill = self.FILL_BLUE
+                    cell.font = self.FONT_BLUE
+                    has_excepted = True
+
+            # Style Known Exception cell
+            if kel_col_idx and kel_val:
                 kel_cell = row[kel_col_idx - 1]
-                if kel_cell.value and str(kel_cell.value).strip() not in ("", "nan"):
-                    kel_cell.fill = self.FILL_BLUE
-                    kel_cell.font = self.FONT_BLUE
-                    if xc_col_idx:
-                        xc_cell = row[xc_col_idx - 1]
+                kel_cell.fill = self.FILL_BLUE
+                kel_cell.font = self.FONT_BLUE
+
+            # Style X-Check No. cell to reflect overall row result
+            if xc_col_idx:
+                xc_cell = row[xc_col_idx - 1]
+                if has_mismatch:
+                    # Any un-excepted MisMatch → red (red beats Not Found)
+                    xc_cell.fill = self.FILL_RED
+                    xc_cell.font = self.FONT_RED
+                elif has_excepted and not has_mismatch and not has_not_found:
+                    # All mismatches are excepted, nothing else bad → blue
+                    xc_cell.fill = self.FILL_BLUE
+                    xc_cell.font = self.FONT_BLUE
+                elif has_not_found:
+                    xc_cell.fill = self.FILL_ORANGE
+                    xc_cell.font = self.FONT_ORANGE
+                else:
+                    # All Match (possibly with Excepted on some cols — show blue)
+                    if has_excepted:
                         xc_cell.fill = self.FILL_BLUE
                         xc_cell.font = self.FONT_BLUE
+                    else:
+                        xc_cell.fill = self.FILL_GREEN
+                        xc_cell.font = self.FONT_GREEN
