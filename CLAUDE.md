@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.47 — Regenerate both UAT test plans at v1.0.46 (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/20260730 Fixture_UAT_v1.0.46 Test Plan.xlsx`: regenerated. | DONE | |
+| 2 | `docs/20260730 Full_Application_v1.0.46 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.47`. | DONE | |
+
 ### v1.0.46 — Fix missing return True in X-Checks and Collect Live X-Checks (2026-07-30)
 
 | # | Change | Status | Notes |
