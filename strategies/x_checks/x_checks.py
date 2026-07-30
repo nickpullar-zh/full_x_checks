@@ -17,9 +17,10 @@ class XChecks(BaseStrategy):
 
         # 0. X-Check No Selection — write the list of changed X-Check Nos to a .txt
         #    file the user can paste into FIP. Only runs when "Process only differences"
-        #    is enabled, since otherwise every X-Check would be listed.
+        #    is enabled. Returns the in-scope list so the Comparison can be filtered.
+        in_scope: list[str] = []
         if files.get("process_only_differences", False):
-            self._write_x_check_no_list(loaded_files, files)
+            in_scope = self._write_x_check_no_list(loaded_files, files) or []
 
         # 1. Load GCoA QU accounts (optional)
         qu_accounts: set = set()
@@ -65,6 +66,13 @@ class XChecks(BaseStrategy):
         df_comparison = pd.DataFrame(comparison_rows)
         df_comparison = df_comparison.sort_values("X-Check No.").reset_index(drop=True)
 
+        # 4b. When "Process only differences" is on, filter Comparison to in-scope rows only.
+        # in_scope was already computed (and the .txt written) at step 0 above.
+        if files.get("process_only_differences", False) and in_scope:
+            df_comparison = df_comparison[
+                df_comparison["X-Check No."].isin(in_scope)
+            ].reset_index(drop=True)
+
         # 5. Apply known exceptions if file was provided
         _XC_FINGERPRINT = [
             "X-Check No.", "EBX Formula", "FIP Formula",
@@ -89,32 +97,32 @@ class XChecks(BaseStrategy):
         )
         return True
 
-    def _write_x_check_no_list(self, loaded_files: dict, files: dict) -> None:
+    def _write_x_check_no_list(self, loaded_files: dict, files: dict) -> list[str]:
         """
         Runs the full Cross Checks All selection pipeline (Status / Type of Change /
         Exclude Z-Core / yellow Category) and writes the surviving X-Check Nos to
         <timestamp>_X-Check_Nos.txt in the output directory, one per line.
 
-        Operates on a copy of the EBX DataFrame; the loaded df is unchanged so
-        downstream comparison still runs against the full dataset.
+        Returns the in-scope X-Check Nos list so the caller can filter the Comparison.
+        Operates on a copy of the EBX DataFrame; the loaded df is unchanged.
         """
         ebx_df = loaded_files.get("X-Checks Publication File")
         if ebx_df is None:
             self.log_step(self.log, "X-Check No Selection", "Skipped — EBX not loaded", 0)
-            return
+            return []
 
         ebx_path = files["files"].get("X-Checks Publication File")
         ebx_sheet = files["sheet_names"].get("X-Checks Publication File")
         if not ebx_path or not ebx_sheet:
             self.log_step(self.log, "X-Check No Selection",
                           "Skipped — EBX file path or sheet not provided", 0)
-            return
+            return []
 
         x_check_nos = select_x_check_nos(ebx_df, ebx_path, ebx_sheet)
         if not x_check_nos:
             self.log_step(self.log, "X-Check No Selection",
                           "No X-Check Nos in scope after pipeline", 0)
-            return
+            return []
 
         out_path = self.build_output_path(
             files["output_directory"], "X-Check_Nos", files["timestamp"], extension=".txt"
@@ -124,6 +132,7 @@ class XChecks(BaseStrategy):
         self.log_step(self.log, "X-Check No Selection",
                       f"Wrote {os.path.basename(out_path)}", len(x_check_nos),
                       notes=out_path)
+        return x_check_nos
 
     def apply_output_formatting(self, workbook):
         if "Comparison" not in workbook.sheetnames:

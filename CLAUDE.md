@@ -58,6 +58,19 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.52 — Fix "Process only differences" filtering across all four strategies (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/x_checks/x_check_no_selection.py`: step 2 now excludes rows where Type of change = "Removed" (orange) in addition to blank. | DONE | |
+| 2 | `strategies/x_checks/x_checks.py`: `_write_x_check_no_list` now returns the in-scope list; `process()` filters `df_comparison` to that list when diff=True. | DONE | |
+| 3 | `strategies/grouping_by/grouping_by.py`: add `_diff_in_scope_xchecks()` which reads Grouping By cell fills via openpyxl; filter Comparison when diff=True to rows whose X-Check part is in scope. | DONE | |
+| 4 | `strategies/accounting_principles/accounting_principles.py`: extend `_select_in_scope_x_checks()` with an event-column colour pass; only X-Checks where at least one event column is yellow or green are in scope for diff=True. | DONE | Conditions was already correct — no change needed. |
+| 5 | `test_data/generate_test_fixtures.py`: add XC_DIFF_YELLOW (Changed/yellow), XC_DIFF_GREEN (New/green), XC_DIFF_ORANGE (Removed/orange — excluded), XC_DIFF_NO_TOC (blank — excluded) rows with correct fills. | DONE | |
+| 6 | `test_data/generate_gb_fixtures.py` + `generate_ap_fixtures.py`: add colour rows for diff=True testing. | DONE | |
+| 7 | All three logic test suites updated and passing: XC 71/71, GB 22/22, AP 26/26. | DONE | |
+| 8 | `version.py`: bump to `1.0.52`. | DONE | |
+
 ### v1.0.51 — Fix datetime import; add Copy Log button with green tick (2026-07-30)
 
 | # | Change | Status | Notes |

@@ -276,3 +276,27 @@ ACC001
 |-Segment @28@ * |
 -|
 
+XC_DIFF_YELLOW XC_DIFF_YELLOW XC_DIFF_YELLOW test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_DIFF_GREEN XC_DIFF_GREEN XC_DIFF_GREEN test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+

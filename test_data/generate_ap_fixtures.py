@@ -193,6 +193,21 @@ def _make_ap_pub(events_info):
     category_col_idx = headers.index("Category") + 1
     ws.cell(row=yellow_row, column=category_col_idx).fill = PatternFill("solid", fgColor="FFFFFF00")
 
+    # Process only differences: event column colour filter
+    # AP_DIFF_YELLOW: warning_event cell yellow → in scope; FIP matches → Match
+    ws.append(row("AP_DIFF_YELLOW", warn_val="w"))
+    diff_yellow_row = ws.max_row
+    warn_col_idx = headers.index(warning_event) + 1
+    ws.cell(row=diff_yellow_row, column=warn_col_idx).fill = PatternFill("solid", fgColor="FFFFFF00")
+
+    # AP_DIFF_GREEN: warning_event cell green → in scope; FIP matches → Match
+    ws.append(row("AP_DIFF_GREEN",  warn_val="w"))
+    diff_green_row = ws.max_row
+    ws.cell(row=diff_green_row, column=warn_col_idx).fill = PatternFill("solid", fgColor="FF92D050")
+
+    # AP_DIFF_WHITE: all event columns white → excluded when diff=True
+    ws.append(row("AP_DIFF_WHITE",  warn_val="w"))
+
     wb.save(OUT / "ap_pub.xlsx")
 
     # Save event names for use in FIP generator
@@ -289,6 +304,11 @@ def _make_ap_fip(event_names):
     ws.append(fip_row(warn_method, "AP_NOT_SCOPE_INA", "w"))
     ws.append(fip_row(warn_method, "AP_EXCL_ZCORE", "w"))
     ws.append(fip_row(warn_method, "AP_YELLOW_CAT", "w"))
+
+    # AP_DIFF_YELLOW/GREEN: event col yellow/green → in scope; FIP matches → Match
+    ws.append(fip_row(warn_method, "AP_DIFF_YELLOW", "w"))
+    ws.append(fip_row(warn_method, "AP_DIFF_GREEN",  "w"))
+    # AP_DIFF_WHITE: excluded by diff filter; FIP row present but won't appear in Comparison
 
     wb.save(OUT / "ap_fip_ZQ9_VALMSG.xlsx")
     print("  wrote ap_fip_ZQ9_VALMSG.xlsx")

@@ -230,21 +230,42 @@ def _make_xc_pub():
     # "Process only differences" / "Test Changes Only" rows
     # ==========================================================================
 
-    # XC: ACTIVE + Type of change → in scope
+    # XC: ACTIVE + Type of change "Changed" (yellow fill on ToC cell) → in scope
     ws.append(row("XC_DIFF_IN_SCOPE",   acct="ACC001", op1="<=", lim1="0", toc="Changed"))
+    pending_fills.append((ws.max_row, 23, yellow_fill))  # col 23 = Type of change
 
     # XC: Type of change set BUT Exclude Z-Core=X → excluded
     ws.append(row("XC_DIFF_EXCLUDED",   acct="ACC001", op1="<=", lim1="0",
                   toc="Changed", excl_zcore="X"))
+    pending_fills.append((ws.max_row, 23, yellow_fill))
 
     # XC: INACTIVE + Type of change → excluded (step 1: drop INACTIVE)
     ws.append(row("XC_DIFF_INACTIVE",   acct="ACC001", op1="<=", lim1="0",
                   status="INACTIVE", toc="Changed"))
+    pending_fills.append((ws.max_row, 23, yellow_fill))
 
     # XC: Type of change set BUT Category cell is yellow → excluded
     ws.append(row("XC_DIFF_YELLOW_CAT", acct="ACC001", op1="<=", lim1="0",
                   category="Test Cat", toc="Changed"))
     pending_fills.append((ws.max_row, 6, yellow_fill))   # col 6 = Category
+    pending_fills.append((ws.max_row, 23, yellow_fill))  # col 23 = Type of change
+
+    # XC: Type of change "Changed" — yellow fill → in scope; FIP matches → Match
+    ws.append(row("XC_DIFF_YELLOW",     acct="ACC001", op1="<=", lim1="0", toc="Changed"))
+    pending_fills.append((ws.max_row, 23, yellow_fill))
+
+    # XC: Type of change "New x-check or association" — green fill → in scope; FIP matches
+    ws.append(row("XC_DIFF_GREEN",      acct="ACC001", op1="<=", lim1="0",
+                  toc="New x-check or association"))
+    pending_fills.append((ws.max_row, 23, green_fill))
+
+    # XC: Type of change "Removed" — orange fill → EXCLUDED (removed rows not compared)
+    orange_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFF9900")
+    ws.append(row("XC_DIFF_ORANGE",     acct="ACC001", op1="<=", lim1="0", toc="Removed"))
+    pending_fills.append((ws.max_row, 23, orange_fill))
+
+    # XC: No Type of change value (plain white) → EXCLUDED
+    ws.append(row("XC_DIFF_NO_TOC",     acct="ACC001", op1="<=", lim1="0"))
 
     # Conditions: yellow condition cell → collected in differences mode
     ws.append(row("COND_DIFF_YELLOW", app_qtrs="Q1"))
@@ -474,9 +495,20 @@ def _make_fip_xc():
 
     # ── Differences mode ──────────────────────────────────────────────────────
 
-    # XC_DIFF_IN_SCOPE: ACTIVE + Type of change → in selection; FIP matches → Match
+    # XC_DIFF_IN_SCOPE: Type of change=Changed (yellow); in scope; FIP matches → Match
     blocks.append(_fip_block_single("XC_DIFF_IN_SCOPE",
         formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_DIFF_YELLOW: Type of change=Changed (yellow fill); in scope; FIP matches → Match
+    blocks.append(_fip_block_single("XC_DIFF_YELLOW",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_DIFF_GREEN: Type of change=New x-check (green fill); in scope; FIP matches → Match
+    blocks.append(_fip_block_single("XC_DIFF_GREEN",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_DIFF_ORANGE (Removed) and XC_DIFF_NO_TOC (blank) are excluded by filter;
+    # no FIP blocks needed.
 
     # XC_DIFF_EXCLUDED, XC_DIFF_INACTIVE, XC_DIFF_YELLOW_CAT:
     # All have Account No so extract_ebx produces a formula.

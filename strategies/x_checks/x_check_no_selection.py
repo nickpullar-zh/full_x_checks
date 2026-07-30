@@ -61,12 +61,16 @@ def select_x_check_nos(
         status = df_copy[col_status].astype(str).str.strip().str.upper()
         df_copy = df_copy[status != "INACTIVE"]
 
-    # Step 2 — only rows with a non-blank Type of Change become candidates
+    # Step 2 — only rows with a non-blank, non-"Removed" Type of Change become candidates.
+    # "Removed" rows (orange fill) are excluded: the X-Check no longer exists in the
+    # current file and should not be compared against FIP.
     if col_type is None:
         in_scope_xchecks = _ordered_unique_str(df_copy[col_xcheck])
     else:
         toc = df_copy[col_type].astype(str).str.strip()
-        candidates = df_copy[~toc.isin(("", "nan", "None"))]
+        candidates = df_copy[
+            ~toc.isin(("", "nan", "None")) & (toc.str.lower() != "removed")
+        ]
         in_scope_xchecks = _ordered_unique_str(candidates[col_xcheck])
 
     # Step 4 — drop any X-Check that has an 'Exclude Z-Core' = X anywhere

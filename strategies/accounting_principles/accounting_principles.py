@@ -103,7 +103,8 @@ class AccountingPrinciples(BaseStrategy):
             ebx_path  = files["files"].get("X-Checks Publication File")
             ebx_sheet = files["sheet_names"].get("X-Checks Publication File",
                                                  "cross checks all")
-            xchecks = self._select_in_scope_x_checks(cc_df, ebx_path, ebx_sheet)
+            xchecks = self._select_in_scope_x_checks(cc_df, ebx_path, ebx_sheet,
+                                                       event_subset=subset)
             self.log_step(self.log, "EBX",
                           "In-scope X-Check Nos (filtered)", len(xchecks))
         else:
@@ -177,7 +178,8 @@ class AccountingPrinciples(BaseStrategy):
     _COL_X_CHECK   = "X-Check No."
     _YELLOW_RGB    = "FFFF00"
 
-    def _select_in_scope_x_checks(self, cc_df, ebx_path: str, ebx_sheet: str) -> list[str]:
+    def _select_in_scope_x_checks(self, cc_df, ebx_path: str, ebx_sheet: str,
+                                   event_subset: list[str] | None = None) -> list[str]:
         """
         Mirrors v0.4.1 select_x_check_nos: drop INACTIVE rows, keep non-blank
         Type of change, drop X-Checks where Exclude Z-Core = X, drop X-Checks
@@ -261,6 +263,65 @@ class AccountingPrinciples(BaseStrategy):
                 self.log_step(self.log, "EBX",
                               f"Could not read Category fill colour: {e}", 0)
 
+        # Event-column colour exclusion: when process_only_differences=True,
+        # keep only X-Checks where at least one validation event column cell is
+        # yellow (Changed) or green (New). X-Checks with all-white event columns
+        # have not changed in this iteration and are out of scope.
+        _DIFF_YELLOW = {"FFFFFF00", "FFFFC000", "FFFFEB9C"}
+        _DIFF_GREEN  = {"FF92D050", "FF00B050", "FFC6EFCE", "FF70AD47", "FF548235"}
+        coloured_x: set | None = None   # None = "don't filter by colour"
+        if ebx_path and ebx_sheet:
+            try:
+                wb2 = openpyxl.load_workbook(ebx_path, data_only=True)
+                ws2 = wb2[ebx_sheet]
+                # Find header row
+                hdr2 = None
+                for r_idx in range(1, 7):
+                    cells2 = {str(ws2.cell(r_idx, c).value).strip().casefold()
+                              for c in range(1, ws2.max_column + 1)
+                              if ws2.cell(r_idx, c).value is not None}
+                    if {self._COL_X_CHECK.casefold()}.issubset(cells2):
+                        hdr2 = r_idx
+                        break
+                if hdr2 is not None:
+                    # Map column header → column index for event columns
+                    event_col_idxs: list[int] = []
+                    xc_col2 = None
+                    for c in range(1, ws2.max_column + 1):
+                        v = ws2.cell(hdr2, c).value
+                        if v is None:
+                            continue
+                        s = str(v).strip()
+                        if s.casefold() == self._COL_X_CHECK.casefold():
+                            xc_col2 = c
+                        elif s in (event_subset or []):
+                            event_col_idxs.append(c)
+                    if xc_col2 and event_col_idxs:
+                        coloured_x = set()
+                        for r in range(hdr2 + 1, ws2.max_row + 1):
+                            xv = ws2.cell(r, xc_col2).value
+                            if xv is None:
+                                continue
+                            xc_str = str(xv).strip()
+                            for ec in event_col_idxs:
+                                cell2 = ws2.cell(r, ec)
+                                fg = getattr(getattr(cell2, "fill", None), "fgColor", None)
+                                if fg is None:
+                                    continue
+                                if fg.type == "rgb":
+                                    rgb2 = str(fg.rgb).upper()
+                                    if rgb2 in _DIFF_YELLOW or rgb2 in _DIFF_GREEN:
+                                        coloured_x.add(xc_str)
+                                        break
+                                elif fg.type == "indexed":
+                                    if fg.indexed in {13, 27, 36, 10, 17, 35, 42, 50}:
+                                        coloured_x.add(xc_str)
+                                        break
+                wb2.close()
+            except Exception as e:
+                self.log_step(self.log, "EBX",
+                              f"Could not read event-column fill colours: {e}", 0)
+
         out: list[str] = []
         seen: set = set()
         for v in df[col_x].tolist():
@@ -268,6 +329,8 @@ class AccountingPrinciples(BaseStrategy):
             if s in ("", "nan", "None") or s in seen:
                 continue
             if s in excluded_x or s in yellow_x:
+                continue
+            if coloured_x is not None and s not in coloured_x:
                 continue
             seen.add(s)
             out.append(s)

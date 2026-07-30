@@ -110,6 +110,26 @@ chk('AP-09c', 'KEL: AP_MATCH_W Known Exception blank (no mismatch, no annotation
     len(match_row) > 0 and match_row.iloc[0].get('Known Exception', '') in ('', 'nan', None),
     repr(match_row.iloc[0].get('Known Exception', '')) if len(match_row) else 'MISSING')
 
+# ── AP-10: Process only differences — event column colour filter ──────────
+strat2 = AccountingPrinciples(ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG)
+strat2.log = []
+from strategies.accounting_principles.accounting_principles import DEFAULT_EVENTS
+from strategies.accounting_principles.validation_methods import list_all_event_names
+events_in_file = list_all_event_names(str(VM))
+selected_diff = strat2._select_in_scope_x_checks(
+    cc_df, str(F / 'ap_pub.xlsx'), 'cross checks all',
+    event_subset=events_in_file
+)
+chk('AP-10a', 'Diff: AP_DIFF_YELLOW in scope (event col yellow)',
+    'AP_DIFF_YELLOW' in selected_diff, str(selected_diff[:5]))
+chk('AP-10b', 'Diff: AP_DIFF_GREEN in scope (event col green)',
+    'AP_DIFF_GREEN' in selected_diff, str(selected_diff[:5]))
+chk('AP-10c', 'Diff: AP_DIFF_WHITE not in scope (all event cols white)',
+    'AP_DIFF_WHITE' not in selected_diff, str(selected_diff[:5]))
+# AP_MATCH_W has no cell fills — should also be excluded
+chk('AP-10d', 'Diff: AP_MATCH_W not in scope (no event col fill)',
+    'AP_MATCH_W' not in selected_diff, str(selected_diff[:5]))
+
 # ── Summary ───────────────────────────────────────────────────────────────
 passes = sum(1 for r in results if r[2] == 'PASS')
 fails  = sum(1 for r in results if r[2] == 'FAIL')

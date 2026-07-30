@@ -13,10 +13,34 @@ Output workbook (6 sheets + Processing Log):
 """
 
 import pandas as pd
+import openpyxl
 from collections import OrderedDict
 
 from strategies.base_strategy import BaseStrategy
 from task_configs import GROUPING_BY_UPLOAD_CONFIG
+
+# Colours that indicate a row is in scope for "Process only differences".
+# Yellow = Changed, Green = New x-check or association.
+_DIFF_YELLOW_RGBS = {"FFFFFF00", "FFFFC000", "FFFFEB9C"}
+_DIFF_GREEN_RGBS  = {"FF92D050", "FF00B050", "FFC6EFCE", "FF70AD47", "FF548235"}
+
+
+def _cell_rgb(cell) -> str | None:
+    """Return 8-char ARGB hex for a cell's solid fill, or None if no fill."""
+    fg = getattr(getattr(cell, "fill", None), "fgColor", None)
+    if fg is None:
+        return None
+    if fg.type == "rgb":
+        rgb = str(fg.rgb).upper()
+        return rgb if rgb and rgb != "00000000" else None
+    if fg.type == "indexed":
+        _Y = {13, 27, 36}
+        _G = {10, 17, 35, 42, 50}
+        if fg.indexed in _Y:
+            return "FFFFFF00"
+        if fg.indexed in _G:
+            return "FF92D050"
+    return None
 
 
 class GroupingBy(BaseStrategy):
@@ -34,6 +58,21 @@ class GroupingBy(BaseStrategy):
             return False
 
         df_comparison = self._process_compare(df_fip_processed, df_ebx_processed)
+
+        # When "Process only differences" is on, filter to rows whose Grouping By
+        # cell is yellow (Changed) or green (New) in the original publication file.
+        if files.get("process_only_differences", False):
+            ebx_path  = files["files"].get(GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label)
+            ebx_sheet = files["sheet_names"].get(GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label, "cross checks all")
+            in_scope = self._diff_in_scope_xchecks(ebx_path, ebx_sheet)
+            if in_scope is not None:
+                # EBX Key format: "{xcheck}|{grouping_value}" — filter on X-Check part
+                df_comparison = df_comparison[
+                    df_comparison["EBX Key"].str.split("|").str[0].isin(in_scope)
+                ].reset_index(drop=True)
+                self.log_step(self.log, "Comparison",
+                              f"Filtered to in-scope X-Checks (differences mode)",
+                              len(df_comparison))
 
         # Apply known exceptions (annotation only — Result column unchanged)
         result = self._annotate_known_exceptions(
@@ -75,6 +114,59 @@ class GroupingBy(BaseStrategy):
 
         self.write_excel_output(output_path, sheets, self.log, summaries=summaries)
         return True
+
+    # ------------------------------------------------------------------
+    # Differences-mode helper
+    # ------------------------------------------------------------------
+
+    def _diff_in_scope_xchecks(self, filepath: str | None, sheet_name: str) -> set | None:
+        """
+        Returns the set of X-Check Nos whose 'Grouping By' cell is yellow or green
+        (i.e. Changed or New) in the publication file.  Returns None on any error
+        so the caller can skip filtering gracefully.
+        """
+        if not filepath:
+            return None
+        try:
+            wb = openpyxl.load_workbook(filepath, data_only=True, read_only=False)
+            if sheet_name not in wb.sheetnames:
+                wb.close()
+                return None
+            ws = wb[sheet_name]
+
+            # Locate header row and column indices
+            xc_col = gb_col = None
+            for row in ws.iter_rows(min_row=1, max_row=10):
+                for cell in row:
+                    v = str(cell.value).strip() if cell.value else ""
+                    if v.casefold() == "x-check no.":
+                        xc_col = cell.column
+                    elif v.casefold() == "grouping by":
+                        gb_col = cell.column
+                if xc_col and gb_col:
+                    header_row = row[0].row
+                    break
+            else:
+                wb.close()
+                return None
+
+            in_scope: set = set()
+            for row in ws.iter_rows(min_row=header_row + 1):
+                row_dict = {cell.column: cell for cell in row}
+                xc_cell = row_dict.get(xc_col)
+                gb_cell = row_dict.get(gb_col)
+                if not xc_cell or not xc_cell.value:
+                    continue
+                if not gb_cell:
+                    continue
+                rgb = _cell_rgb(gb_cell)
+                if rgb and (rgb in _DIFF_YELLOW_RGBS or rgb in _DIFF_GREEN_RGBS):
+                    in_scope.add(str(xc_cell.value).strip())
+
+            wb.close()
+            return in_scope
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------
     # FIP processing

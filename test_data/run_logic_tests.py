@@ -32,8 +32,12 @@ expected_xc = {
     'XC_ALL_MATCH':         'Match',    # standard full match
     'XC_ALL_MISMATCH':      'MisMatch', # formula AND variables wrong
     'XC_DIFF_EXCLUDED':     'Not Found',# Exclude Z-Core=X → no FIP block
+    'XC_DIFF_GREEN':        'Match',    # Type of change=New (green) → in scope; FIP matches
     'XC_DIFF_INACTIVE':     'Not Found',# INACTIVE → no FIP block
-    'XC_DIFF_IN_SCOPE':     'Match',    # in-scope for selection; FIP matches
+    'XC_DIFF_IN_SCOPE':     'Match',    # Type of change=Changed (yellow) → in scope
+    'XC_DIFF_NO_TOC':       'Not Found',# blank Type of change → no FIP block
+    'XC_DIFF_ORANGE':       'Not Found',# Type of change=Removed → no FIP block
+    'XC_DIFF_YELLOW':       'Match',    # Type of change=Changed (yellow fill) → in scope
     'XC_DIFF_YELLOW_CAT':   'Not Found',# yellow Category → no FIP block
     'XC_EXCL_MATCH':        'Match',    # @2A@ in FIP + excl in EBX → Excl=Match
     'XC_EXCL_MISMATCH':     'Match',    # EBX has excl, FIP has none → Formula=Match, Excl=MisMatch
@@ -87,12 +91,32 @@ chk('FX-06d', 'XC_EXCL_MATCH Formula Match (Excl) = Match',
     r is not None and r['Formula Match (Excl)'] == 'Match',
     r['Formula Match (Excl)'] if r is not None else 'MISSING')
 
-# ── FX-10: X-Check No Selection (differences mode) ────────────────────────────
+# ── FX-10: X-Check No Selection + Comparison filtering (differences mode) ────────
 from strategies.x_checks.x_check_no_selection import select_x_check_nos
+
+# Selection filter (drives .txt file)
 selected = select_x_check_nos(ebx_df, str(F / 'xc_pub.xlsx'), 'cross checks all')
-chk('FX-10a', 'X-Check No Selection: exactly 1 result', len(selected) == 1, str(selected))
+expected_selected = {'XC_DIFF_IN_SCOPE', 'XC_DIFF_YELLOW', 'XC_DIFF_GREEN'}
+chk('FX-10a', 'X-Check No Selection: exactly 3 results', len(selected) == 3, str(selected))
 chk('FX-10b', 'X-Check No Selection: XC_DIFF_IN_SCOPE present', 'XC_DIFF_IN_SCOPE' in selected, str(selected))
-chk('FX-10c', 'X-Check No Selection: XC_DIFF_EXCLUDED absent', 'XC_DIFF_EXCLUDED' not in selected, str(selected))
+chk('FX-10c', 'X-Check No Selection: XC_DIFF_YELLOW present (Changed)', 'XC_DIFF_YELLOW' in selected, str(selected))
+chk('FX-10d', 'X-Check No Selection: XC_DIFF_GREEN present (New)', 'XC_DIFF_GREEN' in selected, str(selected))
+chk('FX-10e', 'X-Check No Selection: XC_DIFF_ORANGE absent (Removed)', 'XC_DIFF_ORANGE' not in selected, str(selected))
+chk('FX-10f', 'X-Check No Selection: XC_DIFF_NO_TOC absent (blank TOC)', 'XC_DIFF_NO_TOC' not in selected, str(selected))
+chk('FX-10g', 'X-Check No Selection: XC_DIFF_EXCLUDED absent (Z-Core)', 'XC_DIFF_EXCLUDED' not in selected, str(selected))
+
+# Comparison sheet filtering (when diff=True, Comparison shows only in-scope rows)
+in_scope_set = set(selected)
+xc_df_diff = xc_df[xc_df['X-Check No.'].isin(in_scope_set)].reset_index(drop=True)
+chk('FX-10h', 'Diff Comparison: XC_DIFF_YELLOW present with Match',
+    'XC_DIFF_YELLOW' in xc_df_diff['X-Check No.'].values and
+    xc_df_diff[xc_df_diff['X-Check No.'] == 'XC_DIFF_YELLOW'].iloc[0]['Formula Match'] == 'Match', '')
+chk('FX-10i', 'Diff Comparison: XC_DIFF_GREEN present with Match',
+    'XC_DIFF_GREEN' in xc_df_diff['X-Check No.'].values and
+    xc_df_diff[xc_df_diff['X-Check No.'] == 'XC_DIFF_GREEN'].iloc[0]['Formula Match'] == 'Match', '')
+chk('FX-10j', 'Diff Comparison: XC_DIFF_ORANGE absent', 'XC_DIFF_ORANGE' not in xc_df_diff['X-Check No.'].values, '')
+chk('FX-10k', 'Diff Comparison: XC_DIFF_NO_TOC absent', 'XC_DIFF_NO_TOC' not in xc_df_diff['X-Check No.'].values, '')
+chk('FX-10l', 'Diff Comparison: XC_ALL_MATCH absent (no Type of change)', 'XC_ALL_MATCH' not in xc_df_diff['X-Check No.'].values, '')
 
 # ── FX-12: Grouping By comparison ─────────────────────────────────────────────
 from strategies.grouping_by.grouping_by import GroupingBy

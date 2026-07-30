@@ -33,7 +33,6 @@ The second row's key (GB_DEDUP|ITEM_B) never appears in the Comparison sheet.
 
 import sys
 from pathlib import Path
-
 import openpyxl
 
 OUT = Path(__file__).parent / "fixtures" / "gb"
@@ -100,6 +99,18 @@ def _make_gb_pub():
     ws.append(row("GB_KEL_MATCH",   gb="ITEM_A"))  # KEL entry matches → annotated
     ws.append(row("GB_KEL_NO_MATCH",gb="ITEM_A"))  # KEL entry exists but wrong key → no annotation
 
+    # Process only differences: colour on Grouping By cell drives inclusion
+    ws.append(row("GB_DIFF_YELLOW", gb="ITEM_A"))  # yellow Grouping By cell → in scope
+    ws.append(row("GB_DIFF_GREEN",  gb="ITEM_A"))  # green Grouping By cell → in scope
+    ws.append(row("GB_DIFF_WHITE",  gb="ITEM_A"))  # white Grouping By cell → excluded
+
+    # Apply fills to Grouping By column (col B = index 2)
+    yellow_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFFFF00")
+    green_fill  = openpyxl.styles.PatternFill("solid", fgColor="FF92D050")
+    total_rows = ws.max_row
+    ws.cell(row=total_rows - 2, column=2).fill = yellow_fill  # GB_DIFF_YELLOW
+    ws.cell(row=total_rows - 1, column=2).fill = green_fill   # GB_DIFF_GREEN
+
     wb.save(OUT / "gb_pub.xlsx")
     print("  wrote gb_pub.xlsx")
 
@@ -128,6 +139,11 @@ def _make_gb_fip():
 
             # GB_MULTI: only ITEM_A has a FIP entry, ITEM_B does not
             ["GB_MULTI",      "Multi grouping A",   "GB_FIP_FIELD"],
+
+            # GB_DIFF_YELLOW / GB_DIFF_GREEN: in scope when diff=True; FIP matches → Matched
+            ["GB_DIFF_YELLOW", "Diff yellow match",  "GB_FIP_FIELD"],
+            ["GB_DIFF_GREEN",  "Diff green match",   "GB_FIP_FIELD"],
+            # GB_DIFF_WHITE: no FIP entry needed (excluded by diff filter)
 
             # GB_IGNORE_FIELD: Field name maps to "ignore" → this row dropped during FIP processing
             ["GB_IGNORE_FIELD","Ignore field test",  "GB_IGNORE_FIELD_FIP"],

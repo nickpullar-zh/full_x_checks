@@ -55,16 +55,40 @@ chk('GB-05a', 'GB_DEDUP|ITEM_A present (first row kept)',   present('GB_DEDUP|IT
 chk('GB-05b', 'GB_DEDUP|ITEM_B absent (second row dropped)', not present('GB_DEDUP|ITEM_B'), '')
 
 # ── GB-06: FIP filtering — mapped to "ignore" ─────────────────────────────
-chk('GB-06', 'GB_IGNORE_FIELD|ITEM_A = Not in FIP (FIP field mapped to ignore → dropped)', result('GB_IGNORE_FIELD|ITEM_A') == 'Not in FIP', result('GB_IGNORE_FIELD|ITEM_A'))
+chk('GB-06', 'GB_IGNORE_FIELD|ITEM_A = Not in FIP (FIP field mapped to ignore - dropped)', result('GB_IGNORE_FIELD|ITEM_A') == 'Not in FIP', result('GB_IGNORE_FIELD|ITEM_A'))
 
 # ── GB-07: FIP filtering — field name not in mapping ──────────────────────
-chk('GB-07', 'GB_UNMAPPED|ITEM_A = Not in FIP (FIP field not in mapping → dropped)', result('GB_UNMAPPED|ITEM_A') == 'Not in FIP', result('GB_UNMAPPED|ITEM_A'))
+chk('GB-07', 'GB_UNMAPPED|ITEM_A = Not in FIP (FIP field not in mapping - dropped)', result('GB_UNMAPPED|ITEM_A') == 'Not in FIP', result('GB_UNMAPPED|ITEM_A'))
 
 # ── GB-08: FIP filtering — blank ValidRule ────────────────────────────────
-chk('GB-08', 'GB_BLANK_VR|ITEM_A = Not in FIP (FIP row with blank ValidRule → dropped)', result('GB_BLANK_VR|ITEM_A') == 'Not in FIP', result('GB_BLANK_VR|ITEM_A'))
+chk('GB-08', 'GB_BLANK_VR|ITEM_A = Not in FIP (FIP row with blank ValidRule - dropped)', result('GB_BLANK_VR|ITEM_A') == 'Not in FIP', result('GB_BLANK_VR|ITEM_A'))
 
-# ── GB-09: Total row count ─────────────────────────────────────────────────
-chk('GB-09', 'Comparison row count = 11', len(df_cmp) == 11, f'got {len(df_cmp)}')
+# ── GB-09: Total row count (full file) ────────────────────────────────────
+chk('GB-09', 'Full file Comparison row count = 14', len(df_cmp) == 14, f'got {len(df_cmp)}')
+
+# ── GB-11: Process only differences — Grouping By colour filter ───────────
+gb2 = GroupingBy(GROUPING_BY_UPLOAD_CONFIG)
+gb2.log = []
+in_scope = gb2._diff_in_scope_xchecks(str(F / 'gb_pub.xlsx'), 'cross checks all')
+chk('GB-11a', 'Diff: GB_DIFF_YELLOW in scope (yellow Grouping By cell)',
+    in_scope is not None and 'GB_DIFF_YELLOW' in in_scope, str(in_scope))
+chk('GB-11b', 'Diff: GB_DIFF_GREEN in scope (green Grouping By cell)',
+    in_scope is not None and 'GB_DIFF_GREEN' in in_scope, str(in_scope))
+chk('GB-11c', 'Diff: GB_DIFF_WHITE not in scope (white Grouping By cell)',
+    in_scope is not None and 'GB_DIFF_WHITE' not in in_scope, str(in_scope))
+chk('GB-11d', 'Diff: GB_MATCHED not in scope (no colour)',
+    in_scope is not None and 'GB_MATCHED' not in in_scope, str(in_scope))
+
+# Comparison filtered to in-scope
+df_cmp_diff = df_cmp[df_cmp['EBX Key'].str.split('|').str[0].isin(in_scope or [])].reset_index(drop=True)
+chk('GB-11e', 'Diff Comparison: GB_DIFF_YELLOW|ITEM_A present with Matched',
+    'GB_DIFF_YELLOW|ITEM_A' in df_cmp_diff['EBX Key'].values and
+    df_cmp_diff[df_cmp_diff['EBX Key'] == 'GB_DIFF_YELLOW|ITEM_A'].iloc[0]['Result'] == 'Matched', '')
+chk('GB-11f', 'Diff Comparison: GB_DIFF_GREEN|ITEM_A present with Matched',
+    'GB_DIFF_GREEN|ITEM_A' in df_cmp_diff['EBX Key'].values and
+    df_cmp_diff[df_cmp_diff['EBX Key'] == 'GB_DIFF_GREEN|ITEM_A'].iloc[0]['Result'] == 'Matched', '')
+chk('GB-11g', 'Diff Comparison: GB_DIFF_WHITE|ITEM_A absent',
+    'GB_DIFF_WHITE|ITEM_A' not in df_cmp_diff['EBX Key'].values, '')
 
 # ── GB-10: Known Exception annotation ─────────────────────────────────────
 from strategies.grouping_by.grouping_by import GroupingBy as _GB
