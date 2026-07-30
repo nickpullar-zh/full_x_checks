@@ -255,7 +255,7 @@ class TaskSelectorUI:
             text=f"v{__version__}",
             font=("Zurich Sans", 8),
             foreground="#999999",
-        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 0))
+        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(14, 0))
 
     def _on_settings(self):
         menu = tk.Menu(self.root, tearoff=0)

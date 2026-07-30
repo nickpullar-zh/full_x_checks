@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.49 — Move version label down by its own height (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py` + `file_upload_ui.py`: version label top padding increased to 14px (approx one label height) to move it down. | DONE | |
+| 2 | `version.py`: bump to `1.0.49`. | DONE | |
+
 ### v1.0.48 — Version label in grey at bottom-left of every screen (2026-07-30)
 
 | # | Change | Status | Notes |

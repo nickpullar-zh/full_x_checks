@@ -359,7 +359,7 @@ class FileUploadUI:
             text=f"v{__version__}",
             font=("Zurich Sans", 8),
             foreground="#999999",
-        ).grid(row=current_row, column=0, columnspan=3, sticky="w", pady=(0, 4))
+        ).grid(row=current_row, column=0, columnspan=3, sticky="w", pady=(14, 4))
 
         # ==========================================
         # Pass 2 — Measure hint labels AFTER render
