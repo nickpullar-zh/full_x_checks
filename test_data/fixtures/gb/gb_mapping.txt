@@ -1,0 +1,3 @@
+FIP Data,EBX item
+GB_FIP_FIELD,ITEM_A
+GB_IGNORE_FIELD_FIP,ignore

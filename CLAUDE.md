@@ -58,6 +58,18 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.50 — Logic test fixtures and test suites for GB, AP, and Conditions (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_gb_fixtures.py`: generates `test_data/fixtures/gb/` — 11-row EBX pub, FIP VALFLDGR, mapping file, KEL. Covers: standard match/not-in-FIP, Reference X-Check override, multi-value Grouping By, deduplication, mapping-to-ignore, unmapped field, blank ValidRule, KEL annotation, KEL wrong fingerprint. | DONE | |
+| 2 | `test_data/generate_ap_fixtures.py`: generates `test_data/fixtures/ap/` — EBX pub, FIP VALMSG, KEL. Covers: Warning match/mismatch, Both severity (w and e), grey binding fallback, unknown method skipped, blank event col skipped, raw ZQ9_VALMSG Key construction, all 4 selection filters, KEL annotation. Uses real validation_methods.xlsx. | DONE | |
+| 3 | `test_data/generate_cond_fixtures.py`: generates `test_data/fixtures/cond/` — EBX pub, FIP VALMETH, KEL. Covers: all 5 CONDITION_COLS, Reference X-Check override, Not Matched, multi-col, differences mode (yellow+green+white), FIP column renaming, KEL annotation. Documents that Not Matched rows cannot be KEL-annotated (blank FIP Data). | DONE | |
+| 4 | `test_data/run_gb_logic_tests.py`: 15 assertions — all pass. | DONE | |
+| 5 | `test_data/run_ap_logic_tests.py`: 22 assertions — all pass. | DONE | |
+| 6 | `test_data/run_cond_logic_tests.py`: 26 assertions — all pass. | DONE | |
+| 7 | `version.py`: bump to `1.0.50`. | DONE | |
+
 ### v1.0.49 — Move version label down by its own height (2026-07-30)
 
 | # | Change | Status | Notes |
