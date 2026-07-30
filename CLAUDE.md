@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.53 — File dialogs open in EXE folder by default (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add `_exe_dir()` helper; pass `initialdir=_exe_dir()` to `askopenfilename` and `askdirectory`. | DONE | |
+| 2 | `known_exception_builder.py`: same — add `_exe_dir()` and pass to `asksaveasfilename` and `askopenfilename`. | DONE | |
+| 3 | `version.py`: bump to `1.0.53`. | DONE | |
+
 ### v1.0.52 — Fix "Process only differences" filtering across all four strategies (2026-07-30)
 
 | # | Change | Status | Notes |

@@ -1,6 +1,14 @@
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+
+
+def _exe_dir() -> str:
+    """Return the folder the EXE (or script) lives in — used as initialdir for file dialogs."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
 
@@ -436,7 +444,8 @@ class FileUploadUI:
         """Opens a file picker for a specific field."""
         filepath = filedialog.askopenfilename(
             title=f"Select {field.label}",
-            filetypes=field.file_types + [("All Files", "*.*")]
+            filetypes=field.file_types + [("All Files", "*.*")],
+            initialdir=_exe_dir(),
         )
         if filepath:
             path_var.set(filepath)
@@ -465,7 +474,8 @@ class FileUploadUI:
     def _browse_directory(self):
         """Opens a directory picker for the output location."""
         directory = filedialog.askdirectory(
-            title="Select Output Directory"
+            title="Select Output Directory",
+            initialdir=_exe_dir(),
         )
         if directory:
             self.output_directory = directory  # ← Store as plain string
