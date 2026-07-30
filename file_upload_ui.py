@@ -227,7 +227,7 @@ class FileUploadUI:
             ttk.Label(
                 main_frame,
                 text=label_text,
-                wraplength=150,
+                wraplength=200,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
@@ -303,7 +303,7 @@ class FileUploadUI:
             ttk.Label(
                 main_frame,
                 text="Output Directory *",
-                wraplength=150,
+                wraplength=200,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")

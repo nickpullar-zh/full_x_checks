@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.63 — Shorten button label; fix field label wrapping (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: "Return to Strategy Selection" → "Return to Selection" (fits the button). | DONE | |
+| 2 | `file_upload_ui.py`: field label wraplength 150 → 200 so "X-Checks Publication File *" fits on one line. | DONE | |
+| 3 | `version.py`: bump to `1.0.63`. | DONE | |
+
 ### v1.0.62 — Fix "Start" to "Proceed" in both test plan generators (2026-07-30)
 
 | # | Change | Status | Notes |

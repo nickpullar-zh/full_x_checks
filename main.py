@@ -316,7 +316,7 @@ class TaskSelectorUI:
                         "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )
-                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Selection"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
                 elif not dialog.is_stopped():
                     self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
@@ -381,7 +381,7 @@ class TaskSelectorUI:
                         "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )  # noqa: datetime imported at module level
-                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Selection"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
                 elif not dialog.is_stopped():
                     self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
@@ -391,7 +391,7 @@ class TaskSelectorUI:
                 error_msg = traceback.format_exc()
                 print(f"  [ERROR] Unhandled exception in processing thread:\n{error_msg}")
                 dialog.append_entry("ERROR", f"Unhandled exception: {e}")
-                self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
+                self.root.after(0, lambda: dialog.action_btn.config(text="Return to Selection"))
                 self.root.after(0, lambda: setattr(dialog, "_stopped", True))
 
         strategy = strategy_class(config)
