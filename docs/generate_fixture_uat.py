@@ -124,12 +124,13 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
         "Load the files above into X-Checks and click Start.",
-        "Run completes. Comparison sheet contains exactly 10 rows. "
+        "Run completes. Comparison sheet contains exactly 11 rows. "
         "Formula Match column values:\n\n"
         "  XC_ALL_MATCH          → Match\n"
         "  XC_DIFF_EXCLUDED      → Not Found  (EBX row present, no FIP block)\n"
         "  XC_DIFF_IN_SCOPE      → Match  (also in-scope for differences mode)\n"
         "  XC_FORMULA_MISMATCH   → MisMatch\n"
+        "  XC_KEL_MISMATCH       → MisMatch  (without KEL; annotated when KEL supplied)\n"
         "  XC_NOT_IN_EBX         → Not Found\n"
         "  XC_NOT_IN_FIP         → Not Found\n"
         "  XC_REORDER_MATCH      → MisMatch  (known edge case in reorder logic)\n"
@@ -137,8 +138,7 @@ TEST_CASES = [
         "  XC_TOM_CORRECTION     → Match  (FIP 'TOM' normalised to 'ToM')\n"
         "  XC_VARIABLE_MISMATCH  → Match\n\n"
         "Note: XC_DIFF_EXCLUDED appears in the Comparison sheet (Not Found) even "
-        "though it is excluded from the X-Check No Selection .txt output — the "
-        "Comparison always runs against the full EBX file.",
+        "though it is excluded from the X-Check No Selection .txt output.",
     ),
     (
         "FX-06", "X-Checks — Variables Match", "Logic",
@@ -166,12 +166,13 @@ TEST_CASES = [
     ),
     (
         "FX-09", "X-Checks — Known Exception annotation", "Logic",
-        f"Same files as FX-05. Known Exception List: "
-        f"test_data\\20260721 Known Exception List.xlsx  (sheet: X-Checks).",
-        "Add the Known Exception List and run.",
-        "Run completes. Progress log references the Known Exception List. "
-        "Any row whose fingerprint matches an exception entry has a 'Known Exception' "
-        "column populated with the Reason text and a blue cell fill.",
+        f"Same files as FX-05. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: X-Checks).\n"
+        "The KEL contains one entry for XC_KEL_MISMATCH.",
+        "Add the Known Exception List file and run.",
+        "Run completes. Progress log shows 'Known exceptions loaded  (1)'.\n"
+        "XC_KEL_MISMATCH row: Formula Match = MisMatch (unchanged), "
+        "'Known Exception' column = 'Test fixture — expected mismatch' with blue fill.\n"
+        "All other rows: 'Known Exception' column is blank.",
     ),
 
     (
@@ -347,7 +348,7 @@ TEST_CASES = [
         f"• FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    10 rows\n"
+        "  XC — Comparison    11 rows\n"
         "  GB — Comparison    2 rows\n"
         "  AP — Comparison    2 rows\n"
         "  Cond — Comparison  6 rows\n\n"

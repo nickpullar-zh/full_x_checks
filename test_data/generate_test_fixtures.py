@@ -118,6 +118,12 @@ def _make_xc_pub():
     # XC_ALL_MATCH: EBX → VAL_YTD(ACC001)<=0, FIP matches exactly
     ws.append(row("XC_ALL_MATCH", acct="ACC001", op1="<=", lim1="0"))
 
+    # XC_KEL_MISMATCH: formula mismatch (FIP has ACC999 instead of ACC001).
+    # Without KEL → MisMatch. With KEL → MisMatch + Known Exception reason.
+    # Same EBX formula pattern as XC_FORMULA_MISMATCH but distinct ID so
+    # the KEL entry can be keyed specifically to this X-Check.
+    ws.append(row("XC_KEL_MISMATCH", acct="ACC001", op1="<=", lim1="0"))
+
     # XC_FORMULA_MISMATCH: EBX → VAL_YTD(ACC001)<=0; FIP has VAL_YTD(ACC999)<=0
     ws.append(row("XC_FORMULA_MISMATCH", acct="ACC001", op1="<=", lim1="0"))
 
@@ -319,6 +325,15 @@ def _make_fip_xc():
         fs_accounts=["ACC001"],
     ))
 
+    # XC_KEL_MISMATCH: FIP formula uses ACC999 → MisMatch without KEL.
+    # With KEL the row is annotated with the Reason but result stays MisMatch.
+    blocks.append(_fip_block_single(
+        "XC_KEL_MISMATCH",
+        formula="VAL_YTD(ACC999)<=0",
+        var_name="ACC999",
+        fs_accounts=["ACC999"],
+    ))
+
     # XC_FORMULA_MISMATCH: formula uses ACC999 (EBX expects ACC001) → all MisMatch
     blocks.append(_fip_block_single(
         "XC_FORMULA_MISMATCH",
@@ -502,6 +517,71 @@ def _make_fip_valmeth():
 
 
 # ---------------------------------------------------------------------------
+# 8. Known Exception List
+# ---------------------------------------------------------------------------
+
+def _make_known_exception_list():
+    """
+    Build known_exception_list.xlsx with one entry for XC_KEL_MISMATCH.
+
+    The X-Checks fingerprint is 8 columns: X-Check No., EBX Formula,
+    FIP Formula, EBX Formula (Excl), FIP Formula (Excl), EBX Variables,
+    FIP Variables, FIP Variable (Builder).
+
+    We run the comparison against the already-written fixtures to extract
+    the exact fingerprint values rather than hard-coding them.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(OUT.parent.parent))
+    import pandas as pd
+    from strategies.x_checks.ebx_extraction import extract_ebx
+    from strategies.x_checks.fip_extraction import extract_fip
+    from strategies.x_checks.compare import compare as xc_compare
+
+    ebx_df = pd.read_excel(OUT / 'xc_pub.xlsx', sheet_name='cross checks all')
+    ebx_results = extract_ebx(ebx_df)
+    xc_list = sorted(set(str(x) for x in ebx_df['X-Check No.'].tolist()
+                         if str(x) not in ('nan', '', 'None')))
+    fip_text = (OUT / 'fip_xc.txt').read_text(encoding='utf-8')
+    fip_results = extract_fip(fip_text, xc_list)
+    xc_df = pd.DataFrame(xc_compare(ebx_results, fip_results))
+
+    kel_row = xc_df[xc_df['X-Check No.'] == 'XC_KEL_MISMATCH'].iloc[0]
+
+    fingerprint_cols = [
+        "X-Check No.", "EBX Formula", "FIP Formula",
+        "EBX Formula (Excl)", "FIP Formula (Excl)",
+        "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
+    ]
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+
+    for sheet_name in ["X-Checks", "Grouping By", "Accounting Principles", "Conditions"]:
+        ws = wb.create_sheet(sheet_name)
+        if sheet_name == "X-Checks":
+            headers = fingerprint_cols + ["Reason", "Added By", "Date Added",
+                                          "Resolution Status", "Resolution Notes"]
+            ws.append(headers)
+            # Row 2: guidance row (always skipped by _load_known_exceptions)
+            ws.append(["Guidance: do not delete this row"] + [""] * (len(headers) - 1))
+            # Row 3: the actual exception entry
+            data_row = [kel_row[c] for c in fingerprint_cols]
+            data_row += ["Test fixture — expected mismatch", "fixture_generator",
+                         "2026-07-30", "Open", ""]
+            ws.append(data_row)
+        else:
+            ws.append(["(no entries)"])
+
+    # Instructions sheet
+    ws_inst = wb.create_sheet("Instructions")
+    ws_inst.append(["This file is a test fixture. Row 2 of each strategy sheet is a guidance row skipped by the app."])
+
+    wb.save(OUT / "known_exception_list.xlsx")
+    print("  wrote known_exception_list.xlsx")
+
+
+# ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
 
@@ -514,4 +594,5 @@ if __name__ == "__main__":
     _make_validation_methods()
     _make_fip_valmsg()
     _make_fip_valmeth()
+    _make_known_exception_list()   # must run after xc_pub and fip_xc are written
     print("Done.")

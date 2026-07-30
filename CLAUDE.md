@@ -58,6 +58,16 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.39 — Add XC_KEL_MISMATCH fixture and KEL logic test (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_test_fixtures.py`: add `XC_KEL_MISMATCH` EBX row and FIP block (formula mismatch using ACC999); add `_make_known_exception_list()` which runs the comparison after other fixtures are written to extract exact fingerprint values, then builds `known_exception_list.xlsx` with one X-Checks entry keyed to XC_KEL_MISMATCH. | DONE | |
+| 2 | `test_data/run_logic_tests.py`: add FX-09a/b/c — verify XC_KEL_MISMATCH stays MisMatch, gets reason populated, and non-mismatch rows have blank Known Exception column. All 38 assertions pass. | DONE | |
+| 3 | `docs/generate_fixture_uat.py`: update FX-09 to reference `known_exception_list.xlsx` fixture; update FX-05 and FX-25 row counts to 11. | DONE | |
+| 4 | `docs/20260730 Fixture_UAT_v1.0.38 Test Plan.xlsx`: generated output. | DONE | |
+| 5 | `version.py`: bump to `1.0.39`. | DONE | |
+
 ### v1.0.38 — Logic tests 34/34 pass; fix X-Checks row count to 10 (2026-07-28)
 
 | # | Change | Status | Notes |

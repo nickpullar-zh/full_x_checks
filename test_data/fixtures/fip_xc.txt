@@ -10,6 +10,18 @@ ACC001
 |-Segment @28@ * |
 -|
 
+XC_KEL_MISMATCH XC_KEL_MISMATCH XC_KEL_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC999)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC999
+|
+| 1 | 2 | 3 | FS Account | ACC999 |
+-|
+|-Segment @28@ * |
+-|
+
 XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH test description
 |Formula String |
 VAL_YTD(ACC999)<=0

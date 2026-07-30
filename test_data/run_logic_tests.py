@@ -5,6 +5,7 @@ Run from repo root: python test_data/run_logic_tests.py
 import sys, pandas as pd
 sys.path.insert(0, '.')
 from pathlib import Path
+from strategies.x_checks.x_checks import XChecks
 
 F = Path('test_data/fixtures')
 results = []
@@ -31,6 +32,7 @@ expected_xc = {
     'XC_DIFF_EXCLUDED':     'Not Found',  # has Account No in EBX but no FIP block
     'XC_DIFF_IN_SCOPE':     'Match',
     'XC_FORMULA_MISMATCH':  'MisMatch',
+    'XC_KEL_MISMATCH':      'MisMatch',   # MisMatch without KEL; annotated with reason when KEL supplied
     'XC_NOT_IN_EBX':        'Not Found',
     'XC_NOT_IN_FIP':        'Not Found',
     'XC_REORDER_MATCH':     'MisMatch',
@@ -38,7 +40,7 @@ expected_xc = {
     'XC_TOM_CORRECTION':    'Match',
     'XC_VARIABLE_MISMATCH': 'Match',
 }
-chk('FX-05a', 'X-Checks row count = 10', len(xc_df) == 10, f'got {len(xc_df)}')
+chk('FX-05a', 'X-Checks row count = 11', len(xc_df) == 11, f'got {len(xc_df)}')
 for xc_id, exp in expected_xc.items():
     rows = xc_df[xc_df['X-Check No.'] == xc_id]
     got = rows.iloc[0]['Formula Match'] if len(rows) else 'MISSING'
@@ -139,8 +141,40 @@ chk('FX-21d', 'Conditions diff COND_DIFF_WHITE not collected',
     'COND_DIFF_WHITE|Q1' not in cond_diff['EBX Data'].values, '')
 
 # ── FX-25: Full Run row counts ────────────────────────────────────────────────
-chk('FX-25', 'Full Run row counts: XC=10 GB=2 AP=2 Cond=7',
-    len(xc_df) == 10 and len(df_gb) == 2 and len(ap_df) == 2 and len(cond_full) == 7,
+# ── FX-09: X-Checks — Known Exception annotation ─────────────────────────────
+from strategies.base_strategy import BaseStrategy
+from unittest.mock import MagicMock
+from task_configs import X_CHECKS_UPLOAD_CONFIG
+
+xc_strategy = XChecks(X_CHECKS_UPLOAD_CONFIG)
+xc_strategy.log = []
+kel_path = str(F / 'known_exception_list.xlsx')
+
+# Annotate the comparison df with the KEL
+annotated = xc_strategy._annotate_known_exceptions(
+    xc_df.copy(), kel_path, sheet_name='X-Checks',
+    fingerprint_columns=[
+        "X-Check No.", "EBX Formula", "FIP Formula",
+        "EBX Formula (Excl)", "FIP Formula (Excl)",
+        "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
+    ]
+)
+kel_row = annotated[annotated['X-Check No.'] == 'XC_KEL_MISMATCH']
+kel_val = kel_row.iloc[0]['Known Exception'] if len(kel_row) else 'MISSING'
+kel_formula = kel_row.iloc[0]['Formula Match'] if len(kel_row) else 'MISSING'
+
+chk('FX-09a', 'KEL: XC_KEL_MISMATCH Formula Match still = MisMatch',
+    kel_formula == 'MisMatch', kel_formula)
+chk('FX-09b', 'KEL: XC_KEL_MISMATCH Known Exception reason populated',
+    bool(kel_val) and kel_val not in ('', 'nan', 'MISSING'),
+    repr(kel_val))
+chk('FX-09c', 'KEL: XC_ALL_MATCH Known Exception is blank (not a mismatch)',
+    annotated[annotated['X-Check No.'] == 'XC_ALL_MATCH'].iloc[0].get('Known Exception', '') == '',
+    '')
+
+# ── FX-25: Full Run row counts ────────────────────────────────────────────────
+chk('FX-25', 'Full Run row counts: XC=11 GB=2 AP=2 Cond=7',
+    len(xc_df) == 11 and len(df_gb) == 2 and len(ap_df) == 2 and len(cond_full) == 7,
     f'XC={len(xc_df)} GB={len(df_gb)} AP={len(ap_df)} Cond={len(cond_full)}')
 
 # ── Summary ───────────────────────────────────────────────────────────────────
