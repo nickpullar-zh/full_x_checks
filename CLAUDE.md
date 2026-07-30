@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.58 — Fixture UAT plan expanded: GB/AP/Conditions each list every row with expected output (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: GB, AP, and Conditions sections rewritten to the same level of rigour as X-Checks. Each now has dedicated test cases covering: full comparison output (every row named with exact EBX Key/Result or X-Check/Event/FIP/Actual/Match), differences mode, KEL annotation, output structure, colour coding. Full Run row counts updated to reflect actual fixture outputs (GB=14, AP=11, Cond=15). Total 44 test cases (17 Logic, 27 Whole App). | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.57 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.58`. | DONE | |
+
 ### v1.0.57 — "Close" after success returns to Strategy Selection, not exit (2026-07-30)
 
 | # | Change | Status | Notes |

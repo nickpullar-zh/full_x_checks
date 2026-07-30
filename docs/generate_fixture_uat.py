@@ -237,39 +237,66 @@ TEST_CASES = [
         "4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FX-12", "Grouping By — comparison output", "Logic",
-        f"FIP File (ZQ9_VALFLDGR): {F}\\fip_ZQ9_VALFLDGR.xlsx  (sheet: Sheet1)\n"
-        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
-        f"Mapping File: {F}\\mapping.txt",
+        "FX-12", "Grouping By — full comparison output (all 14 rows)", "Logic",
+        f"FIP File (ZQ9_VALFLDGR): fixtures\\gb\\fip_ZQ9_VALFLDGR.xlsx  (sheet: Sheet1)\n"
+        f"X-Checks Publication File: fixtures\\gb\\gb_pub.xlsx  (sheet: cross checks all)\n"
+        f"Mapping File: fixtures\\gb\\gb_mapping.txt\n"
+        "'Process only differences' unchecked.",
         "Load the files above into Grouping By and click Start.",
-        "Run completes. Comparison sheet contains exactly 2 rows:\n\n"
-        "  GB_MATCHED|GB_GROUPING_ITEM    → Matched\n"
-        "  GB_NOT_IN_FIP|GB_GROUPING_ITEM → Not in FIP",
+        "Comparison sheet contains exactly 14 rows. Verify each row by EBX Key and Result:\n\n"
+        "  GB_BLANK_VR|ITEM_A    Not in FIP  (FIP row has blank ValidRule - dropped during FIP processing)\n"
+        "  GB_DEDUP|ITEM_A       Not in FIP  (first of two identical X-Check rows; no FIP entry)\n"
+        "  GB_DIFF_GREEN|ITEM_A  Matched     (Grouping By cell is green - in scope for diff mode)\n"
+        "  GB_DIFF_WHITE|ITEM_A  Not in FIP  (Grouping By cell is white - out of scope for diff mode)\n"
+        "  GB_DIFF_YELLOW|ITEM_A Matched     (Grouping By cell is yellow - in scope for diff mode)\n"
+        "  GB_IGNORE_FIELD|ITEM_A Not in FIP (FIP field 'GB_IGNORE_FIELD_FIP' maps to 'ignore' - dropped)\n"
+        "  GB_KEL_MATCH|ITEM_A   Not in FIP  (KEL entry with correct fingerprint - annotated)\n"
+        "  GB_KEL_NO_MATCH|ITEM_A Not in FIP (KEL entry exists but wrong EBX Key - not annotated)\n"
+        "  GB_MATCHED|ITEM_A     Matched     (standard match: ValidRule=GB_MATCHED maps via GB_FIP_FIELD to ITEM_A)\n"
+        "  GB_MULTI|ITEM_A       Matched     (first of two comma-separated Grouping By values)\n"
+        "  GB_MULTI|ITEM_B       Not in FIP  (second comma-separated value; no FIP entry for ITEM_B)\n"
+        "  GB_NOT_IN_FIP|ITEM_A  Not in FIP  (EBX key present; no matching FIP row)\n"
+        "  GB_UNMAPPED|ITEM_A    Not in FIP  (FIP field 'UNMAPPED_FIELD' not in mapping file - dropped)\n"
+        "  REF_BASE|ITEM_A       Matched     (GB_REF_XC_KEY row: 'Reference X-Check (Condition)'=REF_BASE\n"
+        "                                     overrides X-Check No. as base key; FIP has REF_BASE|ITEM_A)\n\n"
+        "Key logic to verify:\n"
+        "- GB_DEDUP second row (Grouping By=ITEM_B) never appears: deduplication keeps only the FIRST row per X-Check No.\n"
+        "- GB_IGNORE_FIELD and GB_UNMAPPED test FIP-side filtering: if a field is mapped to 'ignore' or is absent\n"
+        "  from the mapping file, the FIP row is dropped and the EBX key becomes Not in FIP.\n"
+        "- GB_BLANK_VR tests that FIP rows with a blank ValidRule are dropped during processing.\n"
+        "- REF_BASE row confirms that the Reference X-Check (Condition) column replaces X-Check No. as the key prefix.",
     ),
     (
-        "FX-13", "Grouping By — output structure", "Whole App",
+        "FX-13", "Grouping By — Known Exception annotation", "Logic",
+        f"Same files as FX-12. Known Exception List: fixtures\\gb\\gb_kel.xlsx  (sheet: Grouping By).\n"
+        "KEL contains 2 entries: correct fingerprint for GB_KEL_MATCH|ITEM_A; wrong key for GB_KEL_NO_MATCH.",
+        "Add the Known Exception List and run.",
+        "GB_KEL_MATCH|ITEM_A: Result = Not in FIP (unchanged); Known Exception column populated with reason text.\n"
+        "GB_KEL_NO_MATCH|ITEM_A: Result = Not in FIP; Known Exception column BLANK (wrong fingerprint - no match).\n"
+        "All other rows: Known Exception column blank.",
+    ),
+    (
+        "FX-14", "Grouping By — differences mode (Grouping By cell colour)", "Logic",
+        f"Same files as FX-12. 'Process only differences' checked.",
+        "Check 'Process only differences'. Run.",
+        "Comparison sheet shows ONLY rows whose Grouping By cell is yellow or green:\n\n"
+        "  GB_DIFF_GREEN|ITEM_A  Matched  (Grouping By cell green - New x-check)\n"
+        "  GB_DIFF_YELLOW|ITEM_A Matched  (Grouping By cell yellow - Changed)\n\n"
+        "All other rows absent: their Grouping By cells are plain white (unchanged).\n"
+        "Confirm: GB_MATCHED, GB_NOT_IN_FIP, GB_MULTI, REF_BASE etc. do NOT appear.",
+    ),
+    (
+        "FX-15", "Grouping By — output structure and colour coding", "Whole App",
         "FX-12 complete. Output workbook open.",
-        "Check the sheet tabs.",
-        "Workbook contains:\n"
-        "1. Mapping File\n"
-        "2. FIP - Original\n"
-        "3. FIP - Processed\n"
-        "4. EBX - Original\n"
-        "5. EBX - Processed\n"
-        "6. Comparison\n"
-        "7. Processing Log",
-    ),
-    (
-        "FX-14", "Grouping By — colour coding", "Whole App",
-        "FX-12 output open, Comparison sheet.",
-        "Review the Result column fill colours.",
-        "'Matched' → green fill.\n"
-        "'Not in FIP' → orange fill.",
+        "Check the sheet tabs and Comparison fill colours.",
+        "Workbook contains 7 sheets: Mapping File, FIP - Original, FIP - Processed,\n"
+        "EBX - Original, EBX - Processed, Comparison, Processing Log.\n\n"
+        "Comparison sheet: 'Matched' rows have green fill; 'Not in FIP' rows have orange fill.",
     ),
 
     # ── Accounting Principles ─────────────────────────────────────────────────
     (
-        "FX-15", "Accounting Principles — file fields", "Whole App",
+        "FX-16", "Accounting Principles — file fields", "Whole App",
         "Accounting Principles task selected, form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -279,38 +306,72 @@ TEST_CASES = [
         "4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FX-16", "Accounting Principles — Key column built from raw VALMSG", "Logic",
-        f"Validation Methods File: {F}\\validation_methods.xlsx  (sheet: Validation Methods)\n"
-        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
-        f"FIP File (VALMSG): {F}\\fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
-        "Note: fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export — no pre-built Key column.",
+        "FX-17", "Accounting Principles — full comparison output (all rows)", "Logic",
+        f"Validation Methods File: fixtures\\validation_methods.xlsx  (sheet: Validation Methods)\n"
+        f"X-Checks Publication File: fixtures\\ap\\ap_pub.xlsx  (sheet: cross checks all)\n"
+        f"FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
+        "Note: fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export with no pre-built Key column.\n"
+        "'Process only differences' unchecked.",
         "Load the files above into Accounting Principles and click Start.",
-        "Run completes. Progress log shows 'Built Key column from MK + ValidRule'. "
-        "Comparison sheet contains exactly 2 rows:\n\n"
-        "  AP_MATCH    Event=IFRS New RFD  FIP=w  Actual=w  → Match\n"
-        "  AP_MISMATCH Event=IFRS New RFD  FIP=e  Actual=w  → MisMatch",
+        "Progress log shows 'Built Key column from MK + ValidRule'.\n\n"
+        "Comparison sheet contains 11 rows. Verify each (X-Check No., Event, Expected, FIP, Actual, Match):\n\n"
+        "  AP_BOTH_E      Stammhaus SLST SFD  Both     e  e  Match    (Both severity: FIP=e matches actual=e)\n"
+        "  AP_BOTH_W      Stammhaus SLST RFD  Both     w  w  Match    (Both severity: FIP=w matches actual=w)\n"
+        "  AP_DIFF_GREEN  IFRS New RFD        Warning  w  w  Match    (event col green - included in full run)\n"
+        "  AP_DIFF_YELLOW IFRS New RFD        Warning  w  w  Match    (event col yellow - included in full run)\n"
+        "  AP_EXCL_ZCORE  IFRS New RFD        Warning  w  w  Match    (Exclude Z-Core=X - excluded only in diff mode)\n"
+        "  AP_GREY_WINS   IFRS New SFD        Warning  w  w  Match    (black binding column empty; grey binding fires)\n"
+        "  AP_MATCH_W     IFRS New RFD        Warning  w  w  Match    (FIP letter w = actual w)\n"
+        "  AP_MISMATCH    IFRS New RFD        Warning  e  w  MisMatch (FIP letter e != actual w)\n"
+        "  AP_NOT_SCOPE_INA IFRS New RFD      Warning  w  w  Match    (INACTIVE - excluded only in diff mode)\n"
+        "  AP_NOT_SCOPE_TOC IFRS New RFD      Warning  w  w  Match    (blank Type of change - excluded only in diff mode)\n"
+        "  AP_YELLOW_CAT  IFRS New RFD        Warning  w  w  Match    (yellow Category - excluded only in diff mode)\n\n"
+        "Rows NOT appearing (skipped entirely):\n"
+        "  AP_NO_BINDING  - FIP sends method V_UNKNOWN_METHOD which has no binding in Validation Methods\n"
+        "  AP_NO_ACTUAL   - IFRS New RFD column is blank; no binding produces a non-empty actual letter\n"
+        "  AP_DIFF_WHITE  - no event column has any fill colour; excluded in diff mode (not relevant here)\n\n"
+        "Key logic to verify:\n"
+        "- Both severity rows (AP_BOTH_W, AP_BOTH_E) demonstrate that a single binding accepts either w or e.\n"
+        "- AP_GREY_WINS: the black-font binding's event column is blank in ap_pub, so the grey binding fires.\n"
+        "  Verify AP_GREY_WINS appears with Event=IFRS New SFD (the grey event), not IFRS New RFD.\n"
+        "- AP_NO_BINDING row is absent: the method is not in the Validation Methods file at all.\n"
+        "- The 'Process only differences' filter rows (EXCL_ZCORE, NOT_SCOPE_INA, etc.) appear here\n"
+        "  because diff mode is OFF - confirming they are correctly included when the checkbox is unchecked.",
     ),
     (
-        "FX-17", "Accounting Principles — output structure", "Whole App",
-        "FX-16 complete. Output workbook open.",
-        "Check the sheet tabs.",
-        "Workbook contains:\n"
-        "1. EBX\n"
-        "2. FIP\n"
-        "3. Comparison\n"
-        "4. Processing Log",
+        "FX-18", "Accounting Principles — differences mode (event column colour)", "Logic",
+        f"Same files as FX-17. 'Process only differences' checked.",
+        "Check 'Process only differences'. Run.",
+        "Comparison sheet shows ONLY rows where at least one validation event column\n"
+        "is yellow or green in ap_pub.xlsx:\n\n"
+        "  AP_DIFF_GREEN  IFRS New RFD  Warning  w  w  Match  (event col green)\n"
+        "  AP_DIFF_YELLOW IFRS New RFD  Warning  w  w  Match  (event col yellow)\n\n"
+        "All other rows absent: AP_MATCH_W, AP_MISMATCH, AP_BOTH_W, AP_BOTH_E etc.\n"
+        "have no coloured event columns and are therefore out of scope.\n\n"
+        "Also confirm: AP_NOT_SCOPE_TOC absent (blank Type of change),\n"
+        "AP_NOT_SCOPE_INA absent (INACTIVE), AP_EXCL_ZCORE absent (Z-Core=X),\n"
+        "AP_YELLOW_CAT absent (yellow Category cell).",
     ),
     (
-        "FX-18", "Accounting Principles — colour coding", "Whole App",
-        "FX-16 output open, Comparison sheet.",
-        "Review the Match column fill colours.",
-        "'Match' → green fill.\n"
-        "'MisMatch' → red fill.",
+        "FX-19", "Accounting Principles — Known Exception annotation", "Logic",
+        f"Same files as FX-17. Known Exception List: fixtures\\ap\\ap_kel.xlsx  (sheet: Accounting Principles).\n"
+        "KEL contains 2 entries: correct 6-column fingerprint for AP_MISMATCH; wrong FIP value for AP_KEL_NO_MATCH.",
+        "Add the Known Exception List and run.",
+        "AP_MISMATCH: Match = MisMatch (unchanged); Known Exception column populated with reason text.\n"
+        "AP_MATCH_W: Known Exception column BLANK (no mismatch - KEL never fires on Match rows).\n"
+        "All other rows: Known Exception blank.",
+    ),
+    (
+        "FX-20", "Accounting Principles — output structure and colour coding", "Whole App",
+        "FX-17 complete. Output workbook open.",
+        "Check the sheet tabs and Comparison fill colours.",
+        "Workbook contains 4 sheets: EBX, FIP, Comparison, Processing Log.\n\n"
+        "Comparison sheet: 'Match' rows have green fill; 'MisMatch' rows have red fill.",
     ),
 
     # ── Conditions ────────────────────────────────────────────────────────────
     (
-        "FX-19", "Conditions — file fields", "Whole App",
+        "FX-21", "Conditions — file fields", "Whole App",
         "Conditions task selected, form open.",
         "Inspect the form fields.",
         "Three fields present:\n"
@@ -320,52 +381,75 @@ TEST_CASES = [
         "'Process only differences' checkbox present and checked by default.",
     ),
     (
-        "FX-20", "Conditions — full file run", "Logic",
-        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
-        f"FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
+        "FX-22", "Conditions — full file run (all 15 rows)", "Logic",
+        f"X-Checks Publication File: fixtures\\cond\\cond_pub.xlsx  (sheet: cross checks all)\n"
+        f"FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
         "'Process only differences' unchecked.",
         "Uncheck 'Process only differences'. Load the files and click Start.",
-        "Run completes. Comparison sheet contains exactly 5 rows:\n\n"
-        "  COND_MATCHED|Q1          FIP Data=COND_MATCHED|Q1      → Matched\n"
-        "  COND_NOT_MATCHED|Q2      FIP Data=(blank)               → Not Matched\n"
-        "  COND_BASE|COND_BASE      FIP Data=(blank)               → Not Matched\n"
-        "  COND_BASE|Q1             FIP Data=COND_BASE|Q1          → Matched\n"
-        "  COND_DIFF_YELLOW|Q1      FIP Data=COND_DIFF_YELLOW|Q1   → Matched\n"
-        "  COND_DIFF_WHITE|Q1       FIP Data=(blank)               → Not Matched\n\n"
-        "Note: COND_BASE|COND_BASE is expected — the 'Reference X-Check (Condition)' "
-        "column is itself one of the 5 condition columns.",
+        "Comparison sheet contains exactly 15 rows (one per non-blank condition cell value).\n"
+        "Verify each row by EBX Data, FIP Data, and Comparison:\n\n"
+        "  COND_APPL_QTRS|Q1        FIP=COND_APPL_QTRS|Q1        Matched   (Applicable Quarters column)\n"
+        "  COND_DIFF_GREEN|RU_NORTH FIP=COND_DIFF_GREEN|RU_NORTH  Matched   (Included RUs col, green cell)\n"
+        "  COND_DIFF_WHITE|Q1       FIP=(blank)                   Not Matched (white cell - no colour, not in FIP)\n"
+        "  COND_DIFF_YELLOW|Q1      FIP=COND_DIFF_YELLOW|Q1       Matched   (Applicable Quarters col, yellow cell)\n"
+        "  COND_EXCL_RUS|RU_SOUTH   FIP=COND_EXCL_RUS|RU_SOUTH   Matched   (Excluded RUs column)\n"
+        "  COND_INCL_RUS|RU_NORTH   FIP=COND_INCL_RUS|RU_NORTH   Matched   (Included RUs column)\n"
+        "  COND_KEL_MISMATCH|Q3     FIP=(blank)                   Not Matched (KEL annotated - see FX-24)\n"
+        "  COND_KEL_NO_MATCH|Q4     FIP=(blank)                   Not Matched (wrong KEL fingerprint)\n"
+        "  COND_LIMIT_PCT|10.5      FIP=COND_LIMIT_PCT|10.5       Matched   (Reference X-Check (Limit, %) column)\n"
+        "  COND_MULTI_COL|Q1        FIP=COND_MULTI_COL|Q1         Matched   (multi-col row: Applicable Quarters)\n"
+        "  COND_MULTI_COL|RU_IN     FIP=COND_MULTI_COL|RU_IN      Matched   (multi-col row: Included RUs)\n"
+        "  COND_MULTI_COL|RU_OUT    FIP=(blank)                   Not Matched (multi-col row: Excluded RUs - no FIP entry)\n"
+        "  COND_NOT_MATCHED|Q2      FIP=(blank)                   Not Matched (Applicable Quarters value not in FIP)\n"
+        "  COND_REF_XC|COND_REF_XC FIP=(blank)                   Not Matched (Reference X-Check col value itself)\n"
+        "  COND_REF_XC|Q1          FIP=COND_REF_XC|Q1            Matched   (Applicable Quarters using ref override)\n\n"
+        "Key logic to verify:\n"
+        "- COND_APPL_QTRS, COND_INCL_RUS, COND_EXCL_RUS, COND_LIMIT_PCT each confirm a different one of the\n"
+        "  5 condition columns produces output rows.\n"
+        "- COND_MULTI_COL produces 3 rows from a single X-Check: one per non-blank condition column.\n"
+        "  Q1 and RU_IN are in FIP (Matched); RU_OUT is not (Not Matched).\n"
+        "- COND_REF_XC row demonstrates the Reference X-Check (Condition) override:\n"
+        "  The pub row has X-Check No.=COND_REF_XC and Reference X-Check (Condition)=COND_REF_XC.\n"
+        "  The effective key prefix becomes COND_REF_XC (not the X-Check No. itself).\n"
+        "  This produces two rows: COND_REF_XC|COND_REF_XC (col value - Not Matched) and\n"
+        "  COND_REF_XC|Q1 (Applicable Quarters with override prefix - Matched).\n"
+        "- COND_DIFF_WHITE is Not Matched even in full-file mode: the cell is white but the\n"
+        "  value Q1 is not in the FIP file for that X-Check No.",
     ),
     (
-        "FX-21", "Conditions — differences mode (yellow + green cells)", "Logic",
-        f"Same files as FX-20. 'Process only differences' checked (default).",
-        "Run with 'Process only differences' checked (default).",
-        "Comparison sheet contains exactly 2 rows:\n\n"
-        "  COND_DIFF_GREEN|Q1   FIP Data=COND_DIFF_GREEN|Q1   → Matched\n"
-        "  COND_DIFF_YELLOW|Q1  FIP Data=COND_DIFF_YELLOW|Q1  → Matched\n\n"
-        "Yellow-filled and green-filled Applicable Quarters cells are both collected. "
-        "COND_DIFF_WHITE (plain white cell) is not collected — no output row.",
+        "FX-23", "Conditions — differences mode (condition cell colour)", "Logic",
+        f"Same files as FX-22. 'Process only differences' checked (default).",
+        "Run with 'Process only differences' checked (the default setting).",
+        "Comparison sheet shows ONLY rows where the condition cell itself is yellow or green:\n\n"
+        "  COND_DIFF_GREEN|RU_NORTH  FIP=COND_DIFF_GREEN|RU_NORTH  Matched  (Included RUs cell is green)\n"
+        "  COND_DIFF_YELLOW|Q1       FIP=COND_DIFF_YELLOW|Q1       Matched  (Applicable Quarters cell is yellow)\n\n"
+        "All other rows absent - their condition cells are plain white (unchanged).\n"
+        "Confirm: COND_MATCHED, COND_NOT_MATCHED, COND_MULTI_COL rows all absent.\n\n"
+        "Note: COND_DIFF_WHITE is also absent because its Applicable Quarters cell has no fill.",
     ),
     (
-        "FX-22", "Conditions — output structure", "Whole App",
-        "FX-20 complete. Output workbook open.",
-        "Check the sheet tabs and first column header of the FIP Data sheet.",
-        "Workbook contains:\n"
-        "1. Working Sheet\n"
-        "2. FIP Data  (first column header: 'Key (Concatenated)')\n"
-        "3. Comparison\n"
-        "4. Processing Log",
+        "FX-24", "Conditions — Known Exception annotation", "Logic",
+        f"Same files as FX-22. Known Exception List: fixtures\\cond\\cond_kel.xlsx  (sheet: Conditions).\n"
+        "KEL contains: correct 2-column fingerprint for COND_APPL_QTRS|Q1 (Matched row);\n"
+        "wrong FIP Data fingerprint for COND_INCL_RUS|RU_NORTH.\n"
+        "Note: Not Matched rows have blank FIP Data so cannot be fingerprint-matched by the KEL.",
+        "Add the Known Exception List and run with 'Process only differences' unchecked.",
+        "COND_APPL_QTRS|Q1: Comparison = Matched (unchanged); Known Exception column populated with reason text.\n"
+        "COND_INCL_RUS|RU_NORTH: Comparison = Matched; Known Exception BLANK (wrong FIP Data fingerprint).\n"
+        "All other rows: Known Exception blank.",
     ),
     (
-        "FX-23", "Conditions — colour coding", "Whole App",
-        "FX-20 output open, Comparison sheet.",
-        "Review the Comparison column fill colours.",
-        "'Matched' → green fill.\n"
-        "'Not Matched' → red fill.",
+        "FX-25", "Conditions — output structure and colour coding", "Whole App",
+        "FX-22 complete. Output workbook open.",
+        "Check the sheet tabs, FIP Data first column header, and Comparison fill colours.",
+        "Workbook contains 4 sheets: Working Sheet, FIP Data, Comparison, Processing Log.\n"
+        "FIP Data sheet: first column header is 'Key (Concatenated)'.\n\n"
+        "Comparison sheet: 'Matched' rows have green fill; 'Not Matched' rows have red fill.",
     ),
 
     # ── Full Run ──────────────────────────────────────────────────────────────
     (
-        "FX-24", "Full Run — file fields", "Whole App",
+        "FX-26", "Full Run — file fields", "Whole App",
         "Full Run task selected, form open.",
         "Count the file fields and verify no duplicates.",
         "All unique fields from every strategy are merged into one form. "
@@ -375,33 +459,33 @@ TEST_CASES = [
         "No field label appears twice.",
     ),
     (
-        "FX-25", "Full Run — all strategies", "Logic",
+        "FX-27", "Full Run — all strategies", "Logic",
         f"All fixture files. 'Process only differences' unchecked.\n"
         f"• FIP File: {F}\\fip_xc.txt\n"
         f"• X-Checks Publication File: {F}\\xc_pub.xlsx\n"
-        f"• FIP File (ZQ9_VALFLDGR): {F}\\fip_ZQ9_VALFLDGR.xlsx\n"
-        f"• Mapping File: {F}\\mapping.txt\n"
+        f"• FIP File (ZQ9_VALFLDGR): fixtures\\gb\\fip_ZQ9_VALFLDGR.xlsx\n"
+        f"• Mapping File: fixtures\\gb\\gb_mapping.txt\n"
         f"• Validation Methods File: {F}\\validation_methods.xlsx\n"
-        f"• FIP File (VALMSG): {F}\\fip_ZQ9_VALMSG.xlsx\n"
-        f"• FIP File (ZQ9_VALMETH): {F}\\fip_ZQ9_VALMETH.xlsx",
+        f"• FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx\n"
+        f"• FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    30 rows\n"
-        "  GB — Comparison    2 rows\n"
-        "  AP — Comparison    2 rows\n"
-        "  Cond — Comparison  6 rows\n\n"
-        "Row counts and values match the individual strategy results in FX-05, FX-12, FX-16, FX-20.",
+        "  XC — Comparison    30 rows  (matches FX-05)\n"
+        "  GB — Comparison    14 rows  (matches FX-12)\n"
+        "  AP — Comparison    11 rows  (matches FX-17)\n"
+        "  Cond — Comparison  15 rows  (matches FX-22)\n\n"
+        "Single 'Processing Log' sheet at the end.",
     ),
     (
-        "FX-26", "Full Run — combined output structure", "Whole App",
-        "FX-25 complete. Combined output workbook open.",
+        "FX-28", "Full Run — combined output structure", "Whole App",
+        "FX-27 complete. Combined output workbook open.",
         "Check all sheet tabs and tab colours.",
         "One workbook with all strategy sheets prefixed by strategy name "
         "(e.g. 'XC — Comparison', 'GB — Comparison', 'AP — Comparison', 'Cond — Comparison'). "
         "Tabs are colour-coded by strategy. Single 'Processing Log' sheet at the end.",
     ),
     (
-        "FX-27", "Full Run — abort on strategy failure", "Whole App",
+        "FX-29", "Full Run — abort on strategy failure", "Whole App",
         "Full Run form open.",
         "Set an incorrect sheet name for one file, then click Start.",
         "Failing strategy logs a clear error. Full Run aborts immediately — "
@@ -410,23 +494,23 @@ TEST_CASES = [
 
     # ── Settings / Known Exception Builder ────────────────────────────────────
     (
-        "FX-28", "Settings — gear menu", "Whole App",
+        "FX-30", "Settings — gear menu", "Whole App",
         "App open at task selector.",
-        "Click the ⚙ gear button at the bottom-right.",
-        "A popup menu appears with at least 'Build Known Exception List…'. "
+        "Click the gear button at the bottom-right.",
+        "A popup menu appears with at least 'Build Known Exception List...'. "
         "No dialog opens directly.",
     ),
     (
-        "FX-29", "Settings — Known Exception Builder", "Whole App",
-        "Settings popup open (FX-28).",
-        "Click 'Build Known Exception List…'.",
+        "FX-31", "Settings — Known Exception Builder", "Whole App",
+        "Settings popup open (FX-30).",
+        "Click 'Build Known Exception List...'.",
         "Modal dialog opens with: 'Save as' hint text "
         "'Click Browse and select a folder, then type the filename', "
         "Browse button, optional comparison import section, "
         "'Open file after building' checkbox (checked by default), Build button.",
     ),
     (
-        "FX-30", "Settings — build and open KEL", "Whole App",
+        "FX-32", "Settings — build and open KEL", "Whole App",
         "Known Exception Builder dialog open. Output folder available.",
         "Click Browse, select a folder, type a filename. Leave 'Open file after building' checked. Click Build.",
         "File created at the chosen path. Dialog closes. File opens in Excel. "
@@ -437,7 +521,7 @@ TEST_CASES = [
 
     # ── Processing Log ────────────────────────────────────────────────────────
     (
-        "FX-31", "Processing Log — content", "Whole App",
+        "FX-33", "Processing Log — content", "Whole App",
         "Any completed run. Output workbook open, Processing Log sheet.",
         "Review the log entries.",
         f"First entry shows v{VERSION}. "
@@ -445,13 +529,13 @@ TEST_CASES = [
         "All entries have Timestamp, File, Step, Count columns.",
     ),
     (
-        "FX-32", "Processing Log — output path entry", "Whole App",
+        "FX-34", "Processing Log — output path entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the 'Output written to' entry.",
         "Entry with File='Output' and Step starting 'Output written to:' is present.",
     ),
     (
-        "FX-33", "Processing Log — sensitivity label entry", "Whole App",
+        "FX-35", "Processing Log — sensitivity label entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the sensitivity label entry.",
         "Entry with File='Sensitivity' and Step='Expected label: Internal_Use_Only' is present.",
@@ -459,9 +543,9 @@ TEST_CASES = [
 
     # ── Sensitivity label ──────────────────────────────────────────────────────
     (
-        "FX-34", "Sensitivity label", "Whole App",
+        "FX-36", "Sensitivity label", "Whole App",
         "Any completed run. Output .xlsx saved to disk.",
-        "Right-click the output file in Explorer → Properties → Details, "
+        "Right-click the output file in Explorer, Properties, Details, "
         "or open in Excel and check the sensitivity bar.",
         "File carries the 'Internal Use Only' MIP label. "
         "Progress dialog shows 'Applied label: Internal_Use_Only'.",
@@ -469,21 +553,21 @@ TEST_CASES = [
 
     # ── Stop / error handling ──────────────────────────────────────────────────
     (
-        "FX-35", "Stop / Return to Form", "Whole App",
+        "FX-37", "Stop / Return to Form", "Whole App",
         "Any task started.",
         "Click Stop during processing.",
         "Processing halts. Dialog shows 'Processing halted by user'. "
         "'Return to Form' reopens the form with previously chosen files pre-filled.",
     ),
     (
-        "FX-36", "Error — wrong sheet name", "Whole App",
+        "FX-38", "Error — wrong sheet name", "Whole App",
         "Any task's file-selection form open.",
         "Set a sheet name to 'does_not_exist', then click Start.",
         "Run aborts with a clear error identifying the missing sheet. "
         "App returns to form — does not crash.",
     ),
     (
-        "FX-37", "Error — missing required file", "Whole App",
+        "FX-39", "Error — missing required file", "Whole App",
         "Any task's file-selection form open.",
         "Click Start without selecting any required files.",
         "Start does not begin processing. Form indicates missing required fields.",
