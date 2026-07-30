@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.46 — Fix missing return True in X-Checks and Collect Live X-Checks (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/x_checks/x_checks.py`: add `return True` at end of `process()`. Missing return caused `execute()` to receive `None` → treated as failure → completion line never emitted. | DONE | |
+| 2 | `strategies/collect_live_x_checks/collect_live_x_checks.py`: same fix — add `return True` at end of `process()`. | DONE | |
+| 3 | `version.py`: bump to `1.0.46`. | DONE | |
+
 ### v1.0.45 — Enclose completion timestamp in square brackets (2026-07-30)
 
 | # | Change | Status | Notes |

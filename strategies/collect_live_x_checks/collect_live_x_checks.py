@@ -50,6 +50,8 @@ class CollectLiveXChecks(BaseStrategy):
             # Non-fatal — the .txt is still on disk
             self.log_step(self.log, "Collect", "Clipboard copy failed", 0, notes=str(e))
 
+        return True
+
     def _copy_to_clipboard(self, text: str) -> None:
         """
         Pushes `text` to the Windows clipboard.

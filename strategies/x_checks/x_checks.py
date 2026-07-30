@@ -87,6 +87,7 @@ class XChecks(BaseStrategy):
             sheets={"Comparison": df_comparison},
             log=self.log,
         )
+        return True
 
     def _write_x_check_no_list(self, loaded_files: dict, files: dict) -> None:
         """
