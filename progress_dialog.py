@@ -172,7 +172,7 @@ class ProgressDialog:
     # =========================================================
 
     _ERROR_KEYWORDS    = ("error", "failed", "failure", "traceback")
-    _MATCHED_KEYWORDS  = ("processing complete",)   # only the final completion message
+    _MATCHED_KEYWORDS  = ("completed successfully",)   # only the final completion message
     _MISMATCH_KEYWORDS = ("not in fip", "not matched", "mismatch", "not found")
     # "exception" excluded — appears in "Known Exception List" (not an error).
 

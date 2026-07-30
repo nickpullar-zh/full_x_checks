@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.44 — Green completion message with timestamp on all strategies (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: both `run_processing` completion lines now emit `[Complete]  {yyyymmdd hhmmss}  Processing has completed successfully` instead of the plain "Processing complete" text. | DONE | |
+| 2 | `progress_dialog.py`: `_MATCHED_KEYWORDS` updated from `"processing complete"` to `"completed successfully"` to match the new wording and colour the line green. | DONE | |
+| 3 | `version.py`: bump to `1.0.44`. | DONE | |
+
 ### v1.0.43 — Update fixture UAT test plan for 26-row X-Checks (2026-07-30)
 
 | # | Change | Status | Notes |
