@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.54 — Update fixture UAT test plan for v1.0.52/53 changes (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-05 row count 26 → 30 (4 new diff rows); add XC_DIFF_YELLOW, XC_DIFF_GREEN, XC_DIFF_ORANGE, XC_DIFF_NO_TOC to row table. FX-10 rewritten to describe both .txt output (3 entries) and Comparison filtering; document colour semantics (yellow=Changed in scope, green=New in scope, orange=Removed excluded). FX-25 XC row count 26 → 30. | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.53 Test Plan.xlsx`: generated output. | DONE | |
+| 3 | `version.py`: bump to `1.0.54`. | DONE | |
+
 ### v1.0.53 — File dialogs open in EXE folder by default (2026-07-30)
 
 | # | Change | Status | Notes |
