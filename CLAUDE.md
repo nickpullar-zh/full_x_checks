@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.62 — Fix "Start" to "Proceed" in both test plan generators (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py` + `docs/generate_full_app_uat.py`: replace all 18 occurrences of "click/press Start" with "click/press Proceed" to match the actual button label. | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.61 Test Plan.xlsx` + `docs/20260730 Full_Application_v1.0.61 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.62`. | DONE | |
+
 ### v1.0.61 — Generate test plans at v1.0.60 (2026-07-30)
 
 | # | Change | Status | Notes |

@@ -123,7 +123,7 @@ TEST_CASES = [
         f"FIP File: {F}\\fip_xc.txt\n"
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
-        "Load the files above into X-Checks and click Start.",
+        "Load the files above into X-Checks and click Proceed.",
         "Run completes. Comparison sheet contains exactly 30 rows. "
         "Formula Match column values (sorted alphabetically):\n\n"
         "  XC_ABS_FORMULA        - Match   (Operator 2 set - ABS() wrapping)\n"
@@ -205,7 +205,7 @@ TEST_CASES = [
         f"FIP File: {F}\\fip_xc.txt\n"
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "'Process only differences' checked.",
-        "Check 'Process only differences'. Load files and click Start.",
+        "Check 'Process only differences'. Load files and click Proceed.",
         "Run completes with two outputs:\n\n"
         "1. .txt file contains exactly 3 X-Check Nos (Yellow=Changed and Green=New are in scope;\n"
         "   Removed=Orange and blank are excluded):\n"
@@ -242,7 +242,7 @@ TEST_CASES = [
         f"X-Checks Publication File: fixtures\\gb\\gb_pub.xlsx  (sheet: cross checks all)\n"
         f"Mapping File: fixtures\\gb\\gb_mapping.txt\n"
         "'Process only differences' unchecked.",
-        "Load the files above into Grouping By and click Start.",
+        "Load the files above into Grouping By and click Proceed.",
         "Comparison sheet contains exactly 14 rows. Verify each row by EBX Key and Result:\n\n"
         "  GB_BLANK_VR|ITEM_A    Not in FIP  (FIP row has blank ValidRule - dropped during FIP processing)\n"
         "  GB_DEDUP|ITEM_A       Not in FIP  (first of two identical X-Check rows; no FIP entry)\n"
@@ -312,7 +312,7 @@ TEST_CASES = [
         f"FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
         "Note: fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export with no pre-built Key column.\n"
         "'Process only differences' unchecked.",
-        "Load the files above into Accounting Principles and click Start.",
+        "Load the files above into Accounting Principles and click Proceed.",
         "Progress log shows 'Built Key column from MK + ValidRule'.\n\n"
         "Comparison sheet contains 11 rows. Verify each (X-Check No., Event, Expected, FIP, Actual, Match):\n\n"
         "  AP_BOTH_E      Stammhaus SLST SFD  Both     e  e  Match    (Both severity: FIP=e matches actual=e)\n"
@@ -385,7 +385,7 @@ TEST_CASES = [
         f"X-Checks Publication File: fixtures\\cond\\cond_pub.xlsx  (sheet: cross checks all)\n"
         f"FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
         "'Process only differences' unchecked.",
-        "Uncheck 'Process only differences'. Load the files and click Start.",
+        "Uncheck 'Process only differences'. Load the files and click Proceed.",
         "Comparison sheet contains exactly 15 rows (one per non-blank condition cell value).\n"
         "Verify each row by EBX Data, FIP Data, and Comparison:\n\n"
         "  COND_APPL_QTRS|Q1        FIP=COND_APPL_QTRS|Q1        Matched   (Applicable Quarters column)\n"
@@ -468,7 +468,7 @@ TEST_CASES = [
         f"• Validation Methods File: {F}\\validation_methods.xlsx\n"
         f"• FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx\n"
         f"• FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx",
-        "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Start.",
+        "Load all fixture files into Full Run. Uncheck 'Process only differences'. click Proceed.",
         "All four strategies run without error. Combined output contains:\n\n"
         "  XC — Comparison    30 rows  (matches FX-05)\n"
         "  GB — Comparison    14 rows  (matches FX-12)\n"
@@ -487,7 +487,7 @@ TEST_CASES = [
     (
         "FX-29", "Full Run — abort on strategy failure", "Whole App",
         "Full Run form open.",
-        "Set an incorrect sheet name for one file, then click Start.",
+        "Set an incorrect sheet name for one file, then click Proceed.",
         "Failing strategy logs a clear error. Full Run aborts immediately — "
         "does not continue to the next strategy. 'Return to Form' is available.",
     ),
@@ -562,14 +562,14 @@ TEST_CASES = [
     (
         "FX-38", "Error — wrong sheet name", "Whole App",
         "Any task's file-selection form open.",
-        "Set a sheet name to 'does_not_exist', then click Start.",
+        "Set a sheet name to 'does_not_exist', then click Proceed.",
         "Run aborts with a clear error identifying the missing sheet. "
         "App returns to form — does not crash.",
     ),
     (
         "FX-39", "Error — missing required file", "Whole App",
         "Any task's file-selection form open.",
-        "Click Start without selecting any required files.",
+        "click Proceed without selecting any required files.",
         "Start does not begin processing. Form indicates missing required fields.",
     ),
 ]

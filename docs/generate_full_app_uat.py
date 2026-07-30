@@ -178,7 +178,7 @@ TEST_CASES = [
         f"Set FIP File to '{FILES['xc_fip']}', "
         f"X-Checks Publication File to '{FILES['xc_pub']}' (sheet: '{SHEETS['xc_pub']}'), "
         f"no GCoA or Known Exception List. "
-        f"'Process only differences' checked. Click Start.",
+        f"'Process only differences' checked. click Proceed.",
         f"Run completes. Progress log shows {XC_EBX_EXTRACTED} X-Check entries extracted "
         f"from the publication file and {XC_FIP_MATCHED} matched in the FIP file.",
     ),
@@ -223,7 +223,7 @@ TEST_CASES = [
         "Grouping By form open.",
         f"Set FIP File (ZQ9_VALFLDGR) to '{FILES['gb_fip']}' (sheet: '{SHEETS['gb_fip']}'), "
         f"X-Checks Publication File to '{FILES['gb_pub']}' (sheet: '{SHEETS['gb_pub']}'), "
-        f"Mapping File to '{FILES['mapping']}'. Click Start.",
+        f"Mapping File to '{FILES['mapping']}'. click Proceed.",
         f"Run completes without error. Progress log shows:\n"
         f"• FIP original loaded: {GB_FIP_ROWS} rows\n"
         f"• FIP processed (after mapping + filtering): {GB_FIP_PROCESSED} rows\n"
@@ -265,7 +265,7 @@ TEST_CASES = [
         f"Set Validation Methods File to '{FILES['ap_val_mth']}' (sheet: '{SHEETS['ap_val_mth']}'), "
         f"X-Checks Publication File to '{FILES['ap_pub']}' (sheet: '{SHEETS['ap_pub']}'), "
         f"FIP File (VALMSG) to '{FILES['ap_fip']}' (sheet: '{SHEETS['ap_fip']}'). "
-        f"This is the raw ZQ9_VALMSG extract — the app builds the Key column from MK + ValidRule. Click Start.",
+        f"This is the raw ZQ9_VALMSG extract — the app builds the Key column from MK + ValidRule. click Proceed.",
         f"Run completes. Progress log confirms {AP_PUB_ROWS} source rows in the "
         f"publication file and {AP_FIP_ROWS} rows in the VALMSG file. "
         f"Log shows 'Built Key column from MK + ValidRule'.",
@@ -296,7 +296,7 @@ TEST_CASES = [
         "FA-18", "Conditions — run (differences only)",
         "Conditions form open. 'Process only differences' checked (default).",
         f"Set X-Checks Publication File to '{FILES['cond_pub']}' (sheet: '{SHEETS['cond_pub']}'), "
-        f"FIP File (ZQ9_VALMETH) to '{FILES['cond_fip']}' (sheet: '{SHEETS['cond_fip']}'). Click Start.",
+        f"FIP File (ZQ9_VALMETH) to '{FILES['cond_fip']}' (sheet: '{SHEETS['cond_fip']}'). click Proceed.",
         f"Run completes. Progress log shows {COND_FIP_ROWS} FIP rows processed "
         f"and {COND_DIFF_PAIRS} pairs compared.",
     ),
@@ -343,7 +343,7 @@ TEST_CASES = [
         f"• FIP File (VALMSG): '{FILES['ap_fip']}' (sheet: '{SHEETS['ap_fip']}')\n"
         f"• FIP File (ZQ9_VALMETH): '{FILES['cond_fip']}' (sheet: '{SHEETS['cond_fip']}')\n"
         f"• Known Exception List: '{FILES['known_exc']}'\n"
-        "Click Start.",
+        "click Proceed.",
         "All strategies run in sequence without error. Progress dialog shows "
         "steps for each strategy. Run completes with 'Processing complete'.",
     ),
@@ -359,7 +359,7 @@ TEST_CASES = [
     (
         "FA-25", "Full Run — abort on strategy failure",
         "Full Run form open.",
-        "Set an incorrect sheet name for one of the required files, then click Start.",
+        "Set an incorrect sheet name for one of the required files, then click Proceed.",
         "The failing strategy logs a clear error. Full Run aborts immediately "
         "rather than continuing to the next strategy. "
         "'Return to Form' is available.",
@@ -437,7 +437,7 @@ TEST_CASES = [
     # ── Stop / error handling ──────────────────────────────────────────────────
     (
         "FA-33", "Stop / Return to Form",
-        "Any task started (click Start).",
+        "Any task started (click Proceed).",
         "Click Stop during processing.",
         "Processing halts cleanly. Progress dialog shows 'Processing halted by user'. "
         "'Return to Form' button available. Clicking it reopens the file-selection "
@@ -446,14 +446,14 @@ TEST_CASES = [
     (
         "FA-34", "Error handling — wrong sheet name",
         "Any task's file-selection form open.",
-        "Set the sheet name for any file to 'does_not_exist', then click Start.",
+        "Set the sheet name for any file to 'does_not_exist', then click Proceed.",
         "Run aborts with a clear error identifying the missing sheet. "
         "App returns to form — does not crash or exit.",
     ),
     (
         "FA-35", "Error handling — missing required file",
         "Any task's file-selection form open.",
-        "Click Start without selecting any required files.",
+        "click Proceed without selecting any required files.",
         "Start does not begin processing. Form indicates which required fields "
         "are missing and does not crash.",
     ),
