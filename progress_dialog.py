@@ -47,9 +47,10 @@ class ProgressDialog:
 
     WINDOW_SIZE = 550  # Square dimensions in pixels
 
-    def __init__(self, root: tk.Tk, on_dismiss=None):
+    def __init__(self, root: tk.Tk, on_dismiss=None, on_success=None):
         self.root = root
-        self.on_dismiss = on_dismiss        # callable() → return to upload form
+        self.on_dismiss = on_dismiss    # callable() → return to upload form (cancel/error)
+        self.on_success = on_success    # callable() → return to task selector (success)
         self.stop_event = threading.Event()
         self._stopped = False
         self._completed_successfully = False
@@ -218,13 +219,16 @@ class ProgressDialog:
             # Second press — dismiss
             self.window.grab_release()
             self.window.destroy()
-            if self._completed_successfully or self.on_dismiss is None:
-                # Success or no callback registered → exit the application
-                self.root.destroy()
-                sys.exit(0)
-            else:
+            if self._completed_successfully and self.on_success is not None:
+                # Success → return to task selector
+                self.on_success()
+            elif not self._completed_successfully and self.on_dismiss is not None:
                 # Cancel or error → return to the upload form
                 self.on_dismiss()
+            else:
+                # No callback registered (debug mode) → exit
+                self.root.destroy()
+                sys.exit(0)
 
     # =========================================================
     # Public interface — called from background thread

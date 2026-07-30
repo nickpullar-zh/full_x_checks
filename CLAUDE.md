@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.57 — "Close" after success returns to Strategy Selection, not exit (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `progress_dialog.py`: add `on_success` callback parameter; on successful completion the action button calls `on_success()` instead of exiting. `on_dismiss` (cancel/error) still returns to the upload form. Debug mode (no callbacks) still exits. | DONE | |
+| 2 | `main.py`: pass `on_success=_return_to_selector` which calls `self.root.deiconify()` to show the task selector. Rename button text from `"Close"` to `"Return to Strategy Selection"`. | DONE | |
+| 3 | `version.py`: bump to `1.0.57`. | DONE | |
+
 ### v1.0.56 — Progress dialog: copy button right-aligned with tooltip; green separator; fix [[Complete]] (2026-07-30)
 
 | # | Change | Status | Notes |

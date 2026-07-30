@@ -316,7 +316,7 @@ class TaskSelectorUI:
                         "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )
-                    self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
                 elif not dialog.is_stopped():
                     self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
@@ -329,9 +329,13 @@ class TaskSelectorUI:
                 self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
                 self.root.after(0, lambda: setattr(dialog, "_stopped", True))
 
+        def _return_to_selector():
+            self.root.deiconify()
+
         dialog = ProgressDialog(
             self.root,
             on_dismiss=lambda: self._run_task_loop(config, strategy_class, prefill=files),
+            on_success=_return_to_selector,
         )
         strategy = strategy_class(config)
         strategy.set_progress_dialog(dialog)
@@ -377,7 +381,7 @@ class TaskSelectorUI:
                         "Complete",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
                     )  # noqa: datetime imported at module level
-                    self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                    self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
                 elif not dialog.is_stopped():
                     self.root.after(0, lambda: dialog.action_btn.config(text="Return to Form"))
@@ -387,7 +391,7 @@ class TaskSelectorUI:
                 error_msg = traceback.format_exc()
                 print(f"  [ERROR] Unhandled exception in processing thread:\n{error_msg}")
                 dialog.append_entry("ERROR", f"Unhandled exception: {e}")
-                self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
+                self.root.after(0, lambda: dialog.action_btn.config(text="Return to Strategy Selection"))
                 self.root.after(0, lambda: setattr(dialog, "_stopped", True))
 
         strategy = strategy_class(config)
