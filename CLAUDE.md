@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.61 — Generate test plans at v1.0.60 (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/20260730 Fixture_UAT_v1.0.60 Test Plan.xlsx`: generated with Internal_Use_Only label. | DONE | |
+| 2 | `docs/20260730 Full_Application_v1.0.60 Test Plan.xlsx`: generated with Internal_Use_Only label. | DONE | |
+| 3 | `version.py`: bump to `1.0.61`. | DONE | |
+
 ### v1.0.60 — Apply Internal_Use_Only label to generated test plans (2026-07-30)
 
 | # | Change | Status | Notes |
