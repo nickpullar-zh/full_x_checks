@@ -100,7 +100,7 @@ class ProgressDialog:
             font=("Courier", 9, "bold"),
         )
 
-        # --- Stop / Close + Exit buttons ---
+        # --- Stop / Close + Exit + Copy Log buttons ---
         btn_frame = ttk.Frame(outer_frame)
         btn_frame.pack(pady=(10, 0))
 
@@ -118,7 +118,16 @@ class ProgressDialog:
             width=16,
             command=self._on_exit_application
         )
-        self.exit_btn.pack(side="left")
+        self.exit_btn.pack(side="left", padx=(0, 8))
+
+        self.copy_btn = ttk.Button(
+            btn_frame,
+            text="\U0001f4cb",   # 📋 clipboard icon
+            width=3,
+            command=self._on_copy_log
+        )
+        self.copy_btn.pack(side="left")
+        self._copy_reset_id = None
 
     def _centre_on_screen(self):
         self.window.update_idletasks()
@@ -147,6 +156,25 @@ class ProgressDialog:
         except Exception:
             pass
         sys.exit(0)
+
+    def _on_copy_log(self):
+        """Copy the full log text to the clipboard, then show a green tick for 3 seconds."""
+        try:
+            log_text = self.text_area.get("1.0", "end-1c")
+            self.window.clipboard_clear()
+            self.window.clipboard_append(log_text)
+            self.window.update()
+        except Exception:
+            pass
+        # Show green tick
+        if self._copy_reset_id is not None:
+            self.window.after_cancel(self._copy_reset_id)
+        self.copy_btn.config(text="✅", style="Green.TButton")   # ✅
+        self._copy_reset_id = self.window.after(3000, self._reset_copy_btn)
+
+    def _reset_copy_btn(self):
+        self.copy_btn.config(text="\U0001f4cb")   # 📋
+        self._copy_reset_id = None
 
     def _on_stop_or_close(self):
         if not self._stopped:

@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.51 — Fix datetime import; add Copy Log button with green tick (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: move `from datetime import datetime` to module-level import (was only inside `_run_debug`), causing `NameError: name 'datetime' is not defined` on the regular run path. Remove duplicate local import from `_run_debug`. | DONE | |
+| 2 | `progress_dialog.py`: add Copy Log button (📋) to button row. On click, copies full log text to clipboard and shows ✅ for 3 seconds before reverting to 📋. | DONE | |
+| 3 | `version.py`: bump to `1.0.51`. | DONE | |
+
 ### v1.0.50 — Logic test fixtures and test suites for GB, AP, and Conditions (2026-07-30)
 
 | # | Change | Status | Notes |

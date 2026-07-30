@@ -2,6 +2,7 @@ import sys
 import tkinter as tk
 import os
 from tkinter import ttk
+from datetime import datetime
 from file_upload_ui import FileUploadUI
 from task_registry import TASK_REGISTRY
 from version import __version__
@@ -342,7 +343,6 @@ class TaskSelectorUI:
         """Debug mode: skip the UI form and run directly with hardcoded files.
         Retains original exit-on-close behaviour."""
         from progress_dialog import ProgressDialog
-        from datetime import datetime
         import threading
 
         debug_files = _DEBUG_FILES_MAP.get(DEBUG_TASK, DEBUG_FILES)
@@ -376,7 +376,7 @@ class TaskSelectorUI:
                     dialog.append_entry(
                         "[Complete]",
                         datetime.now().strftime("[%Y%m%d %H%M%S]") + "  Processing has completed successfully",
-                    )
+                    )  # noqa: datetime imported at module level
                     self.root.after(0, lambda: dialog.action_btn.config(text="Close"))
                     self.root.after(0, lambda: setattr(dialog, "_stopped", True))
                 elif not dialog.is_stopped():
