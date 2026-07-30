@@ -762,3 +762,13 @@ def _build_signoff(wb):
 
 if __name__ == "__main__":
     build()
+    try:
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from strategies.sensitivity import ExcelLabeler
+        labeler = ExcelLabeler()
+        ok, msg = labeler.label_file(OUT_PATH, "Internal_Use_Only")
+        labeler.close()
+        print(f"  Sensitivity label: {msg}")
+    except Exception as e:
+        print(f"  Sensitivity label skipped: {e}")

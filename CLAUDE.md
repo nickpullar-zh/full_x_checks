@@ -58,6 +58,22 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.60 — Apply Internal_Use_Only label to generated test plans (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py` + `docs/generate_full_app_uat.py`: call `ExcelLabeler` after saving the workbook to apply the Internal_Use_Only MIP label. Failure is swallowed silently so the script still completes. | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.59 Test Plan.xlsx` + `docs/20260730 Full_Application_v1.0.59 Test Plan.xlsx`: regenerated with label applied. | DONE | |
+| 3 | `version.py`: bump to `1.0.60`. | DONE | |
+
+### v1.0.59 — Output both UAT test plans at v1.0.58 (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/20260730 Fixture_UAT_v1.0.58 Test Plan.xlsx`: generated. | DONE | |
+| 2 | `docs/20260730 Full_Application_v1.0.58 Test Plan.xlsx`: generated. | DONE | |
+| 3 | `version.py`: bump to `1.0.59`. | DONE | |
+
 ### v1.0.58 — Fixture UAT plan expanded: GB/AP/Conditions each list every row with expected output (2026-07-30)
 
 | # | Change | Status | Notes |
