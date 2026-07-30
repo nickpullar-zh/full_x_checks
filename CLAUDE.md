@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.65 — Clarify KEL test cases: explicitly state Process only differences must be unchecked (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-09, FX-13, FX-19 KEL test cases now explicitly state "'Process only differences' must be UNCHECKED" and step updated to "Uncheck... then click Proceed". Without this, the default checkbox causes the comparison to be filtered to 2 rows and the KEL rows never appear. | DONE | |
+| 2 | `docs/20260730 Fixture_UAT_v1.0.64 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.65`. | DONE | |
+
 ### v1.0.64 — Field label: (optional) on new line; wraplength 180px (2026-07-30)
 
 | # | Change | Status | Notes |

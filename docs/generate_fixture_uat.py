@@ -190,8 +190,9 @@ TEST_CASES = [
         "FX-09", "X-Checks — Known Exception annotation", "Logic",
         f"Same files as FX-05. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: X-Checks).\n"
         "The KEL contains 2 entries: one correct fingerprint for XC_KEL_MISMATCH, "
-        "one with wrong fingerprint for XC_KEL_NO_MATCH.",
-        "Add the Known Exception List file and run.",
+        "one with wrong fingerprint for XC_KEL_NO_MATCH.\n"
+        "'Process only differences' must be UNCHECKED so all 30 rows appear.",
+        "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
         "Run completes. Progress log shows 'Known exceptions loaded  (2)'.\n\n"
         "XC_KEL_MISMATCH: MisMatch cells → 'MisMatch (Excepted)' with blue fill; "
         "X-Check No. cell blue; Known Exception column = 'Test fixture — expected mismatch'.\n\n"
@@ -269,8 +270,9 @@ TEST_CASES = [
     (
         "FX-13", "Grouping By — Known Exception annotation", "Logic",
         f"Same files as FX-12. Known Exception List: fixtures\\gb\\gb_kel.xlsx  (sheet: Grouping By).\n"
-        "KEL contains 2 entries: correct fingerprint for GB_KEL_MATCH|ITEM_A; wrong key for GB_KEL_NO_MATCH.",
-        "Add the Known Exception List and run.",
+        "KEL contains 2 entries: correct fingerprint for GB_KEL_MATCH|ITEM_A; wrong key for GB_KEL_NO_MATCH.\n"
+        "'Process only differences' must be UNCHECKED (same as FX-12) so all 14 rows appear.",
+        "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
         "GB_KEL_MATCH|ITEM_A: Result = Not in FIP (unchanged); Known Exception column populated with reason text.\n"
         "GB_KEL_NO_MATCH|ITEM_A: Result = Not in FIP; Known Exception column BLANK (wrong fingerprint - no match).\n"
         "All other rows: Known Exception column blank.",
@@ -355,8 +357,9 @@ TEST_CASES = [
     (
         "FX-19", "Accounting Principles — Known Exception annotation", "Logic",
         f"Same files as FX-17. Known Exception List: fixtures\\ap\\ap_kel.xlsx  (sheet: Accounting Principles).\n"
-        "KEL contains 2 entries: correct 6-column fingerprint for AP_MISMATCH; wrong FIP value for AP_KEL_NO_MATCH.",
-        "Add the Known Exception List and run.",
+        "KEL contains 2 entries: correct 6-column fingerprint for AP_MISMATCH; wrong FIP value for AP_KEL_NO_MATCH.\n"
+        "'Process only differences' must be UNCHECKED so all 11 rows appear.",
+        "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
         "AP_MISMATCH: Match = MisMatch (unchanged); Known Exception column populated with reason text.\n"
         "AP_MATCH_W: Known Exception column BLANK (no mismatch - KEL never fires on Match rows).\n"
         "All other rows: Known Exception blank.",
