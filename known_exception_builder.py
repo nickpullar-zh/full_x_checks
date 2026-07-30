@@ -8,14 +8,8 @@ pre-fill mismatch rows.
 """
 
 import tkinter as tk
-import sys as _sys
 from tkinter import ttk, filedialog, messagebox
-
-
-def _exe_dir() -> str:
-    if getattr(_sys, 'frozen', False):
-        return os.path.dirname(_sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+from file_upload_ui import _get_initial_dir, _set_last_dir
 import os
 
 import openpyxl
@@ -195,9 +189,10 @@ class KnownExceptionBuilderDialog:
             title="Save Known Exception List as…",
             defaultextension=".xlsx",
             filetypes=[("Excel Files", "*.xlsx")],
-            initialdir=_exe_dir(),
+            initialdir=_get_initial_dir(),
         )
         if path:
+            _set_last_dir(path)
             self._out_path.set(path)
             self._out_lbl.config(text=os.path.basename(path), foreground="#23366F")
             self._check_ready()
@@ -207,10 +202,11 @@ class KnownExceptionBuilderDialog:
             parent=self._win,
             title="Select comparison output workbook…",
             filetypes=[("Excel Files", "*.xlsx")],
-            initialdir=_exe_dir(),
+            initialdir=_get_initial_dir(),
         )
         if not path:
             return
+        _set_last_dir(path)
         self._import_path.set(path)
         self._import_lbl.config(text=os.path.basename(path), foreground="#23366F")
         self._detect_strategies(path)

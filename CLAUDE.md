@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.55 — File dialogs remember last file location; folder picks don't update it (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add `_last_dir`, `_get_initial_dir()`, `_set_last_dir()`. File pickers use `_get_initial_dir()` and call `_set_last_dir()` on success. Directory picker uses `_get_initial_dir()` but does NOT update `_last_dir`. | DONE | |
+| 2 | `known_exception_builder.py`: remove local `_exe_dir()`; import `_get_initial_dir` and `_set_last_dir` from `file_upload_ui`. Both file pickers call `_set_last_dir()` on success. | DONE | |
+| 3 | `version.py`: bump to `1.0.55`. | DONE | |
+
 ### v1.0.54 — Update fixture UAT test plan for v1.0.52/53 changes (2026-07-30)
 
 | # | Change | Status | Notes |

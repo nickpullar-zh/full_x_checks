@@ -5,10 +5,26 @@ from tkinter import ttk, filedialog, messagebox
 
 
 def _exe_dir() -> str:
-    """Return the folder the EXE (or script) lives in — used as initialdir for file dialogs."""
+    """Return the folder the EXE (or script) lives in."""
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
+
+
+# Tracks the last folder a file dialog visited. Starts at the EXE folder;
+# updated whenever the user picks a file or folder so the next dialog opens there.
+_last_dir: str = _exe_dir()
+
+
+def _get_initial_dir() -> str:
+    return _last_dir
+
+
+def _set_last_dir(path: str) -> None:
+    """Update the remembered directory when a FILE is selected. Folder picks are ignored."""
+    global _last_dir
+    if os.path.isfile(path):
+        _last_dir = os.path.dirname(path)
 from typing import Optional, Dict
 from file_upload_config import UploadTaskConfig
 
@@ -445,9 +461,10 @@ class FileUploadUI:
         filepath = filedialog.askopenfilename(
             title=f"Select {field.label}",
             filetypes=field.file_types + [("All Files", "*.*")],
-            initialdir=_exe_dir(),
+            initialdir=_get_initial_dir(),
         )
         if filepath:
+            _set_last_dir(filepath)
             path_var.set(filepath)
             self.path_labels[field.label].config(
                 text=os.path.basename(filepath),
@@ -475,7 +492,7 @@ class FileUploadUI:
         """Opens a directory picker for the output location."""
         directory = filedialog.askdirectory(
             title="Select Output Directory",
-            initialdir=_exe_dir(),
+            initialdir=_get_initial_dir(),
         )
         if directory:
             self.output_directory = directory  # ← Store as plain string
