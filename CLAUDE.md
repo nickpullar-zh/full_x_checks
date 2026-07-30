@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.41 — Comprehensive X-Checks fixtures + KEL fingerprint no-match test (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_test_fixtures.py`: expanded X-Checks fixtures from 11 to 26 rows covering every transformation path: ABS wrapping, LC_YTD/CONST_LC, percentage format, ff suffix, subtraction, non-zero limit, >= operator, excl.acc.type (match and mismatch), REX→ToM correction, INACTIVE filter, yellow Category filter, XC_ALL_MISMATCH (both formula and vars wrong), XC_FORMULA_MISMATCH (operator differs, vars same), XC_KEL_NO_MATCH (KEL entry with wrong fingerprint → no annotation). Also adds @2A@ excl account type lines to FIP block helper. | DONE | |
+| 2 | `test_data/run_logic_tests.py`: updated to 58 assertions covering all 26 X-Check rows plus column-level checks (Variables Match, Formula Match (Excl), KEL no-match). All 58 pass. | DONE | |
+| 3 | `version.py`: bump to `1.0.41`. | DONE | |
+
 ### v1.0.40 — X-Check No. cell turns blue when row has a Known Exception (2026-07-30)
 
 | # | Change | Status | Notes |

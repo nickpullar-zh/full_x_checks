@@ -8,35 +8,43 @@ Produces test_data/fixtures/:
   fip_xc.txt                  FIP X-Checks text (SAP Validation Rule export format)
   fip_ZQ9_VALFLDGR.xlsx       FIP Grouping By (ZQ9_VALFLDGR extract)
   mapping.txt                 Grouping By mapping file
-  validation_methods.xlsx     AP Validation Methods
+  validation_methods.xlsx     AP Validation Methods (not generated — copy real file)
   fip_ZQ9_VALMSG.xlsx         FIP Accounting Principles (ZQ9_VALMSG extract)
   fip_ZQ9_VALMETH.xlsx        FIP Conditions (ZQ9_VALMETH extract)
+  known_exception_list.xlsx   Known Exception List with one XC_KEL_MISMATCH entry
 
-Expected Comparison results
-===========================
-X-Checks:
-  XC_ALL_MATCH          all 4 comparison cols = Match
-  XC_FORMULA_MISMATCH   all 4 = MisMatch
-  XC_VARIABLE_MISMATCH  Formula Match = Match, Variables Match = MisMatch
-  XC_NOT_IN_FIP         all 4 = Not Found  (EBX only)
-  XC_NOT_IN_EBX         all 4 = Not Found  (FIP only)
-  XC_TOM_CORRECTION     all 4 = Match  (FIP uses TOM; parser rewrites to ToM)
-  XC_THOUSANDS_CORR     all 4 = Match  (FIP formula has 1.000; _clean_text strips to 1000)
-  XC_REORDER_MATCH      Formula Match = MisMatch  (reorder logic fires but produces
-                        invalid formula for simple addition; see compare.py note)
+X-Checks fixture design
+=======================
+Every code path in ebx_extraction.py, fip_extraction.py, and compare.py
+that performs a transformation is covered by a dedicated row.
 
-Grouping By:
-  GB_MATCHED            Result = Matched
-  GB_NOT_IN_FIP         Result = Not in FIP
-
-Accounting Principles:
-  AP_MATCH              Match = Match
-  AP_MISMATCH           Match = MisMatch
-
-Conditions:
-  COND_MATCHED          Comparison = Matched
-  COND_NOT_MATCHED      Comparison = Not Matched
-  COND_REF_XCHECK       Comparison = Matched  (Reference X-Check overrides key prefix)
+Row                   What it tests                                    Expected
+---------             -----------------------------------------        --------
+XC_ALL_MATCH          Standard VAL_YTD formula+vars — full match       all Match
+XC_ALL_MISMATCH       Formula wrong AND variables wrong                 all MisMatch
+XC_FORMULA_MISMATCH   Operator differs (<=0 vs >=0); vars same         Formula=MisMatch, Vars=Match
+XC_VARIABLE_MISMATCH  Formula matches; FIP FS Account differs          Formula=Match, Vars=MisMatch
+XC_NOT_IN_FIP         EBX row present; no FIP block                    all Not Found
+XC_NOT_IN_EBX         FIP block present; no EBX Account No row         all Not Found
+XC_TOM_CORRECTION     FIP var/formula uses TOM; parser rewrites→ToM    all Match
+XC_REX_CORRECTION     FIP var/formula uses REX; parser rewrites→ToM    all Match
+XC_THOUSANDS_CORR     FIP formula has 1.000; _clean_text→1000          all Match
+XC_REORDER_MATCH      FIP addition terms reversed; reorder logic       Formula=MisMatch (edge case)
+XC_ABS_FORMULA        Operator 2 set → ABS(...) wrapping               all Match
+XC_LC_YTD             Category=Shareholders' Equity → LC_YTD           all Match
+XC_LC_CONST           LC_YTD with non-zero limit → CONST_LC            all Match
+XC_PCT_FORMAT         % column=X → percentage format right-hand side   all Match
+XC_FF_SUFFIX          Two accounts, no SubA → ff suffix, one variable  all Match
+XC_SUBTRACT           Two accounts, + and - operators                  all Match
+XC_NONZERO_LIMIT      Non-zero Limit 1 → CONST(...) right-hand side    all Match
+XC_GTE_OPERATOR       Operator 1 = >= (not <=)                         all Match
+XC_EXCL_MATCH         Exclude Account Type=2, FIP has @2A@             all Match (incl Excl cols)
+XC_EXCL_MISMATCH      Exclude Account Type=2, FIP no excl              Formula=Match, Excl=MisMatch
+XC_KEL_MISMATCH       Formula mismatch; KEL entry annotates reason      all MisMatch + Known Exception
+XC_DIFF_IN_SCOPE      Status=ACTIVE, Type of change set                In-scope for selection
+XC_DIFF_EXCLUDED      Type of change set, Exclude Z-Core=X             Excluded from selection
+XC_DIFF_INACTIVE      Status=INACTIVE, Type of change set              Excluded (INACTIVE)
+XC_DIFF_YELLOW_CAT    Type of change set, Category cell yellow          Excluded (yellow category)
 """
 
 from pathlib import Path
@@ -63,34 +71,37 @@ def _make_xc_pub():
     ws.title = "cross checks all"
 
     headers = [
-        "X-Check No.",                   # A
-        "Account No.",                   # B
-        "SubA No.",                      # C
-        "Operator (X-Check Term)",       # D
-        "Absolute (result)",             # E
-        "Category",                      # F
-        "Operator 1",                    # G
-        "Operator 2",                    # H
-        "Limit 1",                       # I
-        "Limit 2",                       # J
-        "%",                             # K
-        "Exclude Account Type",          # L
-        "Version Spanning Validation",   # M
-        "Ending Balance Prior Year",     # N
-        "Grouping By",                   # O
-        "Reference  X-Check (Condition)",  # P  (two spaces — real file header)
-        "IFRS New RFD",                  # Q  (real AP validation event from validation_methods.xlsx)
-        "Applicable Quarters",           # R
-        "Included RUs",                  # S
-        "Excluded RUs",                  # T
-        "Reference X-Check (Limit, %)",  # U
-        "Status",                        # V
-        "Type of change",               # W
-        "Exclude Z-Core",               # X
-        "Sense Check",                  # Y
-        "In Scope",                     # Z
+        "X-Check No.",                    # A  col 1
+        "Account No.",                    # B  col 2
+        "SubA No.",                       # C  col 3
+        "Operator (X-Check Term)",        # D  col 4
+        "Absolute (result)",              # E  col 5
+        "Category",                       # F  col 6
+        "Operator 1",                     # G  col 7
+        "Operator 2",                     # H  col 8
+        "Limit 1",                        # I  col 9
+        "Limit 2",                        # J  col 10
+        "%",                              # K  col 11
+        "Exclude Account Type",           # L  col 12
+        "Version Spanning Validation",    # M  col 13
+        "Ending Balance Prior Year",      # N  col 14
+        "Grouping By",                    # O  col 15
+        "Reference  X-Check (Condition)", # P  col 16  (two spaces — real file header)
+        "IFRS New RFD",                   # Q  col 17  (real AP validation event)
+        "Applicable Quarters",            # R  col 18
+        "Included RUs",                   # S  col 19
+        "Excluded RUs",                   # T  col 20
+        "Reference X-Check (Limit, %)",   # U  col 21
+        "Status",                         # V  col 22
+        "Type of change",                 # W  col 23
+        "Exclude Z-Core",                 # X  col 24
+        "Sense Check",                    # Y  col 25
+        "In Scope",                       # Z  col 26
     ]
     ws.append(headers)
+
+    # Track rows that need fills: list of (row_idx, col_idx, fill)
+    pending_fills = []
 
     def row(xc, acct="", suba="", op_term="+", absolute="", category="",
             op1="<=", op2="", lim1="0", lim2="", pct="",
@@ -109,109 +120,146 @@ def _make_xc_pub():
             status, toc, excl_zcore, "", "",
         ]
 
-    # ------------------------------------------------------------------
+    def append_with_fill(data, col_idx, fill):
+        ws.append(data)
+        pending_fills.append((ws.max_row, col_idx, fill))
+
+    yellow_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFFFF00")
+    green_fill  = openpyxl.styles.PatternFill("solid", fgColor="FF92D050")
+
+    # ==========================================================================
     # X-Checks rows
-    # EBX formula: VAL_YTD(<variable>)<op1><const>
-    # Variable name built from Account No. (+ToM+SubA if SubA present)
-    # ------------------------------------------------------------------
+    # ==========================================================================
 
-    # XC_ALL_MATCH: EBX → VAL_YTD(ACC001)<=0, FIP matches exactly
-    ws.append(row("XC_ALL_MATCH", acct="ACC001", op1="<=", lim1="0"))
+    # Standard match/mismatch
+    ws.append(row("XC_ALL_MATCH",
+                  acct="ACC001", op1="<=", lim1="0"))
 
-    # XC_KEL_MISMATCH: formula mismatch (FIP has ACC999 instead of ACC001).
-    # Without KEL → MisMatch. With KEL → MisMatch + Known Exception reason.
-    # Same EBX formula pattern as XC_FORMULA_MISMATCH but distinct ID so
-    # the KEL entry can be keyed specifically to this X-Check.
-    ws.append(row("XC_KEL_MISMATCH", acct="ACC001", op1="<=", lim1="0"))
+    ws.append(row("XC_ALL_MISMATCH",        # FIP has ACC999 → formula AND vars wrong
+                  acct="ACC001", op1="<=", lim1="0"))
 
-    # XC_FORMULA_MISMATCH: EBX → VAL_YTD(ACC001)<=0; FIP has VAL_YTD(ACC999)<=0
-    ws.append(row("XC_FORMULA_MISMATCH", acct="ACC001", op1="<=", lim1="0"))
+    ws.append(row("XC_FORMULA_MISMATCH",    # EBX <=0, FIP >=0 → formula wrong, vars same
+                  acct="ACC001", op1="<=", lim1="0"))
 
-    # XC_VARIABLE_MISMATCH: EBX → VAL_YTD(ACC001)<=0; FIP formula matches
-    # but FIP FS Account = ACC_WRONG → variable string differs → Variables MisMatch
-    ws.append(row("XC_VARIABLE_MISMATCH", acct="ACC001", op1="<=", lim1="0"))
+    ws.append(row("XC_VARIABLE_MISMATCH",   # formula matches, FIP FS Account differs
+                  acct="ACC001", op1="<=", lim1="0"))
 
-    # XC_NOT_IN_FIP: EBX row present; no FIP block → Not Found (FIP side missing)
-    ws.append(row("XC_NOT_IN_FIP", acct="ACC001", op1="<=", lim1="0"))
+    ws.append(row("XC_NOT_IN_FIP",          # EBX only → Not Found
+                  acct="ACC001", op1="<=", lim1="0"))
 
-    # XC_NOT_IN_EBX: no Account No. → extract_ebx skips it; still appears in
-    # x_check_list (read from raw EBX DataFrame); FIP has a block → Not Found (EBX side)
-    ws.append(row("XC_NOT_IN_EBX"))  # no acct → skipped by extract_ebx
+    ws.append(row("XC_NOT_IN_EBX"))         # no Account No → skipped by extract_ebx
 
-    # XC_TOM_CORRECTION: SubA "AA" (non-numeric string) → no float conversion
-    # EBX var = ACC001ToMAA, Movement Types:AA
-    # FIP uses TOM in var name; VARIABLE state replaces TOM→ToM → ACC001ToMAA → Match
-    ws.append(row("XC_TOM_CORRECTION", acct="ACC001", suba="AA", op_term="+", op1="<=", lim1="0"))
+    # FIP text normalisation
+    ws.append(row("XC_TOM_CORRECTION",      # FIP uses TOM; parser → ToM
+                  acct="ACC001", suba="AA", op_term="+", op1="<=", lim1="0"))
 
-    # XC_THOUSANDS_CORR: EBX → VAL_YTD(ACC001)<=CONST(1000,'USD','E')
-    # FIP formula has CONST(1.000,...); _clean_text re.sub strips 1.000 → 1000 → Match
-    ws.append(row("XC_THOUSANDS_CORR", acct="ACC001", op1="<=", lim1="1000"))
+    ws.append(row("XC_REX_CORRECTION",      # FIP uses REX; parser → ToM
+                  acct="ACC001", suba="CC", op_term="+", op1="<=", lim1="0"))
 
-    # XC_REORDER_MATCH: SubA "AA"/"BB" → vars A_ACCToMAA, B_ACCToMBB
-    # FIP formula reversed; _compare_formulas addition-only reorder → Match
+    ws.append(row("XC_THOUSANDS_CORR",      # FIP has 1.000; _clean_text → 1000
+                  acct="ACC001", op1="<=", lim1="1000"))
+
+    # Addition-term reorder (two rows, same XC — SubA "AA"/"BB")
     ws.append(row("XC_REORDER_MATCH", acct="A_ACC", suba="AA", op_term="+", op1="<=", lim1="0"))
     ws.append(row("XC_REORDER_MATCH", acct="B_ACC", suba="BB", op_term="+", op1="<=", lim1="0"))
 
-    # ------------------------------------------------------------------
+    # EBX formula-building paths
+    ws.append(row("XC_ABS_FORMULA",         # Operator 2 = <= with Limit 2 = 5 → ABS(...)
+                  acct="ACC001", op1="<=", op2="<=", lim1="0", lim2="5"))
+
+    ws.append(row("XC_LC_YTD",              # Category = Shareholders' Equity → LC_YTD
+                  acct="ACC001", category="Shareholders' Equity", op1="<=", lim1="0"))
+
+    ws.append(row("XC_LC_CONST",            # LC_YTD with non-zero limit → CONST_LC
+                  acct="ACC001", category="Shareholders' Equity", op1="<=", lim1="100"))
+
+    ws.append(row("XC_PCT_FORMAT",          # % = X → percentage right-hand side
+                  acct="ACC001", op1="<", lim1="1.5", pct="X"))
+
+    # ff suffix: two accounts, no SubA → grouped, formula uses ACC001ff
+    ws.append(row("XC_FF_SUFFIX", acct="ACC001", op_term="+", op1="<=", lim1="0"))
+    ws.append(row("XC_FF_SUFFIX", acct="ACC002", op_term="+", op1="<=", lim1="0"))
+
+    # Subtraction: ACC_POS (+) and ACC_NEG (-), no SubA
+    ws.append(row("XC_SUBTRACT", acct="ACC_POS", op_term="+", op1="<=", lim1="0"))
+    ws.append(row("XC_SUBTRACT", acct="ACC_NEG", op_term="-", op1="<=", lim1="0"))
+
+    # Non-zero limit
+    ws.append(row("XC_NONZERO_LIMIT",       # lim1=100 → CONST(100,'USD','E')
+                  acct="ACC001", op1="<=", lim1="100"))
+
+    # >= operator
+    ws.append(row("XC_GTE_OPERATOR",        # Operator 1 = >= instead of <=
+                  acct="ACC001", op1=">=", lim1="0"))
+
+    # Excl account type: FIP has @2A@ → Formula Match (Excl) = Match
+    ws.append(row("XC_EXCL_MATCH",
+                  acct="ACC001", excl_acc="2", op1="<=", lim1="0"))
+
+    # Excl account type: FIP has no @2A@ → Formula Match (Excl) = MisMatch
+    ws.append(row("XC_EXCL_MISMATCH",
+                  acct="ACC001", excl_acc="2", op1="<=", lim1="0"))
+
+    # Known Exception List annotation
+    ws.append(row("XC_KEL_MISMATCH",        # MisMatch without KEL; annotated with KEL
+                  acct="ACC001", op1="<=", lim1="0"))
+
+    ws.append(row("XC_KEL_NO_MATCH",       # MisMatch; KEL entry exists for this ID but
+                  acct="ACC001", op1="<=", lim1="0"))  # with wrong fingerprint → no annotation
+
+    # ==========================================================================
     # Grouping By rows
-    # ------------------------------------------------------------------
+    # ==========================================================================
     ws.append(row("GB_MATCHED",    grouping_by="GB_GROUPING_ITEM"))
     ws.append(row("GB_NOT_IN_FIP", grouping_by="GB_GROUPING_ITEM"))
 
-    # ------------------------------------------------------------------
+    # ==========================================================================
     # Accounting Principles rows
-    # TEST_EVENT = 'w' on both; FIP has w (Match) or e (MisMatch)
-    # ------------------------------------------------------------------
+    # ==========================================================================
     ws.append(row("AP_MATCH",    test_event="w"))
     ws.append(row("AP_MISMATCH", test_event="w"))
 
-    # ------------------------------------------------------------------
+    # ==========================================================================
     # Conditions rows
-    # ------------------------------------------------------------------
+    # ==========================================================================
     ws.append(row("COND_MATCHED",     app_qtrs="Q1"))
     ws.append(row("COND_NOT_MATCHED", app_qtrs="Q2"))
-    # Reference X-Check (Condition)=COND_BASE overrides key prefix → key=COND_BASE|Q1
-    ws.append(row("COND_REF_XCHECK", ref_xc_cond="COND_BASE", app_qtrs="Q1"))
+    ws.append(row("COND_REF_XCHECK",  ref_xc_cond="COND_BASE", app_qtrs="Q1"))
 
-    # ------------------------------------------------------------------
+    # ==========================================================================
     # "Process only differences" / "Test Changes Only" rows
-    # ------------------------------------------------------------------
-    # XC_DIFF_IN_SCOPE: Status=ACTIVE, Type of change non-blank, no Z-Core exclusion,
-    # Category not yellow → survives the X-Check No Selection filter.
-    # Also has Account No so extract_ebx produces a formula; FIP block present → Match.
-    ws.append(row("XC_DIFF_IN_SCOPE", acct="ACC001", op1="<=", lim1="0",
-                  toc="Changed"))
+    # ==========================================================================
 
-    # XC_DIFF_EXCLUDED: same Type of change, but Exclude Z-Core = X
-    # → dropped by the filter; should NOT appear in the .txt output.
-    ws.append(row("XC_DIFF_EXCLUDED", acct="ACC001", op1="<=", lim1="0",
+    # XC: ACTIVE + Type of change → in scope
+    ws.append(row("XC_DIFF_IN_SCOPE",   acct="ACC001", op1="<=", lim1="0", toc="Changed"))
+
+    # XC: Type of change set BUT Exclude Z-Core=X → excluded
+    ws.append(row("XC_DIFF_EXCLUDED",   acct="ACC001", op1="<=", lim1="0",
                   toc="Changed", excl_zcore="X"))
 
-    # COND_DIFF_YELLOW: Applicable Quarters cell gets a yellow fill below.
-    # process_only_differences=True → collected. FIP has this key → Matched.
+    # XC: INACTIVE + Type of change → excluded (step 1: drop INACTIVE)
+    ws.append(row("XC_DIFF_INACTIVE",   acct="ACC001", op1="<=", lim1="0",
+                  status="INACTIVE", toc="Changed"))
+
+    # XC: Type of change set BUT Category cell is yellow → excluded
+    ws.append(row("XC_DIFF_YELLOW_CAT", acct="ACC001", op1="<=", lim1="0",
+                  category="Test Cat", toc="Changed"))
+    pending_fills.append((ws.max_row, 6, yellow_fill))   # col 6 = Category
+
+    # Conditions: yellow condition cell → collected in differences mode
     ws.append(row("COND_DIFF_YELLOW", app_qtrs="Q1"))
+    pending_fills.append((ws.max_row, 18, yellow_fill))  # col 18 = Applicable Quarters
 
-    # COND_DIFF_GREEN: Applicable Quarters condition cell is green.
-    # extract_conditions: green condition cell → collected in differences mode.
-    # process_only_differences=True → collected. FIP has this key → Matched.
-    ws.append(row("COND_DIFF_GREEN", app_qtrs="Q1"))
+    # Conditions: green condition cell → collected in differences mode
+    ws.append(row("COND_DIFF_GREEN",  app_qtrs="Q1"))
+    pending_fills.append((ws.max_row, 18, green_fill))
 
-    # COND_DIFF_WHITE: plain white cell — no fill anywhere.
-    # process_only_differences=True → NOT collected → no output row.
-    ws.append(row("COND_DIFF_WHITE", app_qtrs="Q1"))
+    # Conditions: plain white cell → NOT collected in differences mode
+    ws.append(row("COND_DIFF_WHITE",  app_qtrs="Q1"))
 
-    # Apply fills after all rows are appended so row indices are stable.
-    # Column R (index 18) = Applicable Quarters.
-    # Column A (index 1)  = X-Check No.
-    # Row order from bottom: COND_DIFF_WHITE = max_row, COND_DIFF_GREEN = max_row-1,
-    # COND_DIFF_YELLOW = max_row-2.
-    yellow_fill = openpyxl.styles.PatternFill("solid", fgColor="FFFFFF00")
-    green_fill  = openpyxl.styles.PatternFill("solid", fgColor="FF92D050")
-    cond_diff_white_row  = ws.max_row
-    cond_diff_green_row  = ws.max_row - 1
-    cond_diff_yellow_row = ws.max_row - 2
-    ws.cell(row=cond_diff_yellow_row, column=18).fill = yellow_fill  # Applicable Quarters cell yellow
-    ws.cell(row=cond_diff_green_row,  column=18).fill = green_fill   # Applicable Quarters cell green
+    # Apply all fills now that row indices are stable
+    for row_idx, col_idx, fill in pending_fills:
+        ws.cell(row=row_idx, column=col_idx).fill = fill
 
     wb.save(OUT / "xc_pub.xlsx")
     print("  wrote xc_pub.xlsx")
@@ -220,18 +268,23 @@ def _make_xc_pub():
 # ---------------------------------------------------------------------------
 # 2. FIP X-Checks text
 # ---------------------------------------------------------------------------
-# Line formats that survive _clean_text correctly:
+# Block format notes (what survives _clean_text):
 #
-# FS Account line: "| 1 | 2 | 3 | FS Account | <acct> |\n"
-#   → after cleanup: "1 2 3 FS Account <acct> |"
-#   → token[3]="FS" → arr_fs_accounts.append(token[5]=<acct>) ✓
+#   FS Account:   "| 1 | 2 | 3 | FS Account | <acct> |"
+#                  → token[3]="FS", token[5]=<acct>
 #
-# Movement Type line (first MT for a variable): "| |- Movement Type @20@ <mt> desc |\n"
-#   → after cleanup: "|-Movement Type @20@ <mt> desc |"
-#   → 'Movement Type' in line → token[3]=<mt> → arr_movement_types.append(<mt>) ✓
+#   Excl type:    "| 0 | 1 | @2A@ | Account | Type | <n> |"
+#                  → token[2]="@2A@", token[4]="Type", token[5]=<n>
 #
-# Variable name line: just the name on its own line (no delimiters)
-#   → cleanup is identity; then TOM→ToM replacement in VARIABLE state ✓
+#   Movement type (first):  "| |- Movement Type @20@ <mt> desc |"
+#                            → 'Movement Type' in line, token[3]=<mt>
+#
+#   Variable name: bare name on its own line (no delimiters)
+#
+# State machine transitions:
+#   VARIABLE → BLANK → FS_ACCOUNT
+#   FS_ACCOUNT: BLANK saves var, → VARIABLE
+#   FS_ACCOUNT: BLOCK_END saves var, breaks (last var in block)
 
 _SEGMENT_END = "|-Segment @28@ * |"
 _BLOCK_END   = "-|"
@@ -240,171 +293,195 @@ _FORMULA_HDR = "|Formula String |"
 _VAR_HDR     = "|-Characteristic Sel Opt Attributes Node Characteristic From To |"
 
 
-def _fip_block_single(xc_id, formula, var_name, fs_accounts, movement_types=None):
-    """One variable, optional movement types."""
+def _fip_block_single(xc_id, formula, var_name, fs_accounts,
+                      movement_types=None, excl_types=None):
+    """One variable, optional movement types, optional @2A@ excl account types."""
     if movement_types is None:
         movement_types = []
+    if excl_types is None:
+        excl_types = []
 
-    fs_lines = "".join(
-        f"| 1 | 2 | 3 | FS Account | {acc} |\n"
-        for acc in fs_accounts
-    )
+    fs_lines   = "".join(f"| 1 | 2 | 3 | FS Account | {a} |\n" for a in fs_accounts)
+    excl_lines = "".join(f"| 0 | 1 | @2A@ | Account | Type | {t} |\n" for t in excl_types)
 
     if movement_types:
-        # First MT: line that triggers 'Movement Type' detection; token[3] = mt value
         mt_lines = f"| |- Movement Type @20@ {movement_types[0]} desc |\n"
-        # Additional MTs in MOV_GENERAL state: token[3] = mt value
         for mt in movement_types[1:]:
             mt_lines += f"| 1 | 2 | 3 | @20@ | {mt} | desc |\n"
-        end_var = _BLOCK_END + "\n"  # BLOCK_END saves variable and breaks in MOV_GENERAL
     else:
         mt_lines = ""
-        end_var = _BLOCK_END + "\n"  # BLOCK_END in FS_ACCOUNT state saves and breaks
 
     return (
         f"{xc_id} {xc_id} {xc_id} test description\n"
-        f"{_FORMULA_HDR}\n"
-        f"{formula}\n"
+        f"{_FORMULA_HDR}\n{formula}\n{_BLOCK_END}\n"
+        f"{_VAR_HDR}\n{var_name}\n{_BLANK}\n"
+        f"{fs_lines}{excl_lines}{mt_lines}"
         f"{_BLOCK_END}\n"
-        f"{_VAR_HDR}\n"
-        f"{var_name}\n"
-        f"{_BLANK}\n"
-        f"{fs_lines}"
-        f"{mt_lines}"
-        f"{end_var}"
-        f"{_SEGMENT_END}\n"
-        f"{_BLOCK_END}\n\n"
+        f"{_SEGMENT_END}\n{_BLOCK_END}\n\n"
     )
 
 
 def _fip_block_two_vars(xc_id, formula,
                         var1_name, var1_fs, var1_mt,
                         var2_name, var2_fs, var2_mt):
-    """
-    Two variables with movement types.
-    After var1's movement type section: BLANK_LINE returns parser to VARIABLE state.
-    After var2's movement type section: BLOCK_END saves var2 and breaks.
-    """
-    def fs_lines(accts):
-        return "".join(f"| 1 | 2 | 3 | FS Account | {a} |\n" for a in accts)
-
-    def mt_line(mt):
-        return f"| |- Movement Type @20@ {mt} desc |\n"
+    """Two variables each with one movement type."""
+    def fs(accts): return "".join(f"| 1 | 2 | 3 | FS Account | {a} |\n" for a in accts)
+    def mt(m):     return f"| |- Movement Type @20@ {m} desc |\n"
 
     return (
         f"{xc_id} {xc_id} {xc_id} test description\n"
-        f"{_FORMULA_HDR}\n"
-        f"{formula}\n"
-        f"{_BLOCK_END}\n"
+        f"{_FORMULA_HDR}\n{formula}\n{_BLOCK_END}\n"
         f"{_VAR_HDR}\n"
-        # Variable 1
-        f"{var1_name}\n"
-        f"{_BLANK}\n"
-        f"{fs_lines(var1_fs)}"
-        f"{mt_line(var1_mt)}"
-        f"{_BLANK}\n"           # BLANK in MOV_GENERAL → save var1, back to VARIABLE state
-        # Variable 2
-        f"{var2_name}\n"
-        f"{_BLANK}\n"
-        f"{fs_lines(var2_fs)}"
-        f"{mt_line(var2_mt)}"
-        f"{_BLOCK_END}\n"       # BLOCK_END in MOV_GENERAL → save var2, break
-        f"{_SEGMENT_END}\n"
-        f"{_BLOCK_END}\n\n"
+        f"{var1_name}\n{_BLANK}\n{fs(var1_fs)}{mt(var1_mt)}"
+        f"{_BLANK}\n"           # BLANK in MOV_GENERAL → save var1, back to VARIABLE
+        f"{var2_name}\n{_BLANK}\n{fs(var2_fs)}{mt(var2_mt)}"
+        f"{_BLOCK_END}\n"       # BLOCK_END → save var2, break
+        f"{_SEGMENT_END}\n{_BLOCK_END}\n\n"
+    )
+
+
+def _fip_block_two_vars_no_mt(xc_id, formula, var1_name, var1_fs, var2_name, var2_fs):
+    """Two variables with no movement types."""
+    def fs(accts): return "".join(f"| 1 | 2 | 3 | FS Account | {a} |\n" for a in accts)
+
+    return (
+        f"{xc_id} {xc_id} {xc_id} test description\n"
+        f"{_FORMULA_HDR}\n{formula}\n{_BLOCK_END}\n"
+        f"{_VAR_HDR}\n"
+        f"{var1_name}\n{_BLANK}\n{fs(var1_fs)}"
+        f"{_BLANK}\n"           # BLANK in FS_ACCOUNT → save var1, back to VARIABLE
+        f"{var2_name}\n{_BLANK}\n{fs(var2_fs)}"
+        f"{_BLOCK_END}\n"       # BLOCK_END → save var2, break
+        f"{_SEGMENT_END}\n{_BLOCK_END}\n\n"
     )
 
 
 def _make_fip_xc():
     blocks = []
 
-    # XC_ALL_MATCH: formula VAL_YTD(ACC001)<=0, FS Account ACC001 → all Match
-    blocks.append(_fip_block_single(
-        "XC_ALL_MATCH",
-        formula="VAL_YTD(ACC001)<=0",
-        var_name="ACC001",
-        fs_accounts=["ACC001"],
-    ))
+    # ── Standard match/mismatch ───────────────────────────────────────────────
 
-    # XC_KEL_MISMATCH: FIP formula uses ACC999 → MisMatch without KEL.
-    # With KEL the row is annotated with the Reason but result stays MisMatch.
-    blocks.append(_fip_block_single(
-        "XC_KEL_MISMATCH",
-        formula="VAL_YTD(ACC999)<=0",
-        var_name="ACC999",
-        fs_accounts=["ACC999"],
-    ))
+    blocks.append(_fip_block_single("XC_ALL_MATCH",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
 
-    # XC_FORMULA_MISMATCH: formula uses ACC999 (EBX expects ACC001) → all MisMatch
-    blocks.append(_fip_block_single(
-        "XC_FORMULA_MISMATCH",
-        formula="VAL_YTD(ACC999)<=0",
-        var_name="ACC999",
-        fs_accounts=["ACC999"],
-    ))
+    # XC_ALL_MISMATCH: formula wrong (ACC999) AND FS account wrong (ACC999) → all MisMatch
+    blocks.append(_fip_block_single("XC_ALL_MISMATCH",
+        formula="VAL_YTD(ACC999)<=0", var_name="ACC999", fs_accounts=["ACC999"]))
 
-    # XC_VARIABLE_MISMATCH: formula matches EBX but FS Account = ACC_WRONG
-    # → Formula Match=Match, Variables Match=MisMatch
-    blocks.append(_fip_block_single(
-        "XC_VARIABLE_MISMATCH",
-        formula="VAL_YTD(ACC001)<=0",
-        var_name="ACC_WRONG",
-        fs_accounts=["ACC_WRONG"],
-    ))
+    # XC_FORMULA_MISMATCH: operator differs (>=0 vs <=0); account same → vars Match
+    blocks.append(_fip_block_single("XC_FORMULA_MISMATCH",
+        formula="VAL_YTD(ACC001)>=0", var_name="ACC001", fs_accounts=["ACC001"]))
 
-    # XC_NOT_IN_EBX: valid block; X-Check not in EBX (no Account No. row) → Not Found (EBX side)
-    blocks.append(_fip_block_single(
-        "XC_NOT_IN_EBX",
-        formula="VAL_YTD(ACC001)<=0",
-        var_name="ACC001",
-        fs_accounts=["ACC001"],
-    ))
+    # XC_VARIABLE_MISMATCH: formula matches EBX but FS account wrong → vars MisMatch
+    blocks.append(_fip_block_single("XC_VARIABLE_MISMATCH",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC_WRONG", fs_accounts=["ACC_WRONG"]))
 
-    # XC_TOM_CORRECTION: SubA "AA" → EBX var ACC001ToMAA, MT:AA
-    # FIP uses TOM in var name; VARIABLE state replaces TOM→ToM → ACC001ToMAA → Match
-    blocks.append(_fip_block_single(
-        "XC_TOM_CORRECTION",
-        formula="VAL_YTD(ACC001TOMAA)<=0",
-        var_name="ACC001TOMAA",
-        fs_accounts=["ACC001"],
-        movement_types=["AA"],
-    ))
+    # XC_NOT_IN_EBX: FIP block present, no EBX Account No row → Not Found (EBX side)
+    blocks.append(_fip_block_single("XC_NOT_IN_EBX",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
 
-    # XC_THOUSANDS_CORR: FIP formula contains 1.000; _clean_text strips to 1000
-    # EBX Limit=1000 → formula VAL_YTD(ACC001)<=CONST(1000,'USD','E') → Match
-    blocks.append(_fip_block_single(
-        "XC_THOUSANDS_CORR",
+    # ── FIP text normalisation ────────────────────────────────────────────────
+
+    # XC_TOM_CORRECTION: FIP uses TOM in var name/formula; parser replaces TOM→ToM
+    # EBX SubA="AA" → EBX var=ACC001ToMAA. FIP: ACC001TOMAA → parsed as ACC001ToMAA → Match
+    blocks.append(_fip_block_single("XC_TOM_CORRECTION",
+        formula="VAL_YTD(ACC001TOMAA)<=0", var_name="ACC001TOMAA",
+        fs_accounts=["ACC001"], movement_types=["AA"]))
+
+    # XC_REX_CORRECTION: FIP uses REX in var name/formula; parser replaces REX→ToM
+    # EBX SubA="CC" → EBX var=ACC001ToMCC. FIP: ACC001REXCC → parsed as ACC001ToMCC → Match
+    blocks.append(_fip_block_single("XC_REX_CORRECTION",
+        formula="VAL_YTD(ACC001REXCC)<=0", var_name="ACC001REXCC",
+        fs_accounts=["ACC001"], movement_types=["CC"]))
+
+    # XC_THOUSANDS_CORR: FIP has 1.000; _clean_text re.sub(\d.\d)→\d\d strips → 1000
+    # EBX Limit 1=1000 → formula VAL_YTD(ACC001)<=CONST(1000,'USD','E') → Match
+    blocks.append(_fip_block_single("XC_THOUSANDS_CORR",
         formula="VAL_YTD(ACC001)<=CONST(1.000,'USD','E')",
-        var_name="ACC001",
-        fs_accounts=["ACC001"],
-    ))
+        var_name="ACC001", fs_accounts=["ACC001"]))
 
-    # XC_REORDER_MATCH: FIP has terms reversed (B first, A second)
-    # EBX SubA=1 for A_ACC, SubA=2 for B_ACC → two separate variables
-    # EBX formula: VAL_YTD(A_ACCToM1)+VAL_YTD(B_ACCToM2)<=0  (A sorted first)
-    # FIP formula: VAL_YTD(B_ACCToM2)+VAL_YTD(A_ACCToM1)<=0  (reversed)
-    # _compare_formulas: no )-V, sorted vars equal, has + → reorders FIP → Match
-    # XC_REORDER_MATCH: SubA "AA"/"BB" → vars A_ACCToMAA, B_ACCToMBB
-    # FIP reversed formula; _compare_formulas reorders → Match
-    blocks.append(_fip_block_two_vars(
-        "XC_REORDER_MATCH",
+    # XC_REORDER_MATCH: FIP has addition terms in reverse order
+    # _compare_formulas detects addition-only with same sorted vars → attempts reorder
+    # Known edge case: reorder logic produces invalid formula for simple 2-var addition
+    # Expected: Formula Match = MisMatch (not a bug we're fixing here)
+    blocks.append(_fip_block_two_vars("XC_REORDER_MATCH",
         formula="VAL_YTD(B_ACCToMBB)+VAL_YTD(A_ACCToMAA)<=0",
-        var1_name="A_ACCToMAA",
-        var1_fs=["A_ACC"],
-        var1_mt="AA",
-        var2_name="B_ACCToMBB",
-        var2_fs=["B_ACC"],
-        var2_mt="BB",
-    ))
+        var1_name="A_ACCToMAA", var1_fs=["A_ACC"], var1_mt="AA",
+        var2_name="B_ACCToMBB", var2_fs=["B_ACC"], var2_mt="BB"))
 
-    # XC_DIFF_IN_SCOPE: in-scope for differences mode; FIP matches EBX → Match
-    blocks.append(_fip_block_single(
-        "XC_DIFF_IN_SCOPE",
-        formula="VAL_YTD(ACC001)<=0",
-        var_name="ACC001",
-        fs_accounts=["ACC001"],
-    ))
+    # ── EBX formula-building paths ────────────────────────────────────────────
 
-    # XC_NOT_IN_FIP: intentionally omitted → Not Found (FIP side missing)
+    # XC_ABS_FORMULA: Operator 2 set → ABS wrapping; EBX → ABS(VAL_YTD(ACC001))<=CONST(5,'USD','E')
+    blocks.append(_fip_block_single("XC_ABS_FORMULA",
+        formula="ABS(VAL_YTD(ACC001))<=CONST(5,'USD','E')",
+        var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_LC_YTD: Category=Shareholders' Equity, Limit 1=0 → LC_YTD(ACC001)<=0
+    blocks.append(_fip_block_single("XC_LC_YTD",
+        formula="LC_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_LC_CONST: Category=Shareholders' Equity, Limit 1=100 → LC_YTD(ACC001)<=CONST_LC(100,'USD','E')
+    blocks.append(_fip_block_single("XC_LC_CONST",
+        formula="LC_YTD(ACC001)<=CONST_LC(100,'USD','E')",
+        var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_PCT_FORMAT: % column=X, Limit 1=1.5, op1=< → VAL_YTD(ACC001)<'1,500000%'
+    blocks.append(_fip_block_single("XC_PCT_FORMAT",
+        formula="VAL_YTD(ACC001)<'1,500000%'",
+        var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_FF_SUFFIX: two accounts ACC001+ACC002, no SubA → variable name ACC001ff
+    # FIP: single var ACC001ff with FS accounts [ACC001, ACC002] → Match
+    blocks.append(_fip_block_single("XC_FF_SUFFIX",
+        formula="VAL_YTD(ACC001ff)<=0",
+        var_name="ACC001ff", fs_accounts=["ACC001", "ACC002"]))
+
+    # XC_SUBTRACT: VAL_YTD(ACC_POS)-VAL_YTD(ACC_NEG)<=0 — two separate variables
+    blocks.append(_fip_block_two_vars_no_mt("XC_SUBTRACT",
+        formula="VAL_YTD(ACC_POS)-VAL_YTD(ACC_NEG)<=0",
+        var1_name="ACC_POS", var1_fs=["ACC_POS"],
+        var2_name="ACC_NEG", var2_fs=["ACC_NEG"]))
+
+    # XC_NONZERO_LIMIT: Limit 1=100 → CONST(100,'USD','E')
+    blocks.append(_fip_block_single("XC_NONZERO_LIMIT",
+        formula="VAL_YTD(ACC001)<=CONST(100,'USD','E')",
+        var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_GTE_OPERATOR: Operator 1 = >= → VAL_YTD(ACC001)>=0
+    blocks.append(_fip_block_single("XC_GTE_OPERATOR",
+        formula="VAL_YTD(ACC001)>=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_EXCL_MATCH: FIP has @2A@ Account Type 2 → FIP Formula (Excl) includes excl.acc.type=2
+    # EBX Exclude Account Type=2 → EBX Formula (Excl) also includes excl.acc.type=2 → Match
+    blocks.append(_fip_block_single("XC_EXCL_MATCH",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001",
+        fs_accounts=["ACC001"], excl_types=["2"]))
+
+    # XC_EXCL_MISMATCH: FIP has NO @2A@ → FIP Formula (Excl) = plain formula
+    # EBX Exclude Account Type=2 → EBX Formula (Excl) has excl.acc.type=2 → Excl=MisMatch
+    blocks.append(_fip_block_single("XC_EXCL_MISMATCH",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_KEL_MISMATCH: formula MisMatch (ACC999); KEL entry annotates with Reason
+    blocks.append(_fip_block_single("XC_KEL_MISMATCH",
+        formula="VAL_YTD(ACC999)<=0", var_name="ACC999", fs_accounts=["ACC999"]))
+
+    # XC_KEL_NO_MATCH: formula MisMatch (ACC888); KEL has an entry keyed to this
+    # X-Check No. but with the WRONG fingerprint values → key does not match →
+    # output must remain MisMatch with NO Known Exception annotation.
+    blocks.append(_fip_block_single("XC_KEL_NO_MATCH",
+        formula="VAL_YTD(ACC888)<=0", var_name="ACC888", fs_accounts=["ACC888"]))
+
+    # ── Differences mode ──────────────────────────────────────────────────────
+
+    # XC_DIFF_IN_SCOPE: ACTIVE + Type of change → in selection; FIP matches → Match
+    blocks.append(_fip_block_single("XC_DIFF_IN_SCOPE",
+        formula="VAL_YTD(ACC001)<=0", var_name="ACC001", fs_accounts=["ACC001"]))
+
+    # XC_DIFF_EXCLUDED, XC_DIFF_INACTIVE, XC_DIFF_YELLOW_CAT:
+    # All have Account No so extract_ebx produces a formula.
+    # No FIP block → Not Found in Comparison (filter exclusion is independent of comparison).
+    # XC_NOT_IN_FIP already tests this path; we don't need duplicate FIP blocks.
 
     (OUT / "fip_xc.txt").write_text("".join(blocks), encoding="utf-8")
     print("  wrote fip_xc.txt")
@@ -420,12 +497,7 @@ def _make_fip_valfldgr():
     ws.title = "Sheet1"
     _write_rows(ws,
         ["ValidRule", "Long Text", "Field name"],
-        [
-            # GB_MATCHED: Field name maps via mapping.txt to GB_GROUPING_ITEM
-            # FIP Key = ValidRule|EBX Item = GB_MATCHED|GB_GROUPING_ITEM → Matched
-            ["GB_MATCHED", "Test rule", "GB_FIP_FIELD"],
-            # GB_NOT_IN_FIP: no row → Not in FIP
-        ],
+        [["GB_MATCHED", "Test rule", "GB_FIP_FIELD"]],
     )
     wb.save(OUT / "fip_ZQ9_VALFLDGR.xlsx")
     print("  wrote fip_ZQ9_VALFLDGR.xlsx")
@@ -447,10 +519,9 @@ def _make_mapping():
 # 5. Validation Methods (AP)
 # ---------------------------------------------------------------------------
 # The real validation_methods.xlsx must be copied into test_data/fixtures/
-# manually (it is the live Zurich reference file, not generated here).
-# Event used by AP fixture rows: 'IFRS New RFD', method V900W (Warning, black font).
+# manually. Event: 'IFRS New RFD', method V900W (Warning, black font).
 def _make_validation_methods():
-    print("  skipped validation_methods.xlsx — use the real file copied into fixtures/")
+    print("  skipped validation_methods.xlsx — copy the real file into fixtures/")
 
 
 # ---------------------------------------------------------------------------
@@ -458,15 +529,6 @@ def _make_validation_methods():
 # ---------------------------------------------------------------------------
 
 def _make_fip_valmsg():
-    """
-    Raw ZQ9_VALMSG: strategy builds Key = MK|ValidRule at load time.
-    MK = validation method code, ValidRule = X-Check No., MT = W/E letter.
-
-    AP_MATCH:    FIP MT='w' == EBX actual 'w' (Warning binding for IFRS New RFD) → Match
-    AP_MISMATCH: FIP MT='e' != EBX actual 'w' → MisMatch
-    MK=V900W matches the black-font Warning binding for event 'IFRS New RFD' in the
-    real validation_methods.xlsx. ValidRule = X-Check No. in the EBX pub file.
-    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "FIP Methods Rules and Condition"
@@ -487,29 +549,17 @@ def _make_fip_valmsg():
 # ---------------------------------------------------------------------------
 
 def _make_fip_valmeth():
-    """
-    8-column raw ZQ9_VALMETH. conditions/fip.py renames and builds
-    Key (Concatenated) = Normal X-Check No|Condition No.
-
-    COND_MATCHED:    key COND_MATCHED|Q1 → Matched
-    COND_NOT_MATCHED: no row → Not Matched
-    COND_REF_XCHECK: EBX Reference X-Check (Condition)=COND_BASE → key COND_BASE|Q1 → Matched
-    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "FIP Conditions"
-    # Raw ZQ9_VALMETH headers as exported from FIP (positional — duplicate names are normal).
-    # conditions/fip.py renames by position: col3 (ValidRule) → Normal X-Check No,
-    # col6 (ValidRule) → Condition No.
     _write_rows(ws,
         ["MethC", "MK", "Medium Text", "ValidRule",
          "Medium Text", "UCFV20G-TRUE_BRANCH", "ValidRule", "Medium Text"],
         [
-            ["1", "MK1", "Test MK", "COND_MATCHED",    "Matched test",    "X", "Q1", "Quarter 1"],
-            ["1", "MK1", "Test MK", "COND_BASE",       "Ref XC test",     "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_MATCHED",     "Matched test",     "X", "Q1", "Quarter 1"],
+            ["1", "MK1", "Test MK", "COND_BASE",        "Ref XC test",      "X", "Q1", "Quarter 1"],
             ["1", "MK1", "Test MK", "COND_DIFF_YELLOW", "Diff yellow test", "X", "Q1", "Quarter 1"],
             ["1", "MK1", "Test MK", "COND_DIFF_GREEN",  "Diff green test",  "X", "Q1", "Quarter 1"],
-            # COND_NOT_MATCHED and COND_DIFF_WHITE intentionally absent → Not Matched
         ],
     )
     wb.save(OUT / "fip_ZQ9_VALMETH.xlsx")
@@ -522,14 +572,9 @@ def _make_fip_valmeth():
 
 def _make_known_exception_list():
     """
-    Build known_exception_list.xlsx with one entry for XC_KEL_MISMATCH.
-
-    The X-Checks fingerprint is 8 columns: X-Check No., EBX Formula,
-    FIP Formula, EBX Formula (Excl), FIP Formula (Excl), EBX Variables,
-    FIP Variables, FIP Variable (Builder).
-
-    We run the comparison against the already-written fixtures to extract
-    the exact fingerprint values rather than hard-coding them.
+    Build known_exception_list.xlsx keyed to XC_KEL_MISMATCH.
+    Runs the comparison after the other fixtures are written to extract
+    the exact 8-column fingerprint values.
     """
     import sys as _sys
     _sys.path.insert(0, str(OUT.parent.parent))
@@ -538,17 +583,17 @@ def _make_known_exception_list():
     from strategies.x_checks.fip_extraction import extract_fip
     from strategies.x_checks.compare import compare as xc_compare
 
-    ebx_df = pd.read_excel(OUT / 'xc_pub.xlsx', sheet_name='cross checks all')
+    ebx_df = pd.read_excel(OUT / "xc_pub.xlsx", sheet_name="cross checks all")
     ebx_results = extract_ebx(ebx_df)
-    xc_list = sorted(set(str(x) for x in ebx_df['X-Check No.'].tolist()
-                         if str(x) not in ('nan', '', 'None')))
-    fip_text = (OUT / 'fip_xc.txt').read_text(encoding='utf-8')
+    xc_list = sorted(set(str(x) for x in ebx_df["X-Check No."].tolist()
+                         if str(x) not in ("nan", "", "None")))
+    fip_text = (OUT / "fip_xc.txt").read_text(encoding="utf-8")
     fip_results = extract_fip(fip_text, xc_list)
     xc_df = pd.DataFrame(xc_compare(ebx_results, fip_results))
 
-    kel_row = xc_df[xc_df['X-Check No.'] == 'XC_KEL_MISMATCH'].iloc[0]
+    kel_row = xc_df[xc_df["X-Check No."] == "XC_KEL_MISMATCH"].iloc[0]
 
-    fingerprint_cols = [
+    fp_cols = [
         "X-Check No.", "EBX Formula", "FIP Formula",
         "EBX Formula (Excl)", "FIP Formula (Excl)",
         "EBX Variables", "FIP Variables", "FIP Variable (Builder)",
@@ -560,22 +605,31 @@ def _make_known_exception_list():
     for sheet_name in ["X-Checks", "Grouping By", "Accounting Principles", "Conditions"]:
         ws = wb.create_sheet(sheet_name)
         if sheet_name == "X-Checks":
-            headers = fingerprint_cols + ["Reason", "Added By", "Date Added",
-                                          "Resolution Status", "Resolution Notes"]
+            headers = fp_cols + ["Reason", "Added By", "Date Added",
+                                  "Resolution Status", "Resolution Notes"]
             ws.append(headers)
-            # Row 2: guidance row (always skipped by _load_known_exceptions)
             ws.append(["Guidance: do not delete this row"] + [""] * (len(headers) - 1))
-            # Row 3: the actual exception entry
-            data_row = [kel_row[c] for c in fingerprint_cols]
+
+            # Row 3: XC_KEL_MISMATCH — correct fingerprint → annotation fires
+            data_row = [kel_row[c] for c in fp_cols]
             data_row += ["Test fixture — expected mismatch", "fixture_generator",
                          "2026-07-30", "Open", ""]
             ws.append(data_row)
+
+            # Row 4: XC_KEL_NO_MATCH — correct X-Check No. but WRONG FIP Formula
+            # fingerprint will not match the actual comparison row → no annotation
+            no_match_row = xc_df[xc_df["X-Check No."] == "XC_KEL_NO_MATCH"].iloc[0]
+            wrong_row = [no_match_row[c] for c in fp_cols]
+            wrong_row[fp_cols.index("FIP Formula")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
+            wrong_row[fp_cols.index("FIP Formula (Excl)")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
+            wrong_row += ["Test fixture — wrong fingerprint (should not annotate)",
+                          "fixture_generator", "2026-07-30", "Open", ""]
+            ws.append(wrong_row)
         else:
             ws.append(["(no entries)"])
 
-    # Instructions sheet
     ws_inst = wb.create_sheet("Instructions")
-    ws_inst.append(["This file is a test fixture. Row 2 of each strategy sheet is a guidance row skipped by the app."])
+    ws_inst.append(["Row 2 of each strategy sheet is a guidance row skipped by the app."])
 
     wb.save(OUT / "known_exception_list.xlsx")
     print("  wrote known_exception_list.xlsx")

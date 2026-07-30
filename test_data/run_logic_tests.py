@@ -28,28 +28,64 @@ fip_results = extract_fip(fip_text, xc_list)
 xc_df = pd.DataFrame(xc_compare(ebx_results, fip_results)).sort_values('X-Check No.').reset_index(drop=True)
 
 expected_xc = {
-    'XC_ALL_MATCH':         'Match',
-    'XC_DIFF_EXCLUDED':     'Not Found',  # has Account No in EBX but no FIP block
-    'XC_DIFF_IN_SCOPE':     'Match',
-    'XC_FORMULA_MISMATCH':  'MisMatch',
-    'XC_KEL_MISMATCH':      'MisMatch',   # MisMatch without KEL; annotated with reason when KEL supplied
-    'XC_NOT_IN_EBX':        'Not Found',
-    'XC_NOT_IN_FIP':        'Not Found',
-    'XC_REORDER_MATCH':     'MisMatch',
-    'XC_THOUSANDS_CORR':    'Match',
-    'XC_TOM_CORRECTION':    'Match',
-    'XC_VARIABLE_MISMATCH': 'Match',
+    'XC_ABS_FORMULA':       'Match',    # Operator 2 → ABS() wrapping
+    'XC_ALL_MATCH':         'Match',    # standard full match
+    'XC_ALL_MISMATCH':      'MisMatch', # formula AND variables wrong
+    'XC_DIFF_EXCLUDED':     'Not Found',# Exclude Z-Core=X → no FIP block
+    'XC_DIFF_INACTIVE':     'Not Found',# INACTIVE → no FIP block
+    'XC_DIFF_IN_SCOPE':     'Match',    # in-scope for selection; FIP matches
+    'XC_DIFF_YELLOW_CAT':   'Not Found',# yellow Category → no FIP block
+    'XC_EXCL_MATCH':        'Match',    # @2A@ in FIP + excl in EBX → Excl=Match
+    'XC_EXCL_MISMATCH':     'Match',    # EBX has excl, FIP has none → Formula=Match, Excl=MisMatch
+    'XC_FF_SUFFIX':         'Match',    # two accounts → ff suffix
+    'XC_FORMULA_MISMATCH':  'MisMatch', # operator differs (<=0 vs >=0); vars same
+    'XC_GTE_OPERATOR':      'Match',    # >= operator
+    'XC_KEL_MISMATCH':      'MisMatch', # MisMatch; annotated with reason when KEL supplied
+    'XC_KEL_NO_MATCH':      'MisMatch', # KEL entry exists but wrong fingerprint → no annotation
+    'XC_LC_CONST':          'Match',    # LC_YTD + CONST_LC
+    'XC_LC_YTD':            'Match',    # Shareholders Equity → LC_YTD
+    'XC_NONZERO_LIMIT':     'Match',    # non-zero limit → CONST(100,...)
+    'XC_NOT_IN_EBX':        'Not Found',# FIP only
+    'XC_NOT_IN_FIP':        'Not Found',# EBX only
+    'XC_PCT_FORMAT':        'Match',    # % column → percentage format
+    'XC_REORDER_MATCH':     'MisMatch', # known edge case in reorder logic
+    'XC_REX_CORRECTION':    'Match',    # FIP uses REX → ToM
+    'XC_SUBTRACT':          'Match',    # subtraction formula
+    'XC_THOUSANDS_CORR':    'Match',    # 1.000 → 1000
+    'XC_TOM_CORRECTION':    'Match',    # FIP uses TOM → ToM
+    'XC_VARIABLE_MISMATCH': 'Match',    # formula matches, vars differ
 }
-chk('FX-05a', 'X-Checks row count = 11', len(xc_df) == 11, f'got {len(xc_df)}')
+expected_row_count = len(expected_xc)
+chk('FX-05a', f'X-Checks row count = {expected_row_count}',
+    len(xc_df) == expected_row_count, f'got {len(xc_df)}')
 for xc_id, exp in expected_xc.items():
     rows = xc_df[xc_df['X-Check No.'] == xc_id]
     got = rows.iloc[0]['Formula Match'] if len(rows) else 'MISSING'
     chk('FX-05b', f'X-Checks {xc_id} Formula Match = {exp}', got == exp, got)
 
-# ── FX-06: XC_VARIABLE_MISMATCH Variables Match ───────────────────────────────
-rows = xc_df[xc_df['X-Check No.'] == 'XC_VARIABLE_MISMATCH']
-got_vm = rows.iloc[0]['Variables Match'] if len(rows) else 'MISSING'
-chk('FX-06', 'XC_VARIABLE_MISMATCH Variables Match = MisMatch', got_vm == 'MisMatch', got_vm)
+# Specific column checks
+def _xc(xc_id):
+    r = xc_df[xc_df['X-Check No.'] == xc_id]
+    return r.iloc[0] if len(r) else None
+
+# ── FX-06: column-level checks ────────────────────────────────────────────────
+r = _xc('XC_VARIABLE_MISMATCH')
+chk('FX-06a', 'XC_VARIABLE_MISMATCH Variables Match = MisMatch',
+    r is not None and r['Variables Match'] == 'MisMatch', r['Variables Match'] if r is not None else 'MISSING')
+
+r = _xc('XC_FORMULA_MISMATCH')
+chk('FX-06b', 'XC_FORMULA_MISMATCH Variables Match = Match (operator differs, account same)',
+    r is not None and r['Variables Match'] == 'Match', r['Variables Match'] if r is not None else 'MISSING')
+
+r = _xc('XC_EXCL_MISMATCH')
+chk('FX-06c', 'XC_EXCL_MISMATCH Formula Match = Match, Formula Match (Excl) = MisMatch',
+    r is not None and r['Formula Match'] == 'Match' and r['Formula Match (Excl)'] == 'MisMatch',
+    f"Formula={r['Formula Match']} Excl={r['Formula Match (Excl)']}" if r is not None else 'MISSING')
+
+r = _xc('XC_EXCL_MATCH')
+chk('FX-06d', 'XC_EXCL_MATCH Formula Match (Excl) = Match',
+    r is not None and r['Formula Match (Excl)'] == 'Match',
+    r['Formula Match (Excl)'] if r is not None else 'MISSING')
 
 # ── FX-10: X-Check No Selection (differences mode) ────────────────────────────
 from strategies.x_checks.x_check_no_selection import select_x_check_nos
@@ -172,9 +208,18 @@ chk('FX-09c', 'KEL: XC_ALL_MATCH Known Exception is blank (not a mismatch)',
     annotated[annotated['X-Check No.'] == 'XC_ALL_MATCH'].iloc[0].get('Known Exception', '') == '',
     '')
 
+# XC_KEL_NO_MATCH: KEL entry exists with wrong fingerprint → no annotation
+no_match_row = annotated[annotated['X-Check No.'] == 'XC_KEL_NO_MATCH']
+no_match_formula = no_match_row.iloc[0]['Formula Match'] if len(no_match_row) else 'MISSING'
+no_match_kel = no_match_row.iloc[0].get('Known Exception', '') if len(no_match_row) else 'MISSING'
+chk('FX-09d', 'KEL: XC_KEL_NO_MATCH Formula Match still = MisMatch',
+    no_match_formula == 'MisMatch', no_match_formula)
+chk('FX-09e', 'KEL: XC_KEL_NO_MATCH Known Exception is blank (fingerprint mismatch)',
+    no_match_kel in ('', 'nan'), repr(no_match_kel))
+
 # ── FX-25: Full Run row counts ────────────────────────────────────────────────
-chk('FX-25', 'Full Run row counts: XC=11 GB=2 AP=2 Cond=7',
-    len(xc_df) == 11 and len(df_gb) == 2 and len(ap_df) == 2 and len(cond_full) == 7,
+chk('FX-25', f'Full Run row counts: XC={expected_row_count} GB=2 AP=2 Cond=7',
+    len(xc_df) == expected_row_count and len(df_gb) == 2 and len(ap_df) == 2 and len(cond_full) == 7,
     f'XC={len(xc_df)} GB={len(df_gb)} AP={len(ap_df)} Cond={len(cond_full)}')
 
 # ── Summary ───────────────────────────────────────────────────────────────────
