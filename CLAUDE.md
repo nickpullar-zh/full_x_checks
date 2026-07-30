@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.40 — X-Check No. cell turns blue when row has a Known Exception (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/x_checks/x_checks.py`: `apply_output_formatting` now also colours the `X-Check No.` cell blue on any row where the `Known Exception` column is populated. Both cells are coloured in the same pass. | DONE | |
+| 2 | `version.py`: bump to `1.0.40`. | DONE | |
+
 ### v1.0.39 — Add XC_KEL_MISMATCH fixture and KEL logic test (2026-07-30)
 
 | # | Change | Status | Notes |

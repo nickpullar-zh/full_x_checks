@@ -139,12 +139,18 @@ class XChecks(BaseStrategy):
                     "Mismatch - Known Exception": (self.FILL_BLUE,   self.FONT_BLUE),
                 }
             )
-        # Highlight Known Exception column in blue
+        # Highlight Known Exception column and X-Check No. cell in blue
         header_values = [cell.value for cell in ws[1]]
         if "Known Exception" in header_values:
-            col_idx = header_values.index("Known Exception") + 1
-            for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
-                cell = row[0]
-                if cell.value and str(cell.value).strip() not in ("", "nan"):
-                    cell.fill = self.FILL_BLUE
-                    cell.font = self.FONT_BLUE
+            kel_col_idx = header_values.index("Known Exception") + 1
+            xc_col_idx  = (header_values.index("X-Check No.") + 1
+                           if "X-Check No." in header_values else None)
+            for row in ws.iter_rows(min_row=2, min_col=1, max_col=ws.max_column):
+                kel_cell = row[kel_col_idx - 1]
+                if kel_cell.value and str(kel_cell.value).strip() not in ("", "nan"):
+                    kel_cell.fill = self.FILL_BLUE
+                    kel_cell.font = self.FONT_BLUE
+                    if xc_col_idx:
+                        xc_cell = row[xc_col_idx - 1]
+                        xc_cell.fill = self.FILL_BLUE
+                        xc_cell.font = self.FONT_BLUE
