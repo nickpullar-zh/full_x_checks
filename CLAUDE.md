@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.66 — Workbooks open on Comparison sheet by default (2026-07-30)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: `write_excel_output` now sets `workbook.active` to the first sheet whose name contains "Comparison" before saving. Falls back to first sheet if none found. Applies to all strategies. | DONE | |
+| 2 | `version.py`: bump to `1.0.66`. | DONE | |
+
 ### v1.0.65 — Clarify KEL test cases: explicitly state Process only differences must be unchecked (2026-07-30)
 
 | # | Change | Status | Notes |

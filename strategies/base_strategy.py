@@ -216,6 +216,12 @@ class BaseStrategy(ABC):
 
             self.log_step(self.log, "Output", f"  Sheets in workbook: {writer.book.sheetnames}", 0)
 
+            # Set active sheet to "Comparison" so the workbook opens there by default.
+            # Fall back to the first sheet if no Comparison sheet exists.
+            comparison_names = [s for s in writer.book.sheetnames if "Comparison" in s]
+            if comparison_names:
+                writer.book.active = writer.book[comparison_names[0]]
+
             # Allow subclasses to apply strategy-specific formatting
             self.apply_output_formatting(writer.book)
 
