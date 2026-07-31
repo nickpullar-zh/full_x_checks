@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.71 — Fix CF fill: set bgColor = fgColor for solid fill to render in Excel (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: CF `PatternFill` now sets both `fgColor` and `bgColor` to `FFD6E4F7`. Excel requires both for a conditional format solid fill to display. | DONE | |
+| 2 | `docs/20260731 Fixture_UAT_v1.0.70 Test Plan.xlsx`: regenerated with correct CF. | DONE | |
+| 3 | `version.py`: bump to `1.0.71`. | DONE | |
+
 ### v1.0.70 — Regenerate fixture UAT plan at v1.0.69 (2026-07-31)
 
 | # | Change | Status | Notes |

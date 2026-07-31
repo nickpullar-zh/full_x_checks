@@ -719,13 +719,18 @@ def _build_test_cases(wb):
         ws.cell(row=row, column=3).font = _semibold()
 
     # Conditional formatting: entire row turns light blue when column C = "Logic".
-    # Formula anchored on col C, applied across cols A:J for all data rows.
+    # Both fgColor and bgColor must be set for Excel to render a solid fill.
     cf_range = f"A4:J{last_data_row}"
+    cf_fill = PatternFill(
+        patternType="solid",
+        fgColor=LOGIC_BLUE,
+        bgColor=LOGIC_BLUE,
+    )
     ws.conditional_formatting.add(
         cf_range,
         FormulaRule(
             formula=['$C4="Logic"'],
-            fill=_fill(LOGIC_BLUE),
+            fill=cf_fill,
         ),
     )
 
