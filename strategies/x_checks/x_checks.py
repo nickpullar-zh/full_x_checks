@@ -87,12 +87,50 @@ class XChecks(BaseStrategy):
             return
         df_comparison = result
 
-        # 6. Write Excel output — no summary, headers at row 1
+        # 6. Build filtered views of the Comparison
+        MATCH_COLS = ("Formula Match", "Formula Match (Excl)", "Variables Match", "Variables Match (Builder)")
+
+        def _any_col(df, values):
+            """True for rows where ANY of the 4 match columns contains one of `values`."""
+            mask = pd.Series(False, index=df.index)
+            for col in MATCH_COLS:
+                if col in df.columns:
+                    mask |= df[col].isin(values)
+            return mask
+
+        def _all_col(df, values):
+            """True for rows where ALL of the 4 match columns contain one of `values`."""
+            mask = pd.Series(True, index=df.index)
+            for col in MATCH_COLS:
+                if col in df.columns:
+                    mask &= df[col].isin(values)
+            return mask
+
+        # Matched: every match column is "Match" or "MisMatch (Excepted)"
+        df_matched    = df_comparison[_all_col(df_comparison, {"Match", "MisMatch (Excepted)"})].reset_index(drop=True)
+        # MisMatched: any column is "MisMatch" or "MisMatch (Excepted)"
+        df_mismatched = df_comparison[_any_col(df_comparison, {"MisMatch", "MisMatch (Excepted)"})].reset_index(drop=True)
+        # Not Found: any column is "Not Found"
+        df_not_found  = df_comparison[_any_col(df_comparison, {"Not Found"})].reset_index(drop=True)
+
+        # FIP parsed results as a DataFrame
+        df_fip = pd.DataFrame(fip_results)
+
+        # 7. Write Excel output
+        from collections import OrderedDict
+        sheets = OrderedDict([
+            ("EBX Data",       ebx_df),
+            ("FIP Data",       df_fip),
+            ("Comparison",     df_comparison),
+            ("Matched Data",   df_matched),
+            ("MisMatched Data",df_mismatched),
+            ("Not Found Data", df_not_found),
+        ])
         self.write_excel_output(
             output_path=self.build_output_path(
                 files["output_directory"], "Comparison", files["timestamp"]
             ),
-            sheets={"Comparison": df_comparison},
+            sheets=sheets,
             log=self.log,
         )
         return True

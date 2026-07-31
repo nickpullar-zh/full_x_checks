@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.73 — X-Checks output: add source sheets and three filtered Comparison sheets (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/x_checks/x_checks.py`: output now contains 6 sheets: EBX Data (raw cross checks all), FIP Data (parsed FIP results), Comparison (full, unchanged), Matched Data (all 4 match cols = Match or MisMatch(Excepted)), MisMatched Data (any col = MisMatch or MisMatch(Excepted)), Not Found Data (any col = Not Found). | DONE | |
+| 2 | `version.py`: bump to `1.0.73`. | DONE | |
+
 ### v1.0.72 — Update FIP file descriptions to match actual raw export column headers (2026-07-31)
 
 | # | Change | Status | Notes |
