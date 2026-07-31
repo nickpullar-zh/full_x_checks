@@ -101,7 +101,7 @@ chk('COND-09d', 'FIP key format = XCheck|ConditionNo',
 strat = Conditions(CONDITIONS_UPLOAD_CONFIG)
 strat.log = []
 annotated = strat._annotate_known_exceptions(
-    df.copy(), str(F / 'cond_kel.xlsx'),
+    df.copy(), str(F / 'known_exception_list.xlsx'),
     sheet_name='Conditions', fingerprint_columns=['EBX Data', 'FIP Data']
 )
 # KEL annotates COND_APPL_QTRS|Q1 (Matched — both fingerprint cols non-blank)

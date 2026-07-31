@@ -385,12 +385,30 @@ def _make_xc_gcoa():
 # 4. X-Checks Known Exception List  (xc_kel.xlsx)
 # ===========================================================================
 
-def _make_xc_kel():
+def _make_known_exception_list():
+    """
+    Single Known Exception List workbook with one sheet per strategy.
+    This matches how the app (and Known Exception Builder) expects it.
+    """
     import pandas as pd
     from strategies.x_checks.ebx_extraction import extract_ebx
     from strategies.x_checks.fip_extraction import extract_fip
     from strategies.x_checks.compare import compare as xc_compare
+    from strategies.grouping_by.grouping_by import GroupingBy
+    from task_configs import GROUPING_BY_UPLOAD_CONFIG
+    from strategies.accounting_principles.validation_methods import parse_method_bindings
+    from strategies.accounting_principles.compare import compare_with_bindings
+    from strategies.accounting_principles.accounting_principles import DEFAULT_EVENTS
+    from strategies.conditions.extract import extract_conditions
+    from strategies.conditions.fip import process_fip
+    from strategies.conditions.compare import compare as cond_compare
 
+    meta = ["Reason", "Added By", "Date Added", "Resolution Status", "Resolution Notes"]
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+
+    # ── X-Checks sheet ────────────────────────────────────────────────────
     ebx_df = pd.read_excel(OUT / "xc_pub.xlsx", sheet_name="cross checks all")
     ebx_results = extract_ebx(ebx_df)
     xc_list = sorted(set(str(x) for x in ebx_df["X-Check No."].tolist()
@@ -399,36 +417,92 @@ def _make_xc_kel():
     fip_results = extract_fip(fip_text, xc_list)
     xc_df = pd.DataFrame(xc_compare(ebx_results, fip_results))
 
-    kel_row      = xc_df[xc_df["X-Check No."] == "XC_KEL_MISMATCH"].iloc[0]
+    xc_fp   = ["X-Check No.", "EBX Formula", "FIP Formula", "EBX Formula (Excl)",
+               "FIP Formula (Excl)", "EBX Variables", "FIP Variables", "FIP Variable (Builder)"]
+    xc_hdrs = xc_fp + meta
+    ws = wb.create_sheet("X-Checks")
+    ws.append(xc_hdrs)
+    ws.append(["Guidance: do not delete this row"] + [""] * (len(xc_hdrs) - 1))
+    kel_row = xc_df[xc_df["X-Check No."] == "XC_KEL_MISMATCH"].iloc[0]
+    correct = [kel_row[c] for c in xc_fp]
+    correct += ["Test fixture — expected mismatch", "fixture_generator", "2026-07-31", "Open", ""]
+    ws.append(correct)
     no_match_row = xc_df[xc_df["X-Check No."] == "XC_KEL_NO_MATCH"].iloc[0]
+    wrong = [no_match_row[c] for c in xc_fp]
+    wrong[xc_fp.index("FIP Formula")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
+    wrong[xc_fp.index("FIP Formula (Excl)")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
+    wrong += ["Test fixture — wrong fingerprint (should not annotate)",
+              "fixture_generator", "2026-07-31", "Open", ""]
+    ws.append(wrong)
 
-    fp_cols  = ["X-Check No.", "EBX Formula", "FIP Formula", "EBX Formula (Excl)",
-                "FIP Formula (Excl)", "EBX Variables", "FIP Variables", "FIP Variable (Builder)"]
-    meta     = ["Reason", "Added By", "Date Added", "Resolution Status", "Resolution Notes"]
-    headers  = fp_cols + meta
+    # ── Grouping By sheet ─────────────────────────────────────────────────
+    gb = GroupingBy(GROUPING_BY_UPLOAD_CONFIG)
+    gb.log = []
+    mapping_txt = (OUT / "gb_mapping.txt").read_text()
+    fip_gb = pd.read_excel(OUT / "gb_fip_ZQ9_VALFLDGR.xlsx", sheet_name="Sheet1")
+    loaded = {
+        GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label: ebx_df.copy(),
+        GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label: fip_gb,
+        GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label: mapping_txt,
+    }
+    _, _, df_fip = gb._process_fip(loaded)
+    _, df_ebx   = gb._process_ebx(loaded)
+    df_cmp      = gb._process_compare(df_fip, df_ebx)
+    gb_fp   = ["EBX Key"]
+    gb_hdrs = gb_fp + meta
+    ws = wb.create_sheet("Grouping By")
+    ws.append(gb_hdrs)
+    ws.append(["Guidance: do not delete this row"] + [""] * (len(gb_hdrs) - 1))
+    kel_gb = df_cmp[df_cmp["EBX Key"] == "GB_KEL_MATCH|ITEM_A"].iloc[0]
+    ws.append([kel_gb["EBX Key"],
+               "Test fixture — expected Not in FIP", "fixture_generator", "2026-07-31", "Open", ""])
+    ws.append(["GB_KEL_NO_MATCH|WRONG_KEY",
+               "Test fixture — wrong fingerprint (should not annotate)",
+               "fixture_generator", "2026-07-31", "Open", ""])
 
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)
-    for sheet_name in ["X-Checks", "Grouping By", "Accounting Principles", "Conditions"]:
-        ws = wb.create_sheet(sheet_name)
-        if sheet_name == "X-Checks":
-            ws.append(headers)
-            ws.append(["Guidance: do not delete this row"] + [""] * (len(headers) - 1))
-            correct = [kel_row[c] for c in fp_cols]
-            correct += ["Test fixture — expected mismatch", "fixture_generator", "2026-07-31", "Open", ""]
-            ws.append(correct)
-            wrong = [no_match_row[c] for c in fp_cols]
-            wrong[fp_cols.index("FIP Formula")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
-            wrong[fp_cols.index("FIP Formula (Excl)")] = "VAL_YTD(WRONG_ACCOUNT)<=0"
-            wrong += ["Test fixture — wrong fingerprint (should not annotate)",
-                      "fixture_generator", "2026-07-31", "Open", ""]
-            ws.append(wrong)
-        else:
-            ws.append(["(no entries)"])
+    # ── Accounting Principles sheet ───────────────────────────────────────
+    vm_path  = str(OUT / "validation_methods.xlsx")
+    bindings = parse_method_bindings(vm_path, DEFAULT_EVENTS)
+    fip_ap   = pd.read_excel(OUT / "ap_fip_ZQ9_VALMSG.xlsx",
+                              sheet_name="FIP Methods Rules and Condition")
+    fip_ap["Key"] = fip_ap["MK"].astype(str).str.strip() + "|" + fip_ap["ValidRule"].astype(str).str.strip()
+    xchecks  = [str(x).strip() for x in ebx_df["X-Check No."].tolist()
+                if str(x).strip() not in ("nan", "", "None")]
+    ap_df    = pd.DataFrame(compare_with_bindings(bindings, ebx_df, xchecks, fip_ap))
+    ap_fp   = ["X-Check No.", "Event", "Expected", "FIP", "Actual", "Method"]
+    ap_hdrs = ap_fp + meta
+    ws = wb.create_sheet("Accounting Principles")
+    ws.append(ap_hdrs)
+    ws.append(["Guidance: do not delete this row"] + [""] * (len(ap_hdrs) - 1))
+    kel_ap = ap_df[ap_df["X-Check No."] == "AP_MISMATCH"].iloc[0]
+    ap_data = [kel_ap[c] for c in ap_fp]
+    ap_data += ["Test fixture — expected mismatch", "fixture_generator", "2026-07-31", "Open", ""]
+    ws.append(ap_data)
+
+    # ── Conditions sheet ──────────────────────────────────────────────────
+    fip_cond = pd.read_excel(OUT / "cond_fip_ZQ9_VALMETH.xlsx", sheet_name="FIP Conditions")
+    fip_proc = process_fip(fip_cond)
+    working_df, _ = extract_conditions(str(OUT / "xc_pub.xlsx"), "cross checks all",
+                                        process_only_differences=False)
+    results_df, _ = cond_compare(working_df, fip_proc)
+    cond_fp   = ["EBX Data", "FIP Data"]
+    cond_hdrs = cond_fp + meta
+    ws = wb.create_sheet("Conditions")
+    ws.append(cond_hdrs)
+    ws.append(["Guidance: do not delete this row"] + [""] * (len(cond_hdrs) - 1))
+    kel_cond  = results_df[results_df["EBX Data"] == "COND_APPL_QTRS|Q1"].iloc[0]
+    no_match_cond = results_df[results_df["EBX Data"] == "COND_INCL_RUS|RU_NORTH"].iloc[0]
+    ws.append([kel_cond["EBX Data"], kel_cond["FIP Data"],
+               "Test fixture — expected condition", "fixture_generator", "2026-07-31", "Open", ""])
+    ws.append([no_match_cond["EBX Data"], "WRONG_FIP_DATA",
+               "Test fixture — wrong fingerprint", "fixture_generator", "2026-07-31", "Open", ""])
+
+    # ── Instructions sheet ────────────────────────────────────────────────
     ws_inst = wb.create_sheet("Instructions")
-    ws_inst.append(["Row 2 of each strategy sheet is a guidance row skipped by the app."])
-    wb.save(OUT / "xc_kel.xlsx")
-    print("  wrote xc_kel.xlsx")
+    ws_inst.append(["One workbook, one sheet per strategy. Row 2 of each strategy sheet is a guidance row skipped by the app."])
+
+    wb.save(OUT / "known_exception_list.xlsx")
+    print("  wrote known_exception_list.xlsx")
 
 
 # ===========================================================================
@@ -469,7 +543,7 @@ def _make_gb_mapping():
 
 
 # ===========================================================================
-# 7. Grouping By KEL  (gb_kel.xlsx)
+# (gb_kel merged into known_exception_list.xlsx — see _make_known_exception_list)
 # ===========================================================================
 
 def _make_gb_kel():
@@ -706,11 +780,8 @@ if __name__ == "__main__":
     _make_validation_methods()
     _make_ap_fip()
     _make_cond_fip()
-    # KEL files run last — they need other files already written
-    _make_xc_kel()
-    _make_gb_kel()
-    _make_ap_kel()
-    _make_cond_kel()
+    # Single combined KEL — must run last (needs other files already written)
+    _make_known_exception_list()
     print("Done.")
     print()
     print("Files in fixtures/:")

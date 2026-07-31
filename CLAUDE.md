@@ -58,6 +58,16 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.78 — Merge all four KEL files into one known_exception_list.xlsx (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_all_fixtures.py`: replace four separate `_make_xc/gb/ap/cond_kel()` functions with one `_make_known_exception_list()` that writes a single `known_exception_list.xlsx` with one sheet per strategy (X-Checks, Grouping By, Accounting Principles, Conditions, Instructions). | DONE | |
+| 2 | All four logic test scripts updated to reference `known_exception_list.xlsx`. | DONE | |
+| 3 | `docs/generate_fixture_uat.py`: KEL file references updated; test plan regenerated. | DONE | |
+| 4 | Removed from git: `xc_kel.xlsx`, `gb_kel.xlsx`, `ap_kel.xlsx`, `cond_kel.xlsx`. | DONE | |
+| 5 | `version.py`: bump to `1.0.78`. | DONE | |
+
 ### v1.0.77 — Remove stale fixture files and old sub-folders from git (2026-07-31)
 
 | # | Change | Status | Notes |

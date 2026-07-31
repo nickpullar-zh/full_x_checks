@@ -95,7 +95,7 @@ from strategies.grouping_by.grouping_by import GroupingBy as _GB
 strat = _GB(GROUPING_BY_UPLOAD_CONFIG)
 strat.log = []
 annotated = strat._annotate_known_exceptions(
-    df_cmp.copy(), str(F / 'gb_kel.xlsx'),
+    df_cmp.copy(), str(F / 'known_exception_list.xlsx'),
     sheet_name='Grouping By', fingerprint_columns=['EBX Key']
 )
 kel_val       = annotated[annotated['EBX Key'] == 'GB_KEL_MATCH|ITEM_A'].iloc[0].get('Known Exception', '')

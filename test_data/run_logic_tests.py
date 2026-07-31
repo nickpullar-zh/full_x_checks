@@ -224,7 +224,7 @@ from task_configs import X_CHECKS_UPLOAD_CONFIG
 
 xc_strategy = XChecks(X_CHECKS_UPLOAD_CONFIG)
 xc_strategy.log = []
-kel_path = str(F / 'xc_kel.xlsx')
+kel_path = str(F / 'known_exception_list.xlsx')
 
 # Annotate the comparison df with the KEL
 annotated = xc_strategy._annotate_known_exceptions(

@@ -95,7 +95,7 @@ chk('AP-08e', 'AP_YELLOW_CAT excluded (Category cell yellow)', 'AP_YELLOW_CAT' n
 
 # ── AP-09: Known Exception annotation ────────────────────────────────────
 annotated = strat._annotate_known_exceptions(
-    df.copy(), str(F / 'ap_kel.xlsx'),
+    df.copy(), str(F / 'known_exception_list.xlsx'),
     sheet_name='Accounting Principles',
     fingerprint_columns=["X-Check No.", "Event", "Expected", "FIP", "Actual", "Method"]
 )
