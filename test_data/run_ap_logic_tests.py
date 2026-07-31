@@ -12,7 +12,7 @@ from strategies.accounting_principles.accounting_principles import (
 )
 from task_configs import ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG
 
-F   = Path('test_data/fixtures/ap')
+F = FAP = Path('test_data/fixtures')
 VM  = Path('test_data/fixtures/validation_methods.xlsx')
 results = []
 
@@ -21,7 +21,7 @@ def chk(case_id, desc, passed, detail=''):
 
 # ── Setup: run full comparison (no in-scope filter) ───────────────────────
 bindings = parse_method_bindings(str(VM), DEFAULT_EVENTS)
-cc_df    = pd.read_excel(F / 'ap_pub.xlsx', sheet_name='cross checks all')
+cc_df    = pd.read_excel(F / 'xc_pub.xlsx', sheet_name='cross checks all')
 fip_df   = pd.read_excel(F / 'ap_fip_ZQ9_VALMSG.xlsx',
                           sheet_name='FIP Methods Rules and Condition')
 fip_df['Key'] = (fip_df['MK'].astype(str).str.strip()
@@ -84,8 +84,10 @@ chk('AP-07b', 'Key format is MK|ValidRule',
 from strategies.accounting_principles.accounting_principles import AccountingPrinciples
 strat = AccountingPrinciples(ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG)
 strat.log = []
-selected = strat._select_in_scope_x_checks(cc_df, str(F / 'ap_pub.xlsx'), 'cross checks all')
-chk('AP-08a', 'AP_MATCH_W in scope', 'AP_MATCH_W' in selected, str(selected[:5]))
+selected = strat._select_in_scope_x_checks(cc_df, str(F / 'xc_pub.xlsx'), 'cross checks all')
+# AP_MATCH_W has no Type of change value — excluded by text filter (correct: it is not a diff row)
+# Only XC rows with non-blank Type of change survive the text filter
+chk('AP-08a', 'AP_DIFF_IN_SCOPE in text-filter scope (has Type of change=Changed)', 'XC_DIFF_IN_SCOPE' in selected, str(selected[:5]))
 chk('AP-08b', 'AP_NOT_SCOPE_TOC excluded (blank Type of change)', 'AP_NOT_SCOPE_TOC' not in selected, '')
 chk('AP-08c', 'AP_NOT_SCOPE_INA excluded (Status=INACTIVE)', 'AP_NOT_SCOPE_INA' not in selected, '')
 chk('AP-08d', 'AP_EXCL_ZCORE excluded (Exclude Z-Core=X)', 'AP_EXCL_ZCORE' not in selected, '')
@@ -117,7 +119,7 @@ from strategies.accounting_principles.accounting_principles import DEFAULT_EVENT
 from strategies.accounting_principles.validation_methods import list_all_event_names
 events_in_file = list_all_event_names(str(VM))
 selected_diff = strat2._select_in_scope_x_checks(
-    cc_df, str(F / 'ap_pub.xlsx'), 'cross checks all',
+    cc_df, str(F / 'xc_pub.xlsx'), 'cross checks all',
     event_subset=events_in_file
 )
 chk('AP-10a', 'Diff: AP_DIFF_YELLOW in scope (event col yellow)',

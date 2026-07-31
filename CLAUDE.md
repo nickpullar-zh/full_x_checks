@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.75 — Consolidated flat fixture layout; GCoA test; all strategy files in fixtures/ (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `test_data/generate_all_fixtures.py`: new single generator producing all fixture files into `test_data/fixtures/` flat folder. Naming: `xc_` prefix for XC-only, `gb_`/`ap_`/`cond_` for strategy-specific, plain names for shared. Includes `xc_gcoa.xlsx` (GCoA file for QU_YTD test). Merges all strategy pub rows into one `xc_pub.xlsx`. | DONE | |
+| 2 | All four logic test scripts updated to use flat paths, explicit label strings, and corrected row counts (XC=75, GB=22, AP=26, Cond=26 — total 149 assertions, all pass). | DONE | |
+| 3 | `version.py`: bump to `1.0.75`. | DONE | |
+
 ### v1.0.74 — Update both UAT plans for new X-Checks output structure (2026-07-31)
 
 | # | Change | Status | Notes |

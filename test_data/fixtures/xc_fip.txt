@@ -1,0 +1,314 @@
+XC_ALL_MATCH XC_ALL_MATCH XC_ALL_MATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_ALL_MISMATCH XC_ALL_MISMATCH XC_ALL_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC999)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC999
+|
+| 1 | 2 | 3 | FS Account | ACC999 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH XC_FORMULA_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC001)>=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_VARIABLE_MISMATCH XC_VARIABLE_MISMATCH XC_VARIABLE_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC_WRONG
+|
+| 1 | 2 | 3 | FS Account | ACC_WRONG |
+-|
+|-Segment @28@ * |
+-|
+
+XC_NOT_IN_EBX XC_NOT_IN_EBX XC_NOT_IN_EBX test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_TOM_CORRECTION XC_TOM_CORRECTION XC_TOM_CORRECTION test description
+|Formula String |
+VAL_YTD(ACC001TOMAA)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001TOMAA
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+| |- Movement Type @20@ AA desc |
+-|
+|-Segment @28@ * |
+-|
+
+XC_REX_CORRECTION XC_REX_CORRECTION XC_REX_CORRECTION test description
+|Formula String |
+VAL_YTD(ACC001REXCC)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001REXCC
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+| |- Movement Type @20@ CC desc |
+-|
+|-Segment @28@ * |
+-|
+
+XC_THOUSANDS_CORR XC_THOUSANDS_CORR XC_THOUSANDS_CORR test description
+|Formula String |
+VAL_YTD(ACC001)<=CONST(1.000,'USD','E')
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_REORDER_MATCH XC_REORDER_MATCH XC_REORDER_MATCH test description
+|Formula String |
+VAL_YTD(B_ACCToMBB)+VAL_YTD(A_ACCToMAA)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+A_ACCToMAA
+|
+| 1 | 2 | 3 | FS Account | A_ACC |
+| |- Movement Type @20@ AA desc |
+|
+B_ACCToMBB
+|
+| 1 | 2 | 3 | FS Account | B_ACC |
+| |- Movement Type @20@ BB desc |
+-|
+|-Segment @28@ * |
+-|
+
+XC_ABS_FORMULA XC_ABS_FORMULA XC_ABS_FORMULA test description
+|Formula String |
+ABS(VAL_YTD(ACC001))<=CONST(5,'USD','E')
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_LC_YTD XC_LC_YTD XC_LC_YTD test description
+|Formula String |
+LC_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_LC_CONST XC_LC_CONST XC_LC_CONST test description
+|Formula String |
+LC_YTD(ACC001)<=CONST_LC(100,'USD','E')
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_PCT_FORMAT XC_PCT_FORMAT XC_PCT_FORMAT test description
+|Formula String |
+VAL_YTD(ACC001)<'1,500000%'
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_FF_SUFFIX XC_FF_SUFFIX XC_FF_SUFFIX test description
+|Formula String |
+VAL_YTD(ACC001ff)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001ff
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+| 1 | 2 | 3 | FS Account | ACC002 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_SUBTRACT XC_SUBTRACT XC_SUBTRACT test description
+|Formula String |
+VAL_YTD(ACC_POS)-VAL_YTD(ACC_NEG)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC_POS
+|
+| 1 | 2 | 3 | FS Account | ACC_POS |
+|
+ACC_NEG
+|
+| 1 | 2 | 3 | FS Account | ACC_NEG |
+-|
+|-Segment @28@ * |
+-|
+
+XC_NONZERO_LIMIT XC_NONZERO_LIMIT XC_NONZERO_LIMIT test description
+|Formula String |
+VAL_YTD(ACC001)<=CONST(100,'USD','E')
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_GTE_OPERATOR XC_GTE_OPERATOR XC_GTE_OPERATOR test description
+|Formula String |
+VAL_YTD(ACC001)>=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_EXCL_MATCH XC_EXCL_MATCH XC_EXCL_MATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+| 0 | 1 | @2A@ | Account | Type | 2 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_EXCL_MISMATCH XC_EXCL_MISMATCH XC_EXCL_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_QU_YTD XC_QU_YTD XC_QU_YTD test description
+|Formula String |
+VAL_YTD(ACC_QU)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC_QU
+|
+| 1 | 2 | 3 | FS Account | ACC_QU |
+-|
+|-Segment @28@ * |
+-|
+
+XC_KEL_MISMATCH XC_KEL_MISMATCH XC_KEL_MISMATCH test description
+|Formula String |
+VAL_YTD(ACC999)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC999
+|
+| 1 | 2 | 3 | FS Account | ACC999 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_KEL_NO_MATCH XC_KEL_NO_MATCH XC_KEL_NO_MATCH test description
+|Formula String |
+VAL_YTD(ACC888)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC888
+|
+| 1 | 2 | 3 | FS Account | ACC888 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_DIFF_IN_SCOPE XC_DIFF_IN_SCOPE XC_DIFF_IN_SCOPE test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_DIFF_YELLOW XC_DIFF_YELLOW XC_DIFF_YELLOW test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+
+XC_DIFF_GREEN XC_DIFF_GREEN XC_DIFF_GREEN test description
+|Formula String |
+VAL_YTD(ACC001)<=0
+-|
+|-Characteristic Sel Opt Attributes Node Characteristic From To |
+ACC001
+|
+| 1 | 2 | 3 | FS Account | ACC001 |
+-|
+|-Segment @28@ * |
+-|
+

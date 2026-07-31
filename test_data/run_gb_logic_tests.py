@@ -8,7 +8,7 @@ from pathlib import Path
 from strategies.grouping_by.grouping_by import GroupingBy
 from task_configs import GROUPING_BY_UPLOAD_CONFIG
 
-F = Path('test_data/fixtures/gb')
+F = FGB = Path('test_data/fixtures')
 results = []
 
 def chk(case_id, desc, passed, detail=''):
@@ -19,11 +19,11 @@ gb = GroupingBy(GROUPING_BY_UPLOAD_CONFIG)
 gb.log = []
 mapping_txt = (F / 'gb_mapping.txt').read_text()
 fip_gb   = pd.read_excel(F / 'gb_fip_ZQ9_VALFLDGR.xlsx', sheet_name='Sheet1')
-ebx_gb   = pd.read_excel(F / 'gb_pub.xlsx', sheet_name='cross checks all')
+ebx_gb   = pd.read_excel(F / 'xc_pub.xlsx', sheet_name='cross checks all')
 loaded = {
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label: fip_gb,
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label: ebx_gb,
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label: mapping_txt,
+    "FIP File (ZQ9_VALFLDGR)": fip_gb,
+    "X-Checks Publication File": ebx_gb,
+    "Mapping File": mapping_txt,
 }
 _, _, df_fip = gb._process_fip(loaded)
 _, df_ebx    = gb._process_ebx(loaded)
@@ -69,7 +69,7 @@ chk('GB-09', 'Full file Comparison row count = 14', len(df_cmp) == 14, f'got {le
 # ── GB-11: Process only differences — Grouping By colour filter ───────────
 gb2 = GroupingBy(GROUPING_BY_UPLOAD_CONFIG)
 gb2.log = []
-in_scope = gb2._diff_in_scope_xchecks(str(F / 'gb_pub.xlsx'), 'cross checks all')
+in_scope = gb2._diff_in_scope_xchecks(str(FGB / 'xc_pub.xlsx'), 'cross checks all')
 chk('GB-11a', 'Diff: GB_DIFF_YELLOW in scope (yellow Grouping By cell)',
     in_scope is not None and 'GB_DIFF_YELLOW' in in_scope, str(in_scope))
 chk('GB-11b', 'Diff: GB_DIFF_GREEN in scope (green Grouping By cell)',

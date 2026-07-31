@@ -11,7 +11,7 @@ from strategies.conditions.compare import compare as cond_compare
 from strategies.conditions.conditions import Conditions
 from task_configs import CONDITIONS_UPLOAD_CONFIG
 
-F = Path('test_data/fixtures/cond')
+F = FCOND = Path('test_data/fixtures')
 results = []
 
 def chk(case_id, desc, passed, detail=''):
@@ -20,7 +20,7 @@ def chk(case_id, desc, passed, detail=''):
 # ── Setup: full file mode ──────────────────────────────────────────────────
 fip_df   = pd.read_excel(F / 'cond_fip_ZQ9_VALMETH.xlsx', sheet_name='FIP Conditions')
 fip_proc = process_fip(fip_df)
-working_df, warnings = extract_conditions(str(F / 'cond_pub.xlsx'), 'cross checks all',
+working_df, warnings = extract_conditions(str(F / 'xc_pub.xlsx'), 'cross checks all',
                                            process_only_differences=False)
 df, summary = cond_compare(working_df, fip_proc)
 
@@ -62,10 +62,10 @@ chk('COND-04b', 'COND_MULTI_COL|RU_IN = Matched',    result('COND_MULTI_COL|RU_I
 chk('COND-04c', 'COND_MULTI_COL|RU_OUT = Not Matched', result('COND_MULTI_COL|RU_OUT') == 'Not Matched', result('COND_MULTI_COL|RU_OUT'))
 
 # ── COND-05: Total row count ──────────────────────────────────────────────
-chk('COND-05', 'Full file row count = 15', len(df) == 15, f'got {len(df)}')
+chk('COND-05', 'Full file row count = 16', len(df) == 16, f'got {len(df)}')
 
 # ── COND-06: Differences mode — yellow cell ───────────────────────────────
-working_diff, _ = extract_conditions(str(F / 'cond_pub.xlsx'), 'cross checks all',
+working_diff, _ = extract_conditions(str(F / 'xc_pub.xlsx'), 'cross checks all',
                                       process_only_differences=True)
 df_diff, _ = cond_compare(working_diff, fip_proc)
 diff_keys = set(df_diff['EBX Data'].tolist())

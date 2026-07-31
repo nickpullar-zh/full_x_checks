@@ -23,7 +23,7 @@ ebx_df = pd.read_excel(F / 'xc_pub.xlsx', sheet_name='cross checks all')
 ebx_results = extract_ebx(ebx_df)
 xc_list = sorted(set(str(x) for x in ebx_df['X-Check No.'].tolist()
                      if str(x) not in ('nan', '', 'None')))
-fip_text = (F / 'fip_xc.txt').read_text(encoding='utf-8')
+fip_text = (F / 'xc_fip.txt').read_text(encoding='utf-8')
 fip_results = extract_fip(fip_text, xc_list)
 xc_df = pd.DataFrame(xc_compare(ebx_results, fip_results)).sort_values('X-Check No.').reset_index(drop=True)
 
@@ -58,6 +58,7 @@ expected_xc = {
     'XC_THOUSANDS_CORR':    'Match',    # 1.000 → 1000
     'XC_TOM_CORRECTION':    'Match',    # FIP uses TOM → ToM
     'XC_VARIABLE_MISMATCH': 'Match',    # formula matches, vars differ
+    'XC_QU_YTD':           'Match',    # GCoA QU account -> QU_YTD formula
 }
 expected_row_count = len(expected_xc)
 chk('FX-05a', f'X-Checks row count = {expected_row_count}',
@@ -91,13 +92,27 @@ chk('FX-06d', 'XC_EXCL_MATCH Formula Match (Excl) = Match',
     r is not None and r['Formula Match (Excl)'] == 'Match',
     r['Formula Match (Excl)'] if r is not None else 'MISSING')
 
+# ── FX-06e: GCoA QU_YTD substitution ─────────────────────────────────────────
+gcoa_df = pd.read_excel(F / 'xc_gcoa.xlsx', sheet_name='GCoA Base account table')
+qu_mask = gcoa_df['Data type'].astype(str).str.strip() == 'QU'
+qu_accounts = set(gcoa_df.loc[qu_mask, 'Account ID'].astype(str).str.strip())
+ebx_with_qu = extract_ebx(ebx_df, qu_accounts=qu_accounts)
+qu_row  = next((r for r in ebx_with_qu if r['X-Check No.'] == 'XC_QU_YTD'), None)
+fip_qu  = next((r for r in fip_results  if r['X-Check No.'] == 'XC_QU_YTD'), None)
+chk('FX-06e', 'XC_QU_YTD: EBX formula uses QU_YTD when account in GCoA as QU type',
+    qu_row is not None and 'QU_YTD' in str(qu_row.get('EBX Formula', '')),
+    qu_row['EBX Formula'] if qu_row else 'MISSING')
+chk('FX-06f', 'XC_QU_YTD: FIP formula is VAL_YTD (no GCoA context; QU_YTD only used by EBX when GCoA supplied)',
+    fip_qu is not None and 'VAL_YTD' in str(fip_qu.get('FIP Formula', '')),
+    fip_qu['FIP Formula'] if fip_qu else 'MISSING')
+
 # ── FX-10: X-Check No Selection + Comparison filtering (differences mode) ────────
 from strategies.x_checks.x_check_no_selection import select_x_check_nos
 
 # Selection filter (drives .txt file)
 selected = select_x_check_nos(ebx_df, str(F / 'xc_pub.xlsx'), 'cross checks all')
 expected_selected = {'XC_DIFF_IN_SCOPE', 'XC_DIFF_YELLOW', 'XC_DIFF_GREEN'}
-chk('FX-10a', 'X-Check No Selection: exactly 3 results', len(selected) == 3, str(selected))
+chk('FX-10a', 'X-Check No Selection: exactly 5 results', len(selected) == 5, str(selected))
 chk('FX-10b', 'X-Check No Selection: XC_DIFF_IN_SCOPE present', 'XC_DIFF_IN_SCOPE' in selected, str(selected))
 chk('FX-10c', 'X-Check No Selection: XC_DIFF_YELLOW present (Changed)', 'XC_DIFF_YELLOW' in selected, str(selected))
 chk('FX-10d', 'X-Check No Selection: XC_DIFF_GREEN present (New)', 'XC_DIFF_GREEN' in selected, str(selected))
@@ -123,19 +138,20 @@ from strategies.grouping_by.grouping_by import GroupingBy
 from task_configs import GROUPING_BY_UPLOAD_CONFIG
 gb = GroupingBy(GROUPING_BY_UPLOAD_CONFIG)
 gb.log = []
-mapping_txt = (F / 'mapping.txt').read_text()
-fip_gb = pd.read_excel(F / 'fip_ZQ9_VALFLDGR.xlsx', sheet_name='Sheet1')
+mapping_txt = (F / 'gb_mapping.txt').read_text()
+fip_gb = pd.read_excel(F / 'gb_fip_ZQ9_VALFLDGR.xlsx', sheet_name='Sheet1')
 loaded_gb = {
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label: fip_gb,
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label: ebx_df.copy(),
-    GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label: mapping_txt,
+    "X-Checks Publication File":  ebx_df.copy(),
+    "FIP File (ZQ9_VALFLDGR)":    fip_gb,
+    "Mapping File":               mapping_txt,
 }
 _, _, df_fip_proc = gb._process_fip(loaded_gb)
 _, df_ebx_proc = gb._process_ebx(loaded_gb)
 df_gb = gb._process_compare(df_fip_proc, df_ebx_proc)
-chk('FX-12a', 'Grouping By row count = 2', len(df_gb) == 2, f'got {len(df_gb)}')
-for key, exp in [('GB_MATCHED|GB_GROUPING_ITEM', 'Matched'),
-                 ('GB_NOT_IN_FIP|GB_GROUPING_ITEM', 'Not in FIP')]:
+chk('FX-12a', 'Grouping By row count = 14', len(df_gb) == 14, f'got {len(df_gb)}')
+for key, exp in [('GB_MATCHED|ITEM_A',    'Matched'),
+                 ('GB_NOT_IN_FIP|ITEM_A', 'Not in FIP'),
+                 ('REF_BASE|ITEM_A',      'Matched')]:
     rows = df_gb[df_gb['EBX Key'] == key]
     got = rows.iloc[0]['Result'] if len(rows) else 'MISSING'
     chk('FX-12b', f'Grouping By {key} = {exp}', got == exp, got)
@@ -145,14 +161,14 @@ from strategies.accounting_principles.validation_methods import parse_method_bin
 from strategies.accounting_principles.compare import compare_with_bindings
 from strategies.accounting_principles.accounting_principles import DEFAULT_EVENTS
 bindings = parse_method_bindings(str(F / 'validation_methods.xlsx'), DEFAULT_EVENTS)
-fip_ap = pd.read_excel(F / 'fip_ZQ9_VALMSG.xlsx', sheet_name='FIP Methods Rules and Condition')
+fip_ap = pd.read_excel(F / 'ap_fip_ZQ9_VALMSG.xlsx', sheet_name='FIP Methods Rules and Condition')
 fip_ap['Key'] = (fip_ap['MK'].astype(str).str.strip()
                  + '|' + fip_ap['ValidRule'].astype(str).str.strip())
 xchecks = [str(x).strip() for x in ebx_df['X-Check No.'].tolist()
            if str(x).strip() not in ('nan', '', 'None')]
 ap_df = pd.DataFrame(compare_with_bindings(bindings, ebx_df, xchecks, fip_ap))
-chk('FX-16a', 'AP row count = 2', len(ap_df) == 2, f'got {len(ap_df)}')
-for xc, exp_match in [('AP_MATCH', 'Match'), ('AP_MISMATCH', 'MisMatch')]:
+chk('FX-16a', 'AP row count = 11', len(ap_df) == 11, f'got {len(ap_df)}')
+for xc, exp_match in [('AP_MATCH_W', 'Match'), ('AP_MISMATCH', 'MisMatch')]:
     rows = ap_df[ap_df['X-Check No.'] == xc]
     if len(rows) == 0:
         chk('FX-16b', f'AP {xc}', False, 'MISSING')
@@ -167,20 +183,20 @@ for xc, exp_match in [('AP_MATCH', 'Match'), ('AP_MISMATCH', 'MisMatch')]:
 from strategies.conditions.extract import extract_conditions
 from strategies.conditions.fip import process_fip
 from strategies.conditions.compare import compare as cond_compare
-fip_cond = pd.read_excel(F / 'fip_ZQ9_VALMETH.xlsx', sheet_name='FIP Conditions')
+fip_cond = pd.read_excel(F / 'cond_fip_ZQ9_VALMETH.xlsx', sheet_name='FIP Conditions')
 fip_proc = process_fip(fip_cond)
 working_full, _ = extract_conditions(str(F / 'xc_pub.xlsx'), 'cross checks all',
                                      process_only_differences=False)
 cond_full, _ = cond_compare(working_full, fip_proc)
-chk('FX-20a', 'Conditions full row count = 7', len(cond_full) == 7, f'got {len(cond_full)}')
+chk('FX-20a', 'Conditions full row count = 16', len(cond_full) == 16, f'got {len(cond_full)}')
 for ebx_key, exp in [
-    ('COND_MATCHED|Q1',     'Matched'),
-    ('COND_NOT_MATCHED|Q2', 'Not Matched'),
-    ('COND_BASE|COND_BASE', 'Not Matched'),
-    ('COND_BASE|Q1',        'Matched'),
-    ('COND_DIFF_YELLOW|Q1', 'Matched'),
-    ('COND_DIFF_GREEN|Q1',  'Matched'),
-    ('COND_DIFF_WHITE|Q1',  'Not Matched'),
+    ('COND_APPL_QTRS|Q1',        'Matched'),
+    ('COND_NOT_MATCHED|Q2',      'Not Matched'),
+    ('COND_REF_XC|COND_REF_XC',  'Not Matched'),
+    ('COND_REF_XC|Q1',           'Matched'),
+    ('COND_DIFF_YELLOW|Q1',      'Matched'),
+    ('COND_DIFF_GREEN|RU_NORTH', 'Matched'),
+    ('COND_DIFF_WHITE|Q1',       'Not Matched'),
 ]:
     rows = cond_full[cond_full['EBX Data'] == ebx_key]
     got = rows.iloc[0]['Comparison'] if len(rows) else 'MISSING'
@@ -194,9 +210,9 @@ chk('FX-21a', 'Conditions diff row count = 2', len(cond_diff) == 2, f'got {len(c
 chk('FX-21b', 'Conditions diff COND_DIFF_YELLOW|Q1 Matched',
     len(cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_YELLOW|Q1']) > 0 and
     cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_YELLOW|Q1'].iloc[0]['Comparison'] == 'Matched', '')
-chk('FX-21c', 'Conditions diff COND_DIFF_GREEN|Q1 Matched',
-    len(cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_GREEN|Q1']) > 0 and
-    cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_GREEN|Q1'].iloc[0]['Comparison'] == 'Matched', '')
+chk('FX-21c', 'Conditions diff COND_DIFF_GREEN|RU_NORTH Matched',
+    len(cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_GREEN|RU_NORTH']) > 0 and
+    cond_diff[cond_diff['EBX Data'] == 'COND_DIFF_GREEN|RU_NORTH'].iloc[0]['Comparison'] == 'Matched', '')
 chk('FX-21d', 'Conditions diff COND_DIFF_WHITE not collected',
     'COND_DIFF_WHITE|Q1' not in cond_diff['EBX Data'].values, '')
 
@@ -208,7 +224,7 @@ from task_configs import X_CHECKS_UPLOAD_CONFIG
 
 xc_strategy = XChecks(X_CHECKS_UPLOAD_CONFIG)
 xc_strategy.log = []
-kel_path = str(F / 'known_exception_list.xlsx')
+kel_path = str(F / 'xc_kel.xlsx')
 
 # Annotate the comparison df with the KEL
 annotated = xc_strategy._annotate_known_exceptions(
@@ -242,8 +258,8 @@ chk('FX-09e', 'KEL: XC_KEL_NO_MATCH Known Exception is blank (fingerprint mismat
     no_match_kel in ('', 'nan'), repr(no_match_kel))
 
 # ── FX-25: Full Run row counts ────────────────────────────────────────────────
-chk('FX-25', f'Full Run row counts: XC={expected_row_count} GB=2 AP=2 Cond=7',
-    len(xc_df) == expected_row_count and len(df_gb) == 2 and len(ap_df) == 2 and len(cond_full) == 7,
+chk('FX-25', f'Full Run row counts: XC={expected_row_count} GB=14 AP=11 Cond=16',
+    len(xc_df) == expected_row_count and len(df_gb) == 14 and len(ap_df) == 11 and len(cond_full) == 16,
     f'XC={len(xc_df)} GB={len(df_gb)} AP={len(ap_df)} Cond={len(cond_full)}')
 
 # ── Summary ───────────────────────────────────────────────────────────────────
