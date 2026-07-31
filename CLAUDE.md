@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.67 — Fixture UAT plan: Logic row colour via conditional formatting on column C (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: replace static per-cell `PatternFill` on Logic rows with a `FormulaRule` conditional format on `A4:J{last_row}` — fills light blue when `$C4="Logic"`. This means a tester can change "Whole App" to "Logic" in column C and the row colour updates automatically. | DONE | |
+| 2 | `docs/20260731 Fixture_UAT_v1.0.66 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.67`. | DONE | |
+
 ### v1.0.66 — Workbooks open on Comparison sheet by default (2026-07-30)
 
 | # | Change | Status | Notes |

@@ -18,6 +18,7 @@ from datetime import date
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.formatting.rule import FormulaRule
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from version import __version__
@@ -703,11 +704,10 @@ def _build_test_cases(wb):
         cell.border = ALL_THIN
         cell.alignment = CTR_WRAP
 
+    last_data_row = 3 + len(TEST_CASES)
     for row_offset, (tc_id, area, test_type, setup, steps, expected) in enumerate(TEST_CASES):
         row = 4 + row_offset
         ws.row_dimensions[row].height = 100
-        # Logic rows: light blue tint; Whole App rows: plain white
-        row_fill = _fill(LOGIC_BLUE) if test_type == "Logic" else None
         for col_idx, val in enumerate(
             [tc_id, area, test_type, setup, steps, expected, "", "", "", ""], start=1
         ):
@@ -715,10 +715,19 @@ def _build_test_cases(wb):
             cell.font = _font()
             cell.border = ALL_THIN
             cell.alignment = TOP_WRAP
-            if row_fill:
-                cell.fill = row_fill
         # Bold the test-type cell
         ws.cell(row=row, column=3).font = _semibold()
+
+    # Conditional formatting: entire row turns light blue when column C = "Logic".
+    # Formula anchored on col C, applied across cols A:J for all data rows.
+    cf_range = f"A4:J{last_data_row}"
+    ws.conditional_formatting.add(
+        cf_range,
+        FormulaRule(
+            formula=['$C4="Logic"'],
+            fill=_fill(LOGIC_BLUE),
+        ),
+    )
 
 
 def _build_signoff(wb):
