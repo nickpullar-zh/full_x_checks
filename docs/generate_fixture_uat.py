@@ -175,17 +175,36 @@ TEST_CASES = [
         "FX-07", "X-Checks — output structure", "Whole App",
         "FX-05 complete. Output workbook open.",
         "Check the sheet tabs.",
-        "Workbook contains:\n"
-        "1. Comparison\n"
-        "2. Processing Log",
+        "Workbook contains 7 sheets:\n"
+        "1. EBX Data        — the raw 'cross checks all' publication file (all rows and columns)\n"
+        "2. FIP Data        — parsed FIP results: one row per X-Check found in the FIP text\n"
+        "                     (columns: X-Check No., FIP Formula, FIP Formula (Excl), FIP Variables, FIP Variable (Builder))\n"
+        "3. Comparison      — full combined output (all 30 rows)\n"
+        "4. Matched Data    — only rows where ALL 4 match columns = Match or MisMatch (Excepted)\n"
+        "5. MisMatched Data — only rows where ANY match column = MisMatch or MisMatch (Excepted)\n"
+        "6. Not Found Data  — only rows where ANY match column = Not Found\n"
+        "7. Processing Log",
+    ),
+    (
+        "FX-07b", "X-Checks — filtered sheet counts", "Logic",
+        "FX-05 output open.",
+        "Count rows on each filtered sheet.",
+        "From the 30-row fixture Comparison:\n"
+        "  Matched Data:    16 rows  (all 4 match cols = Match)\n"
+        "  MisMatched Data:  7 rows  (any col = MisMatch)\n"
+        "  Not Found Data:   7 rows  (any col = Not Found)\n"
+        "Total: 16 + 7 + 7 = 30 — every Comparison row appears on exactly one filtered sheet.",
     ),
     (
         "FX-08", "X-Checks — colour coding", "Whole App",
         "FX-05 output open, Comparison sheet.",
-        "Review fill colours.",
-        "Comparison columns: Match → green, MisMatch → red, Not Found → orange.\n"
+        "Review fill colours on the Comparison sheet.",
+        "Comparison columns: Match - green, MisMatch - red, Not Found - orange.\n"
         "X-Check No. column: green when all 4 columns Match; red when any MisMatch; "
-        "orange when any Not Found (and no MisMatch).",
+        "orange when any Not Found (and no MisMatch).\n\n"
+        "Matched Data sheet: all rows should be green.\n"
+        "MisMatched Data sheet: all rows should be red.\n"
+        "Not Found Data sheet: all rows should be orange.",
     ),
     (
         "FX-09", "X-Checks — Known Exception annotation", "Logic",
@@ -474,10 +493,15 @@ TEST_CASES = [
         f"• FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. click Proceed.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — Comparison    30 rows  (matches FX-05)\n"
-        "  GB — Comparison    14 rows  (matches FX-12)\n"
-        "  AP — Comparison    11 rows  (matches FX-17)\n"
-        "  Cond — Comparison  15 rows  (matches FX-22)\n\n"
+        "  XC — EBX Data          43 rows\n"
+        "  XC — FIP Data          24 rows\n"
+        "  XC — Comparison        30 rows  (matches FX-05)\n"
+        "  XC — Matched Data      16 rows\n"
+        "  XC — MisMatched Data    7 rows\n"
+        "  XC — Not Found Data     7 rows\n"
+        "  GB — Comparison        14 rows  (matches FX-12)\n"
+        "  AP — Comparison        11 rows  (matches FX-17)\n"
+        "  Cond — Comparison      15 rows  (matches FX-22)\n\n"
         "Single 'Processing Log' sheet at the end.",
     ),
     (

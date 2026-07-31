@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.74 — Update both UAT plans for new X-Checks output structure (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-07 updated to list all 7 sheets; add FX-07b (Logic) verifying filtered sheet counts (16 Matched, 7 MisMatched, 7 Not Found); FX-08 updated for colour coding on filtered sheets; Full Run sheet list updated with 6 XC sheets. | DONE | |
+| 2 | `docs/generate_full_app_uat.py`: FA-07 and FA-08 updated to match new 7-sheet output structure and filtered counts. | DONE | |
+| 3 | `docs/20260731 Fixture_UAT_v1.0.73 Test Plan.xlsx` + `docs/20260731 Full_Application_v1.0.73 Test Plan.xlsx`: generated. | DONE | |
+| 4 | `version.py`: bump to `1.0.74`. | DONE | |
+
 ### v1.0.73 — X-Checks output: add source sheets and three filtered Comparison sheets (2026-07-31)
 
 | # | Change | Status | Notes |

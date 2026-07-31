@@ -186,17 +186,26 @@ TEST_CASES = [
         "FA-07", "X-Checks — output structure",
         "FA-06 complete. Output workbook open.",
         "Check the sheet tabs.",
-        "Workbook contains:\n"
-        "1. Comparison\n"
-        "2. Processing Log",
+        "Workbook contains 7 sheets:\n"
+        "1. EBX Data        — raw 'cross checks all' publication data\n"
+        "2. FIP Data        — parsed FIP results (one row per X-Check found in FIP text)\n"
+        "3. Comparison      — full combined output\n"
+        "4. Matched Data    — only rows where all 4 match columns = Match\n"
+        "5. MisMatched Data — only rows where any match column = MisMatch\n"
+        "6. Not Found Data  — only rows where any match column = Not Found\n"
+        "7. Processing Log",
     ),
     (
         "FA-08", "X-Checks — comparison counts",
         "FA-06 output, Comparison sheet open.",
-        f"Count the rows and check the Formula Match column breakdown.",
-        f"{XC_RESULTS} rows total.\n"
+        f"Count the rows and check the Formula Match column breakdown. "
+        f"Also verify the filtered sheet counts.",
+        f"Comparison: {XC_RESULTS} rows total.\n"
         f"Formula Match: {XC_FORMULA_MATCH} Match, {XC_FORMULA_MISMATCH} MisMatch, "
-        f"{XC_FORMULA_NOTFOUND} Not Found.",
+        f"{XC_FORMULA_NOTFOUND} Not Found.\n\n"
+        f"Matched Data:    {XC_FORMULA_MATCH} rows.\n"
+        f"MisMatched Data: {XC_FORMULA_MISMATCH} rows.\n"
+        f"Not Found Data:  {XC_FORMULA_NOTFOUND} rows.",
     ),
     (
         "FA-09", "X-Checks — Known Exception List",
