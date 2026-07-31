@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.68 — Standardise file field order: FIP first, Pub second, KEL last (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: AP reordered to FIP File (VALMSG), X-Checks Publication File, Validation Methods File, Known Exception List. Conditions reordered to FIP File (ZQ9_VALMETH), X-Checks Publication File, Known Exception List. X-Checks and Grouping By were already correct. | DONE | |
+| 2 | `version.py`: bump to `1.0.68`. | DONE | |
+
 ### v1.0.67 — Fixture UAT plan: Logic row colour via conditional formatting on column C (2026-07-31)
 
 | # | Change | Status | Notes |
