@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.76 — Update fixture UAT plan with new flat file names, GCoA test, corrected row counts (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: all file references updated to flat layout (xc_fip.txt, xc_gcoa.xlsx, gb_fip_ZQ9_VALFLDGR.xlsx, gb_mapping.txt, ap_fip_ZQ9_VALMSG.xlsx, cond_fip_ZQ9_VALMETH.xlsx, xc_kel.xlsx). Add FX-06e GCoA QU_YTD test case. FX-05 row count 30→31. Cond row count 15→16. Full Run file list updated with all 9 fixture files. | DONE | |
+| 2 | `docs/20260731 Fixture_UAT_v1.0.75 Test Plan.xlsx`: generated. | DONE | |
+| 3 | `version.py`: bump to `1.0.76`. | DONE | |
+
 ### v1.0.75 — Consolidated flat fixture layout; GCoA test; all strategy files in fixtures/ (2026-07-31)
 
 | # | Change | Status | Notes |

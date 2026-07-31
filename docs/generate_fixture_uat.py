@@ -125,7 +125,7 @@ TEST_CASES = [
         f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
         "No GCoA. No Known Exception List. 'Process only differences' unchecked.",
         "Load the files above into X-Checks and click Proceed.",
-        "Run completes. Comparison sheet contains exactly 30 rows. "
+        "Run completes. Comparison sheet contains exactly 31 rows. "
         "Formula Match column values (sorted alphabetically):\n\n"
         "  XC_ABS_FORMULA        - Match   (Operator 2 set - ABS() wrapping)\n"
         "  XC_ALL_MATCH          - Match\n"
@@ -156,6 +156,7 @@ TEST_CASES = [
         "  XC_SUBTRACT           - Match   (+ and - operators - subtraction formula)\n"
         "  XC_THOUSANDS_CORR     - Match   (FIP '1.000' stripped to '1000')\n"
         "  XC_TOM_CORRECTION     - Match   (FIP 'TOM' normalised to 'ToM')\n"
+        "  XC_QU_YTD             - Match   (GCoA account with Data type=QU produces QU_YTD formula)\n"
         "  XC_VARIABLE_MISMATCH  - Match   (formula matches; FS Account differs)\n\n"
         "X-Check No. column: green for all-Match rows, red for any MisMatch, "
         "orange for Not Found rows.",
@@ -170,6 +171,22 @@ TEST_CASES = [
         "(EBX has excl.acc.type=2, FIP has no @2A@ row).\n"
         "d) XC_EXCL_MATCH: Formula Match (Excl) = Match "
         "(both EBX and FIP carry excl.acc.type=2).",
+    ),
+    (
+        "FX-06e", "X-Checks — GCoA QU_YTD substitution", "Logic",
+        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
+        f"FIP File: {F}\\xc_fip.txt\n"
+        f"GCoA Publication File: {F}\\xc_gcoa.xlsx  (sheet: GCoA Base account table)\n"
+        "No Known Exception List. 'Process only differences' unchecked.",
+        "Load all three files into X-Checks and click Proceed.",
+        "Run completes. Row XC_QU_YTD in the Comparison sheet:\n\n"
+        "  XC_QU_YTD  Formula Match = Match\n\n"
+        "EBX formula for XC_QU_YTD = QU_YTD(ACC_QU)<=0  "
+        "(because ACC_QU appears in the GCoA file with Data type=QU).\n"
+        "FIP formula = QU_YTD(ACC_QU)<=0  (matches).\n\n"
+        "Without the GCoA file, XC_QU_YTD would produce VAL_YTD(ACC_QU)<=0 "
+        "and still match (FIP also has VAL_YTD). "
+        "The key check is that EBX produces QU_YTD when the GCoA file is supplied.",
     ),
     (
         "FX-07", "X-Checks — output structure", "Whole App",
@@ -332,7 +349,7 @@ TEST_CASES = [
         f"Validation Methods File: fixtures\\validation_methods.xlsx  (sheet: Validation Methods)\n"
         f"X-Checks Publication File: fixtures\\ap\\ap_pub.xlsx  (sheet: cross checks all)\n"
         f"FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
-        "Note: fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export with no pre-built Key column.\n"
+        "Note: ap_fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export with no pre-built Key column.\n"
         "'Process only differences' unchecked.",
         "Load the files above into Accounting Principles and click Proceed.",
         "Progress log shows 'Built Key column from MK + ValidRule'.\n\n"
@@ -354,7 +371,7 @@ TEST_CASES = [
         "  AP_DIFF_WHITE  - no event column has any fill colour; excluded in diff mode (not relevant here)\n\n"
         "Key logic to verify:\n"
         "- Both severity rows (AP_BOTH_W, AP_BOTH_E) demonstrate that a single binding accepts either w or e.\n"
-        "- AP_GREY_WINS: the black-font binding's event column is blank in ap_pub, so the grey binding fires.\n"
+        "- AP_GREY_WINS: the black-font binding's event column is blank in xc_pub.xlsx, so the grey binding fires.\n"
         "  Verify AP_GREY_WINS appears with Event=IFRS New SFD (the grey event), not IFRS New RFD.\n"
         "- AP_NO_BINDING row is absent: the method is not in the Validation Methods file at all.\n"
         "- The 'Process only differences' filter rows (EXCL_ZCORE, NOT_SCOPE_INA, etc.) appear here\n"
@@ -365,7 +382,7 @@ TEST_CASES = [
         f"Same files as FX-17. 'Process only differences' checked.",
         "Check 'Process only differences'. Run.",
         "Comparison sheet shows ONLY rows where at least one validation event column\n"
-        "is yellow or green in ap_pub.xlsx:\n\n"
+        "is yellow or green in xc_pub.xlsx:\n\n"
         "  AP_DIFF_GREEN  IFRS New RFD  Warning  w  w  Match  (event col green)\n"
         "  AP_DIFF_YELLOW IFRS New RFD  Warning  w  w  Match  (event col yellow)\n\n"
         "All other rows absent: AP_MATCH_W, AP_MISMATCH, AP_BOTH_W, AP_BOTH_E etc.\n"
@@ -484,24 +501,26 @@ TEST_CASES = [
     (
         "FX-27", "Full Run — all strategies", "Logic",
         f"All fixture files. 'Process only differences' unchecked.\n"
-        f"• FIP File: {F}\\fip_xc.txt\n"
         f"• X-Checks Publication File: {F}\\xc_pub.xlsx\n"
-        f"• FIP File (ZQ9_VALFLDGR): fixtures\\gb\\fip_ZQ9_VALFLDGR.xlsx\n"
-        f"• Mapping File: fixtures\\gb\\gb_mapping.txt\n"
+        f"• FIP File: {F}\\xc_fip.txt\n"
+        f"• GCoA Publication File: {F}\\xc_gcoa.xlsx  (optional)\n"
+        f"• FIP File (ZQ9_VALFLDGR): {F}\\gb_fip_ZQ9_VALFLDGR.xlsx\n"
+        f"• Mapping File: {F}\\gb_mapping.txt\n"
         f"• Validation Methods File: {F}\\validation_methods.xlsx\n"
-        f"• FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx\n"
-        f"• FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx",
+        f"• FIP File (VALMSG): {F}\\ap_fip_ZQ9_VALMSG.xlsx\n"
+        f"• FIP File (ZQ9_VALMETH): {F}\\cond_fip_ZQ9_VALMETH.xlsx\n"
+        f"• Known Exception List: {F}\\xc_kel.xlsx  (optional)",
         "Load all fixture files into Full Run. Uncheck 'Process only differences'. click Proceed.",
         "All four strategies run without error. Combined output contains:\n\n"
         "  XC — EBX Data          43 rows\n"
         "  XC — FIP Data          24 rows\n"
-        "  XC — Comparison        30 rows  (matches FX-05)\n"
+        "  XC — Comparison        31 rows  (matches FX-05)\n"
         "  XC — Matched Data      16 rows\n"
         "  XC — MisMatched Data    7 rows\n"
         "  XC — Not Found Data     7 rows\n"
         "  GB — Comparison        14 rows  (matches FX-12)\n"
         "  AP — Comparison        11 rows  (matches FX-17)\n"
-        "  Cond — Comparison      15 rows  (matches FX-22)\n\n"
+        "  Cond — Comparison      16 rows  (matches FX-22)\n\n"
         "Single 'Processing Log' sheet at the end.",
     ),
     (
@@ -626,12 +645,12 @@ OVERVIEW_ROWS = [
         "Fixture files",
         f"All in test_data\\fixtures\\:\n"
         "  xc_pub.xlsx               — shared EBX publication (all strategies)\n"
-        "  fip_xc.txt                — FIP X-Checks text\n"
-        "  fip_ZQ9_VALFLDGR.xlsx     — FIP Grouping By\n"
-        "  mapping.txt               — Grouping By mapping\n"
+        "  xc_fip.txt               — FIP X-Checks text\n"
+        "  gb_fip_ZQ9_VALFLDGR.xlsx — FIP Grouping By\n"
+        "  gb_mapping.txt            — Grouping By mapping\n"
         "  validation_methods.xlsx   — AP Validation Methods (real reference file)\n"
-        "  fip_ZQ9_VALMSG.xlsx       — FIP AP (raw ZQ9_VALMSG)\n"
-        "  fip_ZQ9_VALMETH.xlsx      — FIP Conditions (raw ZQ9_VALMETH)\n\n"
+        "  ap_fip_ZQ9_VALMSG.xlsx   — FIP AP (raw ZQ9_VALMSG)\n"
+        "  cond_fip_ZQ9_VALMETH.xlsx— FIP Conditions (raw ZQ9_VALMETH)\n\n"
         "Regenerate (except validation_methods.xlsx) with:\n"
         "  python test_data/generate_test_fixtures.py",
     ),
