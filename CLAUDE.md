@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.70 — Regenerate fixture UAT plan at v1.0.69 (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/20260731 Fixture_UAT_v1.0.69 Test Plan.xlsx`: regenerated. CF rule confirmed present (A4:J42, formula $C4="Logic", fill FFD6E4F7). | DONE | |
+| 2 | `version.py`: bump to `1.0.70`. | DONE | |
+
 ### v1.0.69 — Pub first, FIP second in all strategies; Full Run with section dividers and titles (2026-07-31)
 
 | # | Change | Status | Notes |
