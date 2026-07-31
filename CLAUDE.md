@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.77 — Remove stale fixture files and old sub-folders from git (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | Removed from git: `fixtures/fip_xc.txt`, `fixtures/fip_ZQ9_*.xlsx`, `fixtures/mapping.txt`, `fixtures/ap/`, `fixtures/cond/`, `fixtures/gb/` (all superseded by flat layout). | DONE | Empty sub-folders on disk locked by OneDrive — delete manually in Explorer. |
+| 2 | `version.py`: bump to `1.0.77`. | DONE | |
+
 ### v1.0.76 — Update fixture UAT plan with new flat file names, GCoA test, corrected row counts (2026-07-31)
 
 | # | Change | Status | Notes |
