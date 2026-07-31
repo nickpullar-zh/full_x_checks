@@ -96,7 +96,7 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
         FileFieldConfig(
             label="FIP File (ZQ9_VALFLDGR)",
             file_types=[("Excel Files", "*.xlsx")],
-            description="FIP download from ZQ9_VALFLDGR",
+            description="Raw ZQ9_VALFLDGR export. Expected columns: ValidRule, Long Text, Field name.",
             default_sheet="Sheet1",
         ),
         FileFieldConfig(
@@ -130,8 +130,7 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
         FileFieldConfig(
             label="FIP File (VALMSG)",
             file_types=[("Excel Files", "*.xlsx")],
-            description="VALMSG export with the 'FIP Methods Rules and Condition' sheet "
-                        "(rows keyed by '<Method>|<X-Check No.>' and an MT column of W/E).",
+            description="Raw ZQ9_VALMSG export. Expected columns: MethC, MK, Medium Text, ValidRule, Long Text, UCFV20G-TRUE_BRANCH, Message class, Msg., MT, Message Text. The Key column is calculated after import.",
             default_sheet="FIP Methods Rules and Condition",
         ),
         FileFieldConfig(
@@ -165,7 +164,7 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
         FileFieldConfig(
             label="FIP File (ZQ9_VALMETH)",
             file_types=[("Excel Files", "*.xlsx")],
-            description="FIP download from ZQ9_VALMETH (sheet: FIP Conditions)",
+            description="Raw ZQ9_VALMETH export. Expected columns: MethC, MK, Medium Text, ValidRule, Medium Text, UCFV20G-TRUE_BRANCH, ValidRule, Medium Text. Keys are calculated after import.",
             default_sheet="FIP Conditions",
         ),
         FileFieldConfig(

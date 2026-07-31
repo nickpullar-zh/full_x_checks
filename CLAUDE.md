@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.72 — Update FIP file descriptions to match actual raw export column headers (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: VALFLDGR description updated to list exact columns (ValidRule, Long Text, Field name). VALMSG description updated to list exact raw ZQ9_VALMSG columns; removes misleading Key column mention. VALMETH description updated to list exact positional columns. | DONE | |
+| 2 | `version.py`: bump to `1.0.72`. | DONE | |
+
 ### v1.0.71 — Fix CF fill: set bgColor = fgColor for solid fill to render in Excel (2026-07-31)
 
 | # | Change | Status | Notes |
