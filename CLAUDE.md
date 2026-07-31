@@ -58,6 +58,16 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.69 — Pub first, FIP second in all strategies; Full Run with section dividers and titles (2026-07-31)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_config.py`: add `SectionConfig(title="")` dataclass for dividers and section titles. | DONE | |
+| 2 | `file_upload_ui.py`: import `SectionConfig`; update field loop to render a `ttk.Separator` + optional bold label when it encounters a `SectionConfig`. | DONE | |
+| 3 | `task_configs.py`: all four strategies reordered to Pub first, FIP second, other files, KEL last. `_build_full_run_config` replaced with explicit ordered layout using `SectionConfig` dividers per strategy. | DONE | |
+| 4 | `strategies/grouping_by/grouping_by.py`: replace index-based `file_fields[0/1/2].label` with literal label strings (safe after reorder). | DONE | |
+| 5 | `version.py`: bump to `1.0.69`. | DONE | |
+
 ### v1.0.68 — Standardise file field order: FIP first, Pub second, KEL last (2026-07-31)
 
 | # | Change | Status | Notes |

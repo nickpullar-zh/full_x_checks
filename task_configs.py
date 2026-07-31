@@ -1,7 +1,7 @@
 """
 Per-strategy file-upload configurations — all strategies combined for v1.0.
 """
-from file_upload_config import UploadTaskConfig, FileFieldConfig  # noqa: F401
+from file_upload_config import UploadTaskConfig, FileFieldConfig, SectionConfig  # noqa: F401
 
 
 COLLECT_LIVE_X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
@@ -24,15 +24,15 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
     requires_output_directory=True,
     file_fields=[
         FileFieldConfig(
-            label="FIP File",
-            file_types=[("Text Files", "*.txt")],
-            description="Data from the 'Validation Rule' in FIP Consolidation Workbench"
-        ),
-        FileFieldConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             description="The X-Checks Publication file with the 'cross checks all' sheet",
             default_sheet="cross checks all"
+        ),
+        FileFieldConfig(
+            label="FIP File",
+            file_types=[("Text Files", "*.txt")],
+            description="Data from the 'Validation Rule' in FIP Consolidation Workbench"
         ),
         FileFieldConfig(
             label="GCoA Publication File",
@@ -88,16 +88,16 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
     requires_output_directory=True,
     file_fields=[
         FileFieldConfig(
-            label="FIP File (ZQ9_VALFLDGR)",
-            file_types=[("Excel Files", "*.xlsx")],
-            description="FIP download from ZQ9_VALFLDGR",
-            default_sheet="Sheet1",
-        ),
-        FileFieldConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             description="The X-Checks Publication file with the 'cross checks all' sheet",
             default_sheet="cross checks all",
+        ),
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALFLDGR)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="FIP download from ZQ9_VALFLDGR",
+            default_sheet="Sheet1",
         ),
         FileFieldConfig(
             label="Mapping File",
@@ -121,18 +121,18 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
     requires_output_directory=True,
     file_fields=[
         FileFieldConfig(
-            label="FIP File (VALMSG)",
-            file_types=[("Excel Files", "*.xlsx")],
-            description="VALMSG export with the 'FIP Methods Rules and Condition' sheet "
-                        "(rows keyed by '<Method>|<X-Check No.>' and an MT column of W/E).",
-            default_sheet="FIP Methods Rules and Condition",
-        ),
-        FileFieldConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             description="EBX file with the 'cross checks all' sheet.",
             default_sheet="cross checks all",
             header_signals=["X-Check No.", "Status", "Type of change"],
+        ),
+        FileFieldConfig(
+            label="FIP File (VALMSG)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="VALMSG export with the 'FIP Methods Rules and Condition' sheet "
+                        "(rows keyed by '<Method>|<X-Check No.>' and an MT column of W/E).",
+            default_sheet="FIP Methods Rules and Condition",
         ),
         FileFieldConfig(
             label="Validation Methods File",
@@ -157,16 +157,16 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
     requires_output_directory=True,
     file_fields=[
         FileFieldConfig(
-            label="FIP File (ZQ9_VALMETH)",
-            file_types=[("Excel Files", "*.xlsx")],
-            description="FIP download from ZQ9_VALMETH (sheet: FIP Conditions)",
-            default_sheet="FIP Conditions",
-        ),
-        FileFieldConfig(
             label="X-Checks Publication File",
             file_types=[("Excel Files", "*.xlsx")],
             description="The X-Checks Publication file with the 'cross checks all' sheet",
             default_sheet="cross checks all",
+        ),
+        FileFieldConfig(
+            label="FIP File (ZQ9_VALMETH)",
+            file_types=[("Excel Files", "*.xlsx")],
+            description="FIP download from ZQ9_VALMETH (sheet: FIP Conditions)",
+            default_sheet="FIP Conditions",
         ),
         FileFieldConfig(
             label="Known Exception List",
@@ -181,18 +181,51 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
 
 def _build_full_run_config(registry: dict) -> UploadTaskConfig:
     """
-    Build a merged UploadTaskConfig from all registered strategies, deduplicating
-    file fields by label. Called after the registry is fully populated.
+    Build the Full Run UploadTaskConfig with an explicit ordered layout:
+      X-Checks Publication File
+      --- X-Checks ---
+      FIP File
+      GCoA Publication File
+      --- Grouping By ---
+      FIP File (ZQ9_VALFLDGR)
+      Mapping File
+      --- Accounting Principles ---
+      FIP File (VALMSG)
+      Validation Methods File
+      --- Conditions ---
+      FIP File (ZQ9_VALMETH)
+      ---
+      Known Exception List
     """
-    seen: set = set()
-    merged: list = []
+    # Build a lookup of label → FileFieldConfig from all registered strategies
+    field_map: dict = {}
     for task_name, (config, _) in registry.items():
-        if task_name == "Full Run":
+        if task_name in ("Full Run", "Collect Live X-Checks"):
             continue
         for field in config.file_fields:
-            if field.label not in seen:
-                seen.add(field.label)
-                merged.append(field)
+            if isinstance(field, FileFieldConfig) and field.label not in field_map:
+                field_map[field.label] = field
+
+    def _f(label):
+        return field_map[label]
+
+    merged = [
+        _f("X-Checks Publication File"),
+        SectionConfig(title="X-Checks"),
+        _f("FIP File"),
+        _f("GCoA Publication File"),
+        SectionConfig(title="Grouping By"),
+        _f("FIP File (ZQ9_VALFLDGR)"),
+        _f("Mapping File"),
+        SectionConfig(title="Accounting Principles"),
+        _f("FIP File (VALMSG)"),
+        _f("Validation Methods File"),
+        SectionConfig(title="Conditions"),
+        _f("FIP File (ZQ9_VALMETH)"),
+        SectionConfig(),   # plain separator before KEL
+        _f("Known Exception List"),
+    ]
+
     return UploadTaskConfig(
         task_name="Full Run",
         window_title="Full Run — All Strategies",

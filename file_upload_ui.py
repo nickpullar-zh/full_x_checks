@@ -26,7 +26,7 @@ def _set_last_dir(path: str) -> None:
     if os.path.isfile(path):
         _last_dir = os.path.dirname(path)
 from typing import Optional, Dict
-from file_upload_config import UploadTaskConfig
+from file_upload_config import UploadTaskConfig, FileFieldConfig, SectionConfig
 
 
 class _Tooltip:
@@ -216,6 +216,22 @@ class FileUploadUI:
         hint_labels = []
 
         for field in self.config.file_fields:
+
+            # --- Section divider / title ---
+            if isinstance(field, SectionConfig):
+                ttk.Separator(main_frame, orient="horizontal").grid(
+                    row=current_row, column=0, columnspan=3, sticky="ew", pady=(10, 2)
+                )
+                current_row += 1
+                if field.title:
+                    ttk.Label(
+                        main_frame,
+                        text=field.title,
+                        font=("Zurich Sans Semibold", 10),
+                    ).grid(row=current_row, column=0, columnspan=3, sticky="w", padx=5, pady=(0, 4))
+                    current_row += 1
+                continue
+
             path_var = tk.StringVar()
             self.file_paths[field.label] = path_var
 

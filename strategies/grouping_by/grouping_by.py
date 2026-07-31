@@ -62,8 +62,8 @@ class GroupingBy(BaseStrategy):
         # When "Process only differences" is on, filter to rows whose Grouping By
         # cell is yellow (Changed) or green (New) in the original publication file.
         if files.get("process_only_differences", False):
-            ebx_path  = files["files"].get(GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label)
-            ebx_sheet = files["sheet_names"].get(GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label, "cross checks all")
+            ebx_path  = files["files"].get("X-Checks Publication File")
+            ebx_sheet = files["sheet_names"].get("X-Checks Publication File", "cross checks all")
             in_scope = self._diff_in_scope_xchecks(ebx_path, ebx_sheet)
             if in_scope is not None:
                 # EBX Key format: "{xcheck}|{grouping_value}" — filter on X-Check part
@@ -86,8 +86,8 @@ class GroupingBy(BaseStrategy):
         matched     = (df_comparison["Result"] == "Matched").sum()
         not_matched = (df_comparison["Result"] == "Not in FIP").sum()
 
-        fip_path = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label]
-        ebx_path = files["files"][GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label]
+        fip_path = files["files"]["FIP File (ZQ9_VALFLDGR)"]
+        ebx_path = files["files"]["X-Checks Publication File"]
 
         output_path = self.build_output_path(
             files["output_directory"],
@@ -187,7 +187,7 @@ class GroupingBy(BaseStrategy):
     def _process_fip(self, loaded_files) -> tuple:
         try:
             self.log_step(self.log, "Mapping File", "Started processing", 0)
-            mapping_content = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[2].label]
+            mapping_content = loaded_files["Mapping File"]
             self.log_step(self.log, "Mapping File", "Loaded", len(mapping_content.splitlines()), "Including header row")
 
             mapping_dict = {}
@@ -207,7 +207,7 @@ class GroupingBy(BaseStrategy):
             self.log_step(self.log, "Mapping File", "Finished processing", len(mapping_dict))
 
             self.log_step(self.log, "FIP", "Started processing", 0)
-            df_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[0].label].copy()
+            df_original = loaded_files["FIP File (ZQ9_VALFLDGR)"].copy()
             df_fip = df_original.copy()
             self.log_step(self.log, "FIP", "Original file loaded", len(df_original))
 
@@ -248,7 +248,7 @@ class GroupingBy(BaseStrategy):
         try:
             self.log_step(self.log, "EBX", "Started processing", 0)
 
-            df_ebx_original = loaded_files[GROUPING_BY_UPLOAD_CONFIG.file_fields[1].label].copy()
+            df_ebx_original = loaded_files["X-Checks Publication File"].copy()
             df_ebx = df_ebx_original.copy()
             self.log_step(self.log, "EBX", "Original file loaded", len(df_ebx_original))
 

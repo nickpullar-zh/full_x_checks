@@ -25,6 +25,12 @@ class FileFieldConfig:
         )
 
 @dataclass
+class SectionConfig:
+    """A visual divider with an optional title, rendered between file fields."""
+    title: str = ""   # Empty = plain separator line; non-empty = separator + bold label
+
+
+@dataclass
 class UploadTaskConfig:
     """Configuration for a complete upload task (one use case)."""
     task_name: str                          # e.g. "X-Checks Publication File"
