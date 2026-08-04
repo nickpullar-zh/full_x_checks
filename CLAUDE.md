@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.93 — Lower minimum screen resolution to 1280×720 (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `main.py`: `MIN_WIDTH` 1920→1280, `MIN_HEIGHT` 1080→720. | DONE | |
+| 2 | `version.py`: bump to `1.0.93`. | DONE | |
+
 ### v1.0.92 — Scrollable upload form; minimum 1920×1080 screen size check (2026-08-04)
 
 | # | Change | Status | Notes |

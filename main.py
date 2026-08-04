@@ -413,8 +413,8 @@ class TaskSelectorUI:
 
         self.root.mainloop()
 
-MIN_WIDTH  = 1920
-MIN_HEIGHT = 1080
+MIN_WIDTH  = 1280
+MIN_HEIGHT = 720
 
 if __name__ == "__main__":
     _check = tk.Tk()
