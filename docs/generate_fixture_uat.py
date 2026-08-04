@@ -511,18 +511,20 @@ TEST_CASES = [
         f"• Validation Methods File: {F}\\validation_methods.xlsx\n"
         f"• FIP File (VALMSG): {F}\\ap_fip_ZQ9_VALMSG.xlsx\n"
         f"• FIP File (ZQ9_VALMETH): {F}\\cond_fip_ZQ9_VALMETH.xlsx\n"
-        f"• Known Exception List: {F}\\xc_kel.xlsx  (optional)",
-        "Load all fixture files into Full Run. Uncheck 'Process only differences'. click Proceed.",
+        f"• Known Exception List: {F}\\known_exception_list.xlsx  (optional)",
+        "Load all fixture files into Full Run. Uncheck 'Process only differences'. Click Proceed.",
         "All four strategies run without error. Combined output contains:\n\n"
-        "  XC — EBX Data          43 rows\n"
-        "  XC — FIP Data          24 rows\n"
+        "  XC — EBX Data          74 rows  (full raw publication file)\n"
+        "  XC — FIP Data          25 rows  (parsed FIP results)\n"
         "  XC — Comparison        31 rows  (matches FX-05)\n"
-        "  XC — Matched Data      16 rows\n"
+        "  XC — Matched Data      17 rows\n"
         "  XC — MisMatched Data    7 rows\n"
         "  XC — Not Found Data     7 rows\n"
         "  GB — Comparison        14 rows  (matches FX-12)\n"
         "  AP — Comparison        11 rows  (matches FX-17)\n"
         "  Cond — Comparison      16 rows  (matches FX-22)\n\n"
+        "Note: GCoA file is optional — if omitted, XC_QU_YTD uses VAL_YTD (Match). "
+        "If supplied, XC_QU_YTD uses QU_YTD (MisMatch vs FIP), giving 16 Matched and 8 MisMatched instead.\n\n"
         "Single 'Processing Log' sheet at the end.",
     ),
     (

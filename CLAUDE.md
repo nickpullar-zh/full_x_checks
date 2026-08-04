@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.97 — Fix FX-27 XC row counts (EBX=74, FIP=25, Matched=17, MisMatched=7) (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-27 XC row counts corrected — EBX Data 43→74 (raw pub file), FIP Data 24→25, Matched Data 16→17, MisMatched Data unchanged at 7. KEL file reference updated to `known_exception_list.xlsx`. Added note explaining GCoA effect on XC_QU_YTD. | DONE | |
+| 2 | `docs/20260804 Fixture_UAT_v1.0.97 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.97`. | DONE | |
+
 ### v1.0.96 — Fix empty dialog: premature inner reference + overlapping title/separator rows (2026-08-04)
 
 | # | Change | Status | Notes |
