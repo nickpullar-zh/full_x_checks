@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.91 — Full Run dialog: 20px screen margin; two-column layout when too tall (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add `_SCREEN_MARGIN = 20` px; `_set_position` clamps all four edges with this margin. | DONE | |
+| 2 | `file_upload_ui.py`: `_build_ui` measures dialog height after initial render; if it exceeds usable screen height minus margins, destroys the single-column fields panel and rebuilds it as two side-by-side columns (split at the first SectionConfig after the midpoint). | DONE | |
+| 3 | `file_upload_ui.py`: extract field-building into `_build_fields_panel(parent, fields, hint_wrap, two_col)` reused by both layouts. Add `_usable_screen_height()` helper. | DONE | |
+| 4 | `version.py`: bump to `1.0.91`. | DONE | |
+
 ### v1.0.90 — AP pastel tab colour darkened to distinguish from Conditions (2026-08-04)
 
 | # | Change | Status | Notes |

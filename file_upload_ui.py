@@ -144,61 +144,62 @@ class FileUploadUI:
 
     def _set_position(self):
         """
-        Positions the dialog at the same top-left as the parent window.
-        Clamps to usable screen boundaries (respects taskbar) if needed.
-        NOTE: Taskbar-aware positioning only works on Windows.
+        Positions the dialog at the same top-left as the parent window,
+        keeping a _SCREEN_MARGIN px gap from every usable-screen edge.
         """
         self.root.update_idletasks()
 
+        M = self._SCREEN_MARGIN
         parent_x = self.parent.winfo_x()
         parent_y = self.parent.winfo_y()
-        window_width = self.root.winfo_reqwidth()
+        window_width  = self.root.winfo_reqwidth()
         window_height = self.root.winfo_reqheight()
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
 
-        # Use Windows API for taskbar-aware positioning, fall back to screen size
         if os.name == 'nt':
-            import ctypes
-            import ctypes.wintypes
-
-            work_area = ctypes.wintypes.RECT()
-            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(work_area), 0)
-            usable_height = work_area.bottom  # ← Top of taskbar
-            usable_width = work_area.right    # ← Right boundary (accounts for side taskbars too)
+            import ctypes, ctypes.wintypes
+            wa = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
+            usable_top    = wa.top
+            usable_left   = wa.left
+            usable_bottom = wa.bottom
+            usable_right  = wa.right
         else:
-            usable_height = screen_height
-            usable_width = screen_width
+            usable_top  = usable_left = 0
+            usable_right  = self.root.winfo_screenwidth()
+            usable_bottom = self.root.winfo_screenheight()
 
-        desired_x = parent_x
-        desired_y = parent_y
+        # Clamp with margin: prefer parent position, stay within usable area
+        max_x = usable_right  - window_width  - M
+        max_y = usable_bottom - window_height - M
+        min_x = usable_left  + M
+        min_y = usable_top   + M
 
-        if desired_x + window_width > usable_width:
-            desired_x = usable_width - window_width
-
-        # ← Clamp against usable height, not full screen height
-        if desired_y + window_height > usable_height:
-            desired_y = usable_height - window_height
-
-        desired_x = max(0, desired_x)
-        desired_y = max(0, desired_y)
+        desired_x = max(min_x, min(parent_x, max_x))
+        desired_y = max(min_y, min(parent_y, max_y))
 
         self.root.geometry(f"+{desired_x}+{desired_y}")
 
+    # Minimum margin (px) to keep between the dialog edge and the screen edge.
+    _SCREEN_MARGIN = 20
+
     def _build_ui(self):
-        """Dynamically builds UI rows from config."""
+        """
+        Dynamically builds the upload form from config.
+
+        Normal layout: one column of fields, title at top, controls at bottom.
+        Two-column layout: triggered automatically when the form would be taller
+        than the usable screen height minus margins. The file fields are split
+        roughly in half across two side-by-side panels; title and controls remain
+        full-width.
+        """
+        HINT_WRAP_LENGTH   = 533
+        LABEL_FALLBACK_WIDTH = 267
+
         main_frame = ttk.Frame(self.root, padding="15")
         main_frame.grid(row=0, column=0, sticky="nsew")
 
-        # ==========================================
-        # Constants
-        # ==========================================
-        HINT_WRAP_LENGTH = 533  # ← Max width before hint text wraps
-        LABEL_FALLBACK_WIDTH = 267  # ← Fallback if no hints exist
-
-        current_row = 0
-
         # --- Title ---
+        current_row = 0
         ttk.Label(
             main_frame,
             text=self.config.task_name,
@@ -211,118 +212,15 @@ class FileUploadUI:
         )
         current_row += 1
 
-        # ==========================================
-        # Pass 1 — Build all rows, store hint label
-        # references so we can measure them later
-        # ==========================================
-        hint_labels = []
+        # --- Build the fields panel (single column first) ---
+        fields_frame = ttk.Frame(main_frame)
+        fields_frame.grid(row=current_row, column=0, columnspan=3, sticky="nsew")
+        hint_labels = self._build_fields_panel(fields_frame, self.config.file_fields,
+                                               HINT_WRAP_LENGTH, two_col=False)
+        current_row += 1
 
-        for field in self.config.file_fields:
-
-            # --- Section divider / title ---
-            if isinstance(field, SectionConfig):
-                ttk.Separator(main_frame, orient="horizontal").grid(
-                    row=current_row, column=0, columnspan=3, sticky="ew", pady=(10, 2)
-                )
-                current_row += 1
-                if field.title:
-                    ttk.Label(
-                        main_frame,
-                        text=field.title,
-                        font=("Zurich Sans Semibold", 10),
-                    ).grid(row=current_row, column=0, columnspan=3, sticky="w", padx=5, pady=(0, 4))
-                    current_row += 1
-                continue
-
-            path_var = tk.StringVar()
-            self.file_paths[field.label] = path_var
-
-            # --- Field label ---
-            label_text = (
-                f"{field.label} *" if field.required
-                else f"{field.label}\n(optional)"
-            )
-            ttk.Label(
-                main_frame,
-                text=label_text,
-                wraplength=180,
-                justify="left",
-                anchor="w"
-            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
-
-            # --- Path display label (placeholder for now) ---
-            path_label = ttk.Label(
-                main_frame,
-                text="No file selected",
-                foreground="grey",
-                justify="left",
-                anchor="w"
-            )
-            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
-            self.path_labels[field.label] = path_label
-
-            # --- Browse button ---
-            ttk.Button(
-                main_frame,
-                text="Browse...",
-                command=lambda f=field, v=path_var: self._browse_file(f, v)
-            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
-
-            current_row += 1
-
-            # --- Sheet name row ---
-            if field.show_sheet:
-                sheet_var = tk.StringVar(value=field.default_sheet)  # ← Default value
-                self.sheet_names[field.label] = sheet_var
-
-                sheet_label = ttk.Label(
-                    main_frame,
-                    text="Sheet name:",
-                    font=("Zurich Sans", 9),
-                    foreground="grey"
-                )
-                sheet_label.grid(row=current_row, column=0, padx=5, pady=(0, 4), sticky="e")
-                self.sheet_labels[field.label] = sheet_label  # ← Store reference
-
-                sheet_combo = ttk.Combobox(
-                    main_frame,
-                    textvariable=sheet_var,
-                    width=28,
-                    font=("Zurich Sans", 9),
-                    state="disabled"
-                )
-                sheet_combo.grid(row=current_row, column=1, padx=5, pady=(0, 4), sticky="w")
-                self.sheet_entries[field.label] = sheet_combo
-
-                current_row += 1
-
-                # --- Sheet note (when the sheet name is fixed and cannot be changed) ---
-                if field.sheet_note:
-                    ttk.Label(
-                        main_frame,
-                        text=f"  {field.sheet_note}",
-                        foreground="grey",
-                        font=("Zurich Sans", 9),
-                        wraplength=HINT_WRAP_LENGTH,
-                        justify="left",
-                    ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
-                    current_row += 1
-
-            # --- Hint label ---
-            hint_text = f"  {field.description}" if field.description else ""
-            hint_label = ttk.Label(
-                main_frame,
-                text=hint_text,
-                foreground="black",
-                font=("Zurich Sans", 9),
-                wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
-                justify="left"
-            )
-            hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
-            hint_labels.append(hint_label)  # ← Store for measuring later
-
-            current_row += 1
-
+        # --- Separator before output dir / controls ---
+        sep_row = current_row
         ttk.Separator(main_frame, orient="horizontal").grid(
             row=current_row, column=0, columnspan=3, sticky="ew", pady=5
         )
@@ -352,21 +250,18 @@ class FileUploadUI:
                 text="Browse...",
                 command=self._browse_directory
             ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
-
             current_row += 1
 
-            # --- Output directory hint ---
             output_hint_label = ttk.Label(
                 main_frame,
                 text="  Folder where output files will be saved",
                 foreground="black",
                 font=("Zurich Sans", 9),
-                wraplength=HINT_WRAP_LENGTH,  # ← Max width before wrapping
+                wraplength=HINT_WRAP_LENGTH,
                 justify="left"
             )
             output_hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
-            hint_labels.append(output_hint_label)  # ← Include in measurement
-
+            hint_labels.append(output_hint_label)
             current_row += 1
 
         ttk.Separator(main_frame, orient="horizontal").grid(
@@ -382,7 +277,7 @@ class FileUploadUI:
         ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
         current_row += 1
 
-        # --- Config-driven checkboxes (e.g. experimental options) ---
+        # --- Config-driven checkboxes ---
         for cb in self.config.checkboxes:
             var = tk.BooleanVar(value=cb.get("default", False))
             self.extra_checkboxes[cb["key"]] = var
@@ -416,29 +311,187 @@ class FileUploadUI:
         ).grid(row=current_row, column=0, columnspan=3, sticky="w", pady=(14, 4))
 
         # ==========================================
-        # Pass 2 — Measure hint labels AFTER render
-        # and apply the widest as the uniform width
-        # for all path/directory display labels
+        # Check if the form overflows the screen;
+        # if so, rebuild fields_frame as two columns.
         # ==========================================
-        self.root.update_idletasks()  # ← Force Tkinter to render
+        self.root.update_idletasks()
+        usable_height = self._usable_screen_height()
+        needed = self.root.winfo_reqheight() + 2 * self._SCREEN_MARGIN
 
-        # Find the widest hint label
+        if needed > usable_height:
+            # Destroy the single-column fields panel and replace with two columns.
+            fields_frame.destroy()
+            hint_labels.clear()
+
+            fields_frame2 = ttk.Frame(main_frame)
+            fields_frame2.grid(row=sep_row - 1, column=0, columnspan=3, sticky="nsew")
+
+            # Split file fields at the first SectionConfig after the midpoint
+            all_fields = self.config.file_fields
+            mid = len(all_fields) // 2
+            # Walk forward from mid to find a clean SectionConfig split point
+            split = mid
+            for i in range(mid, len(all_fields)):
+                if isinstance(all_fields[i], SectionConfig):
+                    split = i
+                    break
+
+            left_fields  = list(all_fields[:split])
+            right_fields = list(all_fields[split:])
+
+            left_panel  = ttk.Frame(fields_frame2, padding=(0, 0, 10, 0))
+            right_panel = ttk.Frame(fields_frame2, padding=(10, 0, 0, 0))
+            left_panel.grid( row=0, column=0, sticky="nsew")
+            right_panel.grid(row=0, column=1, sticky="nsew")
+            ttk.Separator(fields_frame2, orient="vertical").grid(
+                row=0, column=0, sticky="ns", padx=(0, 0)
+            )
+
+            hint_labels_l = self._build_fields_panel(left_panel,  left_fields,
+                                                     HINT_WRAP_LENGTH, two_col=True)
+            hint_labels_r = self._build_fields_panel(right_panel, right_fields,
+                                                     HINT_WRAP_LENGTH, two_col=True)
+            hint_labels   = hint_labels_l + hint_labels_r
+
+            self.root.update_idletasks()
+
+        # ==========================================
+        # Pass 2 — uniform widths on hint/path labels
+        # ==========================================
         max_hint_width = max(
             (label.winfo_width() for label in hint_labels if label.winfo_width() > 1),
             default=LABEL_FALLBACK_WIDTH
         )
-
-        # Apply uniform width to all path display labels
         for path_label in self.path_labels.values():
             path_label.config(wraplength=max_hint_width)
-
-        # Apply same width to output directory label
         if self.output_label:
             self.output_label.config(wraplength=max_hint_width)
-
-        # Apply same width to all hint labels so descriptions are consistent
         for hint_label in hint_labels:
             hint_label.config(wraplength=max_hint_width)
+
+    def _usable_screen_height(self) -> int:
+        """Return the usable screen height (minus taskbar on Windows)."""
+        if os.name == 'nt':
+            import ctypes, ctypes.wintypes
+            wa = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
+            return wa.bottom
+        return self.root.winfo_screenheight()
+
+    def _build_fields_panel(self, parent: tk.Widget, fields: list,
+                            hint_wrap: int, two_col: bool) -> list:
+        """
+        Render a list of FileFieldConfig / SectionConfig entries into `parent`
+        using the standard 3-column grid (label | path | browse).
+
+        Returns a list of hint label widgets for later width measurement.
+        """
+        hint_labels: list = []
+        current_row = 0
+
+        for field in fields:
+
+            # --- Section divider / title ---
+            if isinstance(field, SectionConfig):
+                ttk.Separator(parent, orient="horizontal").grid(
+                    row=current_row, column=0, columnspan=3, sticky="ew", pady=(10, 2)
+                )
+                current_row += 1
+                if field.title:
+                    ttk.Label(
+                        parent,
+                        text=field.title,
+                        font=("Zurich Sans Semibold", 10),
+                    ).grid(row=current_row, column=0, columnspan=3, sticky="w",
+                           padx=5, pady=(0, 4))
+                    current_row += 1
+                continue
+
+            path_var = tk.StringVar()
+            self.file_paths[field.label] = path_var
+
+            label_text = (
+                f"{field.label} *" if field.required
+                else f"{field.label}\n(optional)"
+            )
+            ttk.Label(
+                parent,
+                text=label_text,
+                wraplength=180,
+                justify="left",
+                anchor="w"
+            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
+
+            path_label = ttk.Label(
+                parent,
+                text="No file selected",
+                foreground="grey",
+                justify="left",
+                anchor="w"
+            )
+            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+            self.path_labels[field.label] = path_label
+
+            ttk.Button(
+                parent,
+                text="Browse...",
+                command=lambda f=field, v=path_var: self._browse_file(f, v)
+            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+            current_row += 1
+
+            # --- Sheet name row ---
+            if field.show_sheet:
+                sheet_var = tk.StringVar(value=field.default_sheet)
+                self.sheet_names[field.label] = sheet_var
+
+                sheet_label = ttk.Label(
+                    parent,
+                    text="Sheet name:",
+                    font=("Zurich Sans", 9),
+                    foreground="grey"
+                )
+                sheet_label.grid(row=current_row, column=0, padx=5,
+                                 pady=(0, 4), sticky="e")
+                self.sheet_labels[field.label] = sheet_label
+
+                sheet_combo = ttk.Combobox(
+                    parent,
+                    textvariable=sheet_var,
+                    width=28,
+                    font=("Zurich Sans", 9),
+                    state="disabled"
+                )
+                sheet_combo.grid(row=current_row, column=1, padx=5,
+                                 pady=(0, 4), sticky="w")
+                self.sheet_entries[field.label] = sheet_combo
+                current_row += 1
+
+                if field.sheet_note:
+                    ttk.Label(
+                        parent,
+                        text=f"  {field.sheet_note}",
+                        foreground="grey",
+                        font=("Zurich Sans", 9),
+                        wraplength=hint_wrap,
+                        justify="left",
+                    ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
+                    current_row += 1
+
+            # --- Hint label ---
+            hint_text = f"  {field.description}" if field.description else ""
+            hint_label = ttk.Label(
+                parent,
+                text=hint_text,
+                foreground="black",
+                font=("Zurich Sans", 9),
+                wraplength=hint_wrap,
+                justify="left"
+            )
+            hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
+            hint_labels.append(hint_label)
+            current_row += 1
+
+        return hint_labels
 
 
     def _apply_prefill(self, prefill: dict):
