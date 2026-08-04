@@ -15,6 +15,13 @@ class FileFieldConfig:
     # whose cells contain ALL of these names (case-insensitive, stripped) and
     # uses that as the header row. Defaults to None = treat row 1 as header.
     header_signals: Optional[list[str]] = None
+    # When True, the sheet combobox becomes a free-text entry after file
+    # selection (state="normal") rather than a read-only dropdown. Use for
+    # fields where the user may need to supply a sheet name not in the list.
+    sheet_editable: bool = False
+    # When set, the sheet combobox is permanently disabled and this text is
+    # shown below it to explain why it cannot be changed.
+    sheet_note: str = ""
 
     @property
     def show_sheet(self) -> bool:

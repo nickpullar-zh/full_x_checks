@@ -45,8 +45,9 @@ X_CHECKS_UPLOAD_CONFIG = UploadTaskConfig(
             label="Known Exception List",
             file_types=[("Excel Files", "*.xlsx")],
             required=False,
-            description="Spreadsheet with a 'Known Exceptions' sheet listing X-Check Numbers where EBX/FIP differences are expected and documented. If not uploaded, no exception flagging is applied.",
-            default_sheet="Known Exceptions"
+            description="Spreadsheet with an 'X-Checks' sheet listing X-Check Numbers where EBX/FIP differences are expected and documented. If not uploaded, no exception flagging is applied.",
+            default_sheet="X-Checks",
+            sheet_editable=True,
         ),
     ],
     checkboxes=[
@@ -110,7 +111,8 @@ GROUPING_BY_UPLOAD_CONFIG = UploadTaskConfig(
             file_types=[("Excel Files", "*.xlsx")],
             required=False,
             description="Spreadsheet with a 'Grouping By' sheet listing EBX Keys where differences are expected and documented. If not uploaded, no exception flagging is applied.",
-            default_sheet="Known Exceptions"
+            default_sheet="Grouping By",
+            sheet_editable=True,
         ),
     ],
 )
@@ -145,7 +147,8 @@ ACCOUNTING_PRINCIPLES_UPLOAD_CONFIG = UploadTaskConfig(
             file_types=[("Excel Files", "*.xlsx")],
             required=False,
             description="Spreadsheet with an 'Accounting Principles' sheet listing rows where differences are expected and documented. If not uploaded, no exception flagging is applied.",
-            default_sheet="Known Exceptions"
+            default_sheet="Accounting Principles",
+            sheet_editable=True,
         ),
     ],
 )
@@ -172,7 +175,8 @@ CONDITIONS_UPLOAD_CONFIG = UploadTaskConfig(
             file_types=[("Excel Files", "*.xlsx")],
             required=False,
             description="Spreadsheet with a 'Conditions' sheet listing EBX/FIP pairs where differences are expected and documented. If not uploaded, no exception flagging is applied.",
-            default_sheet="Known Exceptions"
+            default_sheet="Conditions",
+            sheet_editable=True,
         ),
     ],
 )
@@ -222,7 +226,17 @@ def _build_full_run_config(registry: dict) -> UploadTaskConfig:
         SectionConfig(title="Conditions"),
         _f("FIP File (ZQ9_VALMETH)"),
         SectionConfig(),   # plain separator before KEL
-        _f("Known Exception List"),
+        FileFieldConfig(
+            label="Known Exception List",
+            file_types=[("Excel Files", "*.xlsx")],
+            required=False,
+            description=_f("Known Exception List").description,
+            default_sheet="(per strategy)",
+            sheet_note=(
+                "Sheet name is set automatically per strategy "
+                "(X-Checks / Grouping By / Accounting Principles / Conditions)."
+            ),
+        ),
     ]
 
     return UploadTaskConfig(

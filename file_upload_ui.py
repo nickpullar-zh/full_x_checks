@@ -294,6 +294,18 @@ class FileUploadUI:
 
                 current_row += 1
 
+                # --- Sheet note (when the sheet name is fixed and cannot be changed) ---
+                if field.sheet_note:
+                    ttk.Label(
+                        main_frame,
+                        text=f"  {field.sheet_note}",
+                        foreground="grey",
+                        font=("Zurich Sans", 9),
+                        wraplength=HINT_WRAP_LENGTH,
+                        justify="left",
+                    ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
+                    current_row += 1
+
             # --- Hint label ---
             hint_text = f"  {field.description}" if field.description else ""
             hint_label = ttk.Label(
@@ -438,15 +450,16 @@ class FileUploadUI:
                 )
                 for field in self.config.file_fields:
                     if field.label == label and field.show_sheet:
-                        self.sheet_labels[label].config(foreground="black")
                         combo = self.sheet_entries[label]
-                        try:
-                            import pandas as pd
-                            sheet_names = pd.ExcelFile(path).sheet_names
-                            combo["values"] = sheet_names
-                        except Exception:
-                            pass
-                        combo.config(state="readonly")
+                        if not field.sheet_note:
+                            self.sheet_labels[label].config(foreground="black")
+                            try:
+                                import pandas as pd
+                                sheet_names = pd.ExcelFile(path).sheet_names
+                                combo["values"] = sheet_names
+                            except Exception:
+                                pass
+                            combo.config(state="normal" if field.sheet_editable else "readonly")
 
         # Sheet names
         for label, sheet in (prefill.get("sheet_names") or {}).items():
@@ -487,21 +500,26 @@ class FileUploadUI:
                 foreground="black"
             )
             if field.show_sheet:
-                self.sheet_labels[field.label].config(foreground="black")
                 combo = self.sheet_entries[field.label]
-                # Read sheet names from the workbook
-                try:
-                    import pandas as pd
-                    sheet_names = pd.ExcelFile(filepath).sheet_names
-                except Exception:
-                    sheet_names = []
-                if sheet_names:
-                    combo["values"] = sheet_names
-                    # Use default if present, else first sheet
-                    default = field.default_sheet
-                    selected = default if default in sheet_names else sheet_names[0]
-                    self.sheet_names[field.label].set(selected)
-                combo.config(state="readonly")
+                if field.sheet_note:
+                    # Sheet is fixed — never populate or enable the combobox
+                    pass
+                else:
+                    self.sheet_labels[field.label].config(foreground="black")
+                    # Read sheet names from the workbook
+                    try:
+                        import pandas as pd
+                        sheet_names = pd.ExcelFile(filepath).sheet_names
+                    except Exception:
+                        sheet_names = []
+                    if sheet_names:
+                        combo["values"] = sheet_names
+                        # Use default if present, else first sheet
+                        default = field.default_sheet
+                        selected = default if default in sheet_names else sheet_names[0]
+                        self.sheet_names[field.label].set(selected)
+                    # Editable fields allow free-text entry; others are read-only
+                    combo.config(state="normal" if field.sheet_editable else "readonly")
             self._check_ready()
 
     def _browse_directory(self):

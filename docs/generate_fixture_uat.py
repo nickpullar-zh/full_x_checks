@@ -139,7 +139,7 @@ TEST_CASES = [
         "  XC_DIFF_YELLOW        - Match   (Type of change=Changed, yellow fill - in scope)\n"
         "  XC_DIFF_YELLOW_CAT    - Not Found (Category yellow, no FIP block)\n"
         "  XC_EXCL_MATCH         - Match   (FIP @2A@, EBX excl - Excl cols Match)\n"
-        "  XC_EXCL_MISMATCH      - Match   (Formula Match=Match; Excl=MisMatch - see FX-06c)\n"
+        "  XC_EXCL_MISMATCH      - MisMatch (Formula Match=Match; Formula Match (Excl)=MisMatch - see FX-06c)\n"
         "  XC_FF_SUFFIX          - Match   (two accounts - ff suffix)\n"
         "  XC_FORMULA_MISMATCH   - MisMatch (operator differs <=0 vs >=0; vars same)\n"
         "  XC_GTE_OPERATOR       - Match   (Operator 1 = >=)\n"
@@ -151,12 +151,12 @@ TEST_CASES = [
         "  XC_NOT_IN_EBX         - Not Found\n"
         "  XC_NOT_IN_FIP         - Not Found\n"
         "  XC_PCT_FORMAT         - Match   (% column=X - percentage right-hand side)\n"
+        "  XC_QU_YTD             - Match   (no GCoA supplied - EBX uses VAL_YTD, same as FIP)\n"
         "  XC_REORDER_MATCH      - MisMatch (known edge case in reorder logic)\n"
         "  XC_REX_CORRECTION     - Match   (FIP uses REX; parser - ToM)\n"
         "  XC_SUBTRACT           - Match   (+ and - operators - subtraction formula)\n"
         "  XC_THOUSANDS_CORR     - Match   (FIP '1.000' stripped to '1000')\n"
         "  XC_TOM_CORRECTION     - Match   (FIP 'TOM' normalised to 'ToM')\n"
-        "  XC_QU_YTD             - Match   (GCoA account with Data type=QU produces QU_YTD formula)\n"
         "  XC_VARIABLE_MISMATCH  - Match   (formula matches; FS Account differs)\n\n"
         "X-Check No. column: green for all-Match rows, red for any MisMatch, "
         "orange for Not Found rows.",
@@ -165,11 +165,11 @@ TEST_CASES = [
         "FX-06", "X-Checks — column-level checks", "Logic",
         "FX-05 output open, Comparison sheet.",
         "Check the following specific columns on the rows listed.",
-        "a) XC_VARIABLE_MISMATCH: Variables Match = MisMatch; Formula Match = Match.\n"
-        "b) XC_FORMULA_MISMATCH: Variables Match = Match (operator differs, account same).\n"
+        "a) XC_VARIABLE_MISMATCH: Formula Match = Match; Variables Match = MisMatch.\n"
+        "b) XC_FORMULA_MISMATCH: Formula Match = MisMatch; Variables Match = Match (operator differs, account same).\n"
         "c) XC_EXCL_MISMATCH: Formula Match = Match; Formula Match (Excl) = MisMatch "
         "(EBX has excl.acc.type=2, FIP has no @2A@ row).\n"
-        "d) XC_EXCL_MATCH: Formula Match (Excl) = Match "
+        "d) XC_EXCL_MATCH: Formula Match = Match; Formula Match (Excl) = Match "
         "(both EBX and FIP carry excl.acc.type=2).",
     ),
     (
@@ -180,13 +180,13 @@ TEST_CASES = [
         "No Known Exception List. 'Process only differences' unchecked.",
         "Load all three files into X-Checks and click Proceed.",
         "Run completes. Row XC_QU_YTD in the Comparison sheet:\n\n"
-        "  XC_QU_YTD  Formula Match = Match\n\n"
-        "EBX formula for XC_QU_YTD = QU_YTD(ACC_QU)<=0  "
-        "(because ACC_QU appears in the GCoA file with Data type=QU).\n"
-        "FIP formula = QU_YTD(ACC_QU)<=0  (matches).\n\n"
-        "Without the GCoA file, XC_QU_YTD would produce VAL_YTD(ACC_QU)<=0 "
-        "and still match (FIP also has VAL_YTD). "
-        "The key check is that EBX produces QU_YTD when the GCoA file is supplied.",
+        "  XC_QU_YTD  Formula Match = MisMatch | Formula Match (Excl) = MisMatch | "
+        "Variables Match = Match | Variables Match (Builder) = Match\n\n"
+        "EBX Formula = QU_YTD(ACC_QU)<=0  "
+        "(ACC_QU appears in the GCoA file with Data type=QU, so EBX substitutes QU_YTD).\n"
+        "FIP Formula = VAL_YTD(ACC_QU)<=0  (FIP is parsed as-is — no QU substitution).\n\n"
+        "The formulas differ → Formula Match = MisMatch. Variables match (same account). "
+        "X-Check No. cell is red.",
     ),
     (
         "FX-07", "X-Checks — output structure", "Whole App",
@@ -196,7 +196,7 @@ TEST_CASES = [
         "1. EBX Data        — the raw 'cross checks all' publication file (all rows and columns)\n"
         "2. FIP Data        — parsed FIP results: one row per X-Check found in the FIP text\n"
         "                     (columns: X-Check No., FIP Formula, FIP Formula (Excl), FIP Variables, FIP Variable (Builder))\n"
-        "3. Comparison      — full combined output (all 30 rows)\n"
+        "3. Comparison      — full combined output (all 31 rows)\n"
         "4. Matched Data    — only rows where ALL 4 match columns = Match or MisMatch (Excepted)\n"
         "5. MisMatched Data — only rows where ANY match column = MisMatch or MisMatch (Excepted)\n"
         "6. Not Found Data  — only rows where ANY match column = Not Found\n"
@@ -206,11 +206,11 @@ TEST_CASES = [
         "FX-07b", "X-Checks — filtered sheet counts", "Logic",
         "FX-05 output open.",
         "Count rows on each filtered sheet.",
-        "From the 30-row fixture Comparison:\n"
-        "  Matched Data:    16 rows  (all 4 match cols = Match)\n"
+        "From the 31-row fixture Comparison:\n"
+        "  Matched Data:    17 rows  (all 4 match cols = Match)\n"
         "  MisMatched Data:  7 rows  (any col = MisMatch)\n"
         "  Not Found Data:   7 rows  (any col = Not Found)\n"
-        "Total: 16 + 7 + 7 = 30 — every Comparison row appears on exactly one filtered sheet.",
+        "Total: 17 + 7 + 7 = 31 — every Comparison row appears on exactly one filtered sheet.",
     ),
     (
         "FX-08", "X-Checks — colour coding", "Whole App",
@@ -228,7 +228,7 @@ TEST_CASES = [
         f"Same files as FX-05. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: X-Checks).\n"
         "The KEL contains 2 entries: one correct fingerprint for XC_KEL_MISMATCH, "
         "one with wrong fingerprint for XC_KEL_NO_MATCH.\n"
-        "'Process only differences' must be UNCHECKED so all 30 rows appear.",
+        "'Process only differences' must be UNCHECKED so all 31 rows appear.",
         "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
         "Run completes. Progress log shows 'Known exceptions loaded  (2)'.\n\n"
         "XC_KEL_MISMATCH: MisMatch cells → 'MisMatch (Excepted)' with blue fill; "
@@ -276,9 +276,9 @@ TEST_CASES = [
     ),
     (
         "FX-12", "Grouping By — full comparison output (all 14 rows)", "Logic",
-        f"FIP File (ZQ9_VALFLDGR): fixtures\\gb\\fip_ZQ9_VALFLDGR.xlsx  (sheet: Sheet1)\n"
-        f"X-Checks Publication File: fixtures\\gb\\gb_pub.xlsx  (sheet: cross checks all)\n"
-        f"Mapping File: fixtures\\gb\\gb_mapping.txt\n"
+        f"FIP File (ZQ9_VALFLDGR): {F}\\gb_fip_ZQ9_VALFLDGR.xlsx  (sheet: Sheet1)\n"
+        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
+        f"Mapping File: {F}\\gb_mapping.txt\n"
         "'Process only differences' unchecked.",
         "Load the files above into Grouping By and click Proceed.",
         "Comparison sheet contains exactly 14 rows. Verify each row by EBX Key and Result:\n\n"
@@ -306,7 +306,7 @@ TEST_CASES = [
     ),
     (
         "FX-13", "Grouping By — Known Exception annotation", "Logic",
-        f"Same files as FX-12. Known Exception List: fixtures\\gb\\gb_kel.xlsx  (sheet: Grouping By).\n"
+        f"Same files as FX-12. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: Grouping By).\n"
         "KEL contains 2 entries: correct fingerprint for GB_KEL_MATCH|ITEM_A; wrong key for GB_KEL_NO_MATCH.\n"
         "'Process only differences' must be UNCHECKED (same as FX-12) so all 14 rows appear.",
         "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
@@ -346,9 +346,9 @@ TEST_CASES = [
     ),
     (
         "FX-17", "Accounting Principles — full comparison output (all rows)", "Logic",
-        f"Validation Methods File: fixtures\\validation_methods.xlsx  (sheet: Validation Methods)\n"
-        f"X-Checks Publication File: fixtures\\ap\\ap_pub.xlsx  (sheet: cross checks all)\n"
-        f"FIP File (VALMSG): fixtures\\ap\\ap_fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
+        f"Validation Methods File: {F}\\validation_methods.xlsx  (sheet: Validation Methods)\n"
+        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
+        f"FIP File (VALMSG): {F}\\ap_fip_ZQ9_VALMSG.xlsx  (sheet: FIP Methods Rules and Condition)\n"
         "Note: ap_fip_ZQ9_VALMSG.xlsx is a raw ZQ9_VALMSG export with no pre-built Key column.\n"
         "'Process only differences' unchecked.",
         "Load the files above into Accounting Principles and click Proceed.",
@@ -393,7 +393,7 @@ TEST_CASES = [
     ),
     (
         "FX-19", "Accounting Principles — Known Exception annotation", "Logic",
-        f"Same files as FX-17. Known Exception List: fixtures\\ap\\ap_kel.xlsx  (sheet: Accounting Principles).\n"
+        f"Same files as FX-17. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: Accounting Principles).\n"
         "KEL contains 2 entries: correct 6-column fingerprint for AP_MISMATCH; wrong FIP value for AP_KEL_NO_MATCH.\n"
         "'Process only differences' must be UNCHECKED so all 11 rows appear.",
         "Uncheck 'Process only differences'. Add the Known Exception List file and click Proceed.",
@@ -422,11 +422,11 @@ TEST_CASES = [
     ),
     (
         "FX-22", "Conditions — full file run (all 15 rows)", "Logic",
-        f"X-Checks Publication File: fixtures\\cond\\cond_pub.xlsx  (sheet: cross checks all)\n"
-        f"FIP File (ZQ9_VALMETH): fixtures\\cond\\cond_fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
+        f"X-Checks Publication File: {F}\\xc_pub.xlsx  (sheet: cross checks all)\n"
+        f"FIP File (ZQ9_VALMETH): {F}\\cond_fip_ZQ9_VALMETH.xlsx  (sheet: FIP Conditions)\n"
         "'Process only differences' unchecked.",
         "Uncheck 'Process only differences'. Load the files and click Proceed.",
-        "Comparison sheet contains exactly 15 rows (one per non-blank condition cell value).\n"
+        "Comparison sheet contains exactly 16 rows (one per non-blank condition cell value).\n"
         "Verify each row by EBX Data, FIP Data, and Comparison:\n\n"
         "  COND_APPL_QTRS|Q1        FIP=COND_APPL_QTRS|Q1        Matched   (Applicable Quarters column)\n"
         "  COND_DIFF_GREEN|RU_NORTH FIP=COND_DIFF_GREEN|RU_NORTH  Matched   (Included RUs col, green cell)\n"
@@ -442,7 +442,9 @@ TEST_CASES = [
         "  COND_MULTI_COL|RU_OUT    FIP=(blank)                   Not Matched (multi-col row: Excluded RUs - no FIP entry)\n"
         "  COND_NOT_MATCHED|Q2      FIP=(blank)                   Not Matched (Applicable Quarters value not in FIP)\n"
         "  COND_REF_XC|COND_REF_XC FIP=(blank)                   Not Matched (Reference X-Check col value itself)\n"
-        "  COND_REF_XC|Q1          FIP=COND_REF_XC|Q1            Matched   (Applicable Quarters using ref override)\n\n"
+        "  COND_REF_XC|Q1          FIP=COND_REF_XC|Q1            Matched   (Applicable Quarters using ref override)\n"
+        "  REF_BASE|REF_BASE        FIP=(blank)                   Not Matched (GB_REF_XC_KEY row: Reference X-Check (Condition)=REF_BASE;\n"
+        "                                                                       Conditions picks up this cell value; no FIP entry)\n\n"
         "Key logic to verify:\n"
         "- COND_APPL_QTRS, COND_INCL_RUS, COND_EXCL_RUS, COND_LIMIT_PCT each confirm a different one of the\n"
         "  5 condition columns produces output rows.\n"
@@ -469,7 +471,7 @@ TEST_CASES = [
     ),
     (
         "FX-24", "Conditions — Known Exception annotation", "Logic",
-        f"Same files as FX-22. Known Exception List: fixtures\\cond\\cond_kel.xlsx  (sheet: Conditions).\n"
+        f"Same files as FX-22. Known Exception List: {F}\\known_exception_list.xlsx  (sheet: Conditions).\n"
         "KEL contains: correct 2-column fingerprint for COND_APPL_QTRS|Q1 (Matched row);\n"
         "wrong FIP Data fingerprint for COND_INCL_RUS|RU_NORTH.\n"
         "Note: Not Matched rows have blank FIP Data so cannot be fingerprint-matched by the KEL.",

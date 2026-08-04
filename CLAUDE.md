@@ -58,6 +58,81 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.86 — KEL sheet name: editable on individual strategies, locked on Full Run (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_config.py`: add `sheet_editable: bool = False` to `FileFieldConfig`. When True the combobox becomes free-text after file selection (`state="normal"`); when False it stays read-only. | DONE | |
+| 2 | `task_configs.py`: all four strategy KEL fields gain `sheet_editable=True` so users can type a custom sheet name if needed. Full Run KEL field keeps `sheet_editable=False` (locked, with the `sheet_note`). | DONE | |
+| 3 | `file_upload_ui.py`: `_browse_file` and `_apply_prefill` use `state="normal"` vs `"readonly"` based on `field.sheet_editable`. | DONE | |
+| 4 | `version.py`: bump to `1.0.86`. | DONE | |
+
+### v1.0.85 — Full Run KEL: grey out sheet name with explanatory note (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_config.py`: add `sheet_note: str = ""` field to `FileFieldConfig`. When non-empty, the sheet combobox stays permanently disabled and the note is shown below it. | DONE | |
+| 2 | `file_upload_ui.py`: render the sheet note as a grey label below the combobox when `field.sheet_note` is set. `_browse_file` skips combobox population and remains disabled for locked fields. | DONE | |
+| 3 | `task_configs.py`: Full Run config now supplies its own `Known Exception List` field with `default_sheet="(per strategy)"` and `sheet_note="Sheet name is set automatically per strategy (X-Checks / Grouping By / Accounting Principles / Conditions)."` | DONE | |
+| 4 | `version.py`: bump to `1.0.85`. | DONE | |
+
+### v1.0.84 — KEL file picker: default sheet matches the strategy sheet name (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `task_configs.py`: Known Exception List `default_sheet` updated for all four strategies — X-Checks: `"X-Checks"`, Grouping By: `"Grouping By"`, Accounting Principles: `"Accounting Principles"`, Conditions: `"Conditions"`. Previously all defaulted to `"Known Exceptions"` which doesn't exist in the shared workbook. | DONE | The file picker auto-selects this sheet when the user browses to `known_exception_list.xlsx`. The Full Run is unaffected — each strategy already hardcodes the correct sheet name when calling `_annotate_known_exceptions`. |
+| 2 | `version.py`: bump to `1.0.84`. | DONE | |
+
+### v1.0.83 — FX-22: add missing REF_BASE|REF_BASE row to Conditions expected output (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-22 row list extended with `REF_BASE\|REF_BASE - Not Matched`. This row is produced because `GB_REF_XC_KEY` has `Reference X-Check (Condition)=REF_BASE`; Conditions picks up that cell value and generates an output row with no matching FIP entry. | DONE | |
+| 2 | `docs/20260804 Fixture_UAT_v1.0.83 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.83`. | DONE | |
+
+### v1.0.82 — Comprehensive fixture UAT accuracy pass (2026-08-03)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | FX-05 `XC_QU_YTD` reverted to Match — FX-05 supplies no GCoA, so EBX produces VAL_YTD matching FIP. MisMatch only occurs in FX-06e where GCoA is supplied. | DONE | |
+| 2 | FX-06 items a/b reordered to Formula Match → Variables Match sequence. Item b corrected: Formula Match=MisMatch for XC_FORMULA_MISMATCH. | DONE | |
+| 3 | FX-06e expected result expanded to show all 4 match columns in sequence. | DONE | |
+| 4 | FX-07 Comparison row count corrected: 30 → 31. | DONE | |
+| 5 | FX-07b counts corrected: Matched=17 (was 16), total=31 (was 30). | DONE | |
+| 6 | FX-09 "all 30 rows" → "all 31 rows". | DONE | |
+| 7 | FX-22 Conditions row count corrected: 15 → 16. | DONE | |
+| 8 | FX-12/13/14 GB file paths updated to flat layout (`{F}\\gb_*`; `xc_pub.xlsx`; `known_exception_list.xlsx`). | DONE | |
+| 9 | FX-17/19 AP file paths updated to flat layout (`{F}\\ap_*`; `xc_pub.xlsx`; `known_exception_list.xlsx`). | DONE | |
+| 10 | FX-22/24 Conditions file paths updated to flat layout (`{F}\\cond_*`; `xc_pub.xlsx`; `known_exception_list.xlsx`). | DONE | |
+| 11 | `docs/20260803 Fixture_UAT_v1.0.82 Test Plan.xlsx`: regenerated. | DONE | |
+| 12 | `version.py`: bump to `1.0.82`. | DONE | |
+
+### v1.0.81 — Fix FX-05 and FX-06e: XC_QU_YTD result is MisMatch, not Match (2026-08-03)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-05 `XC_QU_YTD` corrected to `MisMatch` — EBX produces `QU_YTD(ACC_QU)<=0` but FIP is parsed as `VAL_YTD(ACC_QU)<=0` (no QU substitution in FIP). | DONE | |
+| 2 | `docs/generate_fixture_uat.py`: FX-06e expected result corrected to `Formula Match = MisMatch`; FIP formula description corrected to `VAL_YTD(ACC_QU)<=0`. | DONE | |
+| 3 | `docs/20260803 Fixture_UAT_v1.0.81 Test Plan.xlsx`: regenerated. | DONE | |
+| 4 | `version.py`: bump to `1.0.81`. | DONE | |
+
+### v1.0.80 — Fix FX-05 row order: XC_QU_YTD moved to correct alphabetical position (2026-08-03)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-05 row list reordered so `XC_QU_YTD` appears between `XC_PCT_FORMAT` and `XC_REORDER_MATCH` (correct alphabetical order matching actual output). | DONE | |
+| 2 | `docs/20260803 Fixture_UAT_v1.0.80 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.80`. | DONE | |
+
+### v1.0.79 — Fix FX-05 test plan: XC_EXCL_MISMATCH row result is MisMatch (2026-08-03)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: FX-05 `XC_EXCL_MISMATCH` entry corrected from `Match` to `MisMatch` — Formula Match=Match but Formula Match (Excl)=MisMatch, so the row-level result is MisMatch. | DONE | |
+| 2 | `docs/20260803 Fixture_UAT_v1.0.79 Test Plan.xlsx`: regenerated. | DONE | |
+| 3 | `version.py`: bump to `1.0.79`. | DONE | |
+
 ### v1.0.78 — Merge all four KEL files into one known_exception_list.xlsx (2026-07-31)
 
 | # | Change | Status | Notes |
