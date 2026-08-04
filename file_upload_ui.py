@@ -182,15 +182,58 @@ class FileUploadUI:
     # Minimum margin (px) to keep between the dialog edge and the screen edge.
     _SCREEN_MARGIN = 20
 
+    @staticmethod
+    def _ui_scale() -> float:
+        """
+        Returns a scale factor in [0.70, 1.0] based on screen size relative to
+        the 1920×1080 design baseline. Drives font sizes and dialog width.
+        """
+        root = tk.Tk()
+        root.withdraw()
+        sw = root.winfo_screenwidth()
+        sh = root.winfo_screenheight()
+        root.destroy()
+        raw = min(sw / 1920, sh / 1080)
+        return max(0.70, min(1.0, raw))
+
     def _build_ui(self):
         """
         Builds the upload form inside a scrollable canvas so it always fits
         on screen regardless of how many fields the strategy requires.
         The title, scrollable fields area, and controls (checkboxes / Proceed)
         are laid out in a fixed outer frame; only the fields area scrolls.
+        All font sizes and widths are scaled to the screen resolution.
         """
-        HINT_WRAP_LENGTH    = 533
-        LABEL_FALLBACK_WIDTH = 267
+        M = self._SCREEN_MARGIN
+        scale = self._ui_scale()
+
+        # ── Font sizes (scaled, min 7pt) ───────────────────────────────────────
+        F_TITLE   = max(7, round(14 * scale))
+        F_SECTION = max(7, round(10 * scale))
+        F_BODY    = max(7, round(9  * scale))
+        F_SMALL   = max(7, round(8  * scale))
+
+        # ── Dialog width: fill most of the screen, capped at 900px ────────────
+        if os.name == 'nt':
+            import ctypes, ctypes.wintypes
+            wa = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
+            usable_w = wa.right  - wa.left
+            usable_h = wa.bottom - wa.top
+        else:
+            usable_w = self.root.winfo_screenwidth()
+            usable_h = self.root.winfo_screenheight()
+
+        # Label col ≈180, browse btn ≈80, padding ≈40 → hint col gets the rest
+        DIALOG_W = min(usable_w - 2 * M, max(700, int(900 * scale)))
+        LABEL_COL_W  = max(130, int(180 * scale))
+        BROWSE_COL_W = 80
+        HINT_WRAP_LENGTH    = DIALOG_W - LABEL_COL_W - BROWSE_COL_W - 50
+        LABEL_FALLBACK_WIDTH = HINT_WRAP_LENGTH // 2
+
+        # Set an explicit minimum width on the root window
+        self.root.minsize(DIALOG_W, 300)
+        self.root.geometry(f"{DIALOG_W}x1")   # width only; height auto-expands
 
         # ── Outer container fills the window ──────────────────────────────────
         outer = ttk.Frame(self.root, padding="15")
@@ -206,10 +249,10 @@ class FileUploadUI:
         ttk.Label(
             title_frame,
             text=self.config.task_name,
-            font=("Zurich Sans Semibold", 14)
+            font=("Zurich Sans Semibold", F_TITLE)
         ).pack()
         ttk.Separator(outer, orient="horizontal").grid(
-            row=0, column=0, sticky="ew", pady=(44, 0)
+            row=0, column=0, sticky="ew", pady=(max(30, int(44 * scale)), 0)
         )
 
         # ── Scrollable canvas for file fields ─────────────────────────────────
@@ -263,7 +306,7 @@ class FileUploadUI:
                     ttk.Label(
                         main_frame,
                         text=field.title,
-                        font=("Zurich Sans Semibold", 10),
+                        font=("Zurich Sans Semibold", F_SECTION),
                     ).grid(row=current_row, column=0, columnspan=3, sticky="w",
                            padx=5, pady=(0, 4))
                     current_row += 1
@@ -279,7 +322,7 @@ class FileUploadUI:
             ttk.Label(
                 main_frame,
                 text=label_text,
-                wraplength=180,
+                wraplength=LABEL_COL_W,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
@@ -309,7 +352,7 @@ class FileUploadUI:
                 sheet_label = ttk.Label(
                     main_frame,
                     text="Sheet name:",
-                    font=("Zurich Sans", 9),
+                    font=("Zurich Sans", F_BODY),
                     foreground="grey"
                 )
                 sheet_label.grid(row=current_row, column=0, padx=5,
@@ -319,8 +362,8 @@ class FileUploadUI:
                 sheet_combo = ttk.Combobox(
                     main_frame,
                     textvariable=sheet_var,
-                    width=28,
-                    font=("Zurich Sans", 9),
+                    width=max(18, int(28 * scale)),
+                    font=("Zurich Sans", F_BODY),
                     state="disabled"
                 )
                 sheet_combo.grid(row=current_row, column=1, padx=5,
@@ -333,7 +376,7 @@ class FileUploadUI:
                         main_frame,
                         text=f"  {field.sheet_note}",
                         foreground="grey",
-                        font=("Zurich Sans", 9),
+                        font=("Zurich Sans", F_BODY),
                         wraplength=HINT_WRAP_LENGTH,
                         justify="left",
                     ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
@@ -345,7 +388,7 @@ class FileUploadUI:
                 main_frame,
                 text=hint_text,
                 foreground="black",
-                font=("Zurich Sans", 9),
+                font=("Zurich Sans", F_BODY),
                 wraplength=HINT_WRAP_LENGTH,
                 justify="left"
             )
@@ -363,7 +406,7 @@ class FileUploadUI:
             ttk.Label(
                 main_frame,
                 text="Output Directory *",
-                wraplength=180,
+                wraplength=LABEL_COL_W,
                 justify="left",
                 anchor="w"
             ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
@@ -389,7 +432,7 @@ class FileUploadUI:
                 main_frame,
                 text="  Folder where output files will be saved",
                 foreground="black",
-                font=("Zurich Sans", 9),
+                font=("Zurich Sans", F_BODY),
                 wraplength=HINT_WRAP_LENGTH,
                 justify="left"
             )
@@ -438,22 +481,12 @@ class FileUploadUI:
         tk.Label(
             controls,
             text=f"v{__version__}",
-            font=("Zurich Sans", 8),
+            font=("Zurich Sans", F_SMALL),
             foreground="#999999",
         ).grid(row=ctrl_row, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
         # ── Size canvas to usable screen, respecting margin ───────────────────
         self.root.update_idletasks()
-        M = self._SCREEN_MARGIN
-        if os.name == 'nt':
-            import ctypes, ctypes.wintypes
-            wa = ctypes.wintypes.RECT()
-            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
-            usable_h = wa.bottom - wa.top
-            usable_w = wa.right  - wa.left
-        else:
-            usable_h = self.root.winfo_screenheight()
-            usable_w = self.root.winfo_screenwidth()
 
         # Height the canvas may occupy = screen minus margins minus non-scroll rows
         controls_h = controls.winfo_reqheight()

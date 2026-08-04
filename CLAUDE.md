@@ -58,6 +58,16 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.94 — Responsive dialog: scaled fonts and width based on screen resolution (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add `_ui_scale()` — returns `min(sw/1920, sh/1080)` clamped to `[0.70, 1.0]`. | DONE | |
+| 2 | `file_upload_ui.py`: all font sizes (`F_TITLE`, `F_SECTION`, `F_BODY`, `F_SMALL`) derived from scale, floored at 7pt. | DONE | |
+| 3 | `file_upload_ui.py`: dialog width computed from scale (`min(usable_w-2*M, max(700, 900*scale))`); `HINT_WRAP_LENGTH` and label column width both derived from dialog width so text never overflows the right edge. | DONE | |
+| 4 | `file_upload_ui.py`: `root.minsize` and `root.geometry` set to the computed width at build time. | DONE | |
+| 5 | `version.py`: bump to `1.0.94`. | DONE | |
+
 ### v1.0.93 — Lower minimum screen resolution to 1280×720 (2026-08-04)
 
 | # | Change | Status | Notes |
