@@ -52,7 +52,8 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 - When a change is **implemented and confirmed**, update the entry to `DONE`.
 - No change may be silently applied. If a change is rejected or abandoned, mark it `REJECTED` with a reason.
 - **Claude must update the change log as part of implementing the change — not as an afterthought, and not only when reminded.** Updating the log is the final step before marking any task complete.
-- **Every change must also bump the version in `version.py`.** The version is displayed in the app title bar, UI label, and Excel processing log so users can confirm which version they are running when reporting issues.
+- **Every code change must also bump the version in `version.py`.** The version is displayed in the app title bar, UI label, and Excel processing log so users can confirm which version they are running when reporting issues.
+- **Docs-only changes (test plan generators, `.xlsx` outputs, `CLAUDE.md`) do not require a version bump** and do not require a rebuild of the EXE.
 
 ---
 
