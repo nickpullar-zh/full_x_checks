@@ -413,5 +413,27 @@ class TaskSelectorUI:
 
         self.root.mainloop()
 
+MIN_WIDTH  = 1920
+MIN_HEIGHT = 1080
+
 if __name__ == "__main__":
-    TaskSelectorUI().run()
+    _check = tk.Tk()
+    _check.withdraw()
+    _sw = _check.winfo_screenwidth()
+    _sh = _check.winfo_screenheight()
+    _check.destroy()
+
+    if _sw < MIN_WIDTH or _sh < MIN_HEIGHT:
+        _err = tk.Tk()
+        _err.withdraw()
+        from tkinter import messagebox
+        messagebox.showerror(
+            "Screen too small",
+            f"This application requires a screen resolution of at least "
+            f"{MIN_WIDTH}×{MIN_HEIGHT} pixels.\n\n"
+            f"Your current resolution is {_sw}×{_sh}.\n\n"
+            f"Please connect a larger display and try again."
+        )
+        _err.destroy()
+    else:
+        TaskSelectorUI().run()

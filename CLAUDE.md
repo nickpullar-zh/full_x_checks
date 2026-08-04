@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.92 — Scrollable upload form; minimum 1920×1080 screen size check (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: replace two-column overflow approach with a scrollable canvas. File fields and output directory sit inside a canvas that is capped to fit the usable screen height; controls (checkboxes, Proceed, version) are in a fixed frame below the canvas. Mousewheel scrolling enabled. | DONE | Works correctly on all strategies regardless of field count. |
+| 2 | `main.py`: screen size check at startup — if width < 1920 or height < 1080, shows an error dialog explaining the requirement and exits without launching the app. | DONE | |
+| 3 | `version.py`: bump to `1.0.92`. | DONE | |
+
 ### v1.0.91 — Full Run dialog: 20px screen margin; two-column layout when too tall (2026-08-04)
 
 | # | Change | Status | Notes |

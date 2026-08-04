@@ -184,49 +184,181 @@ class FileUploadUI:
 
     def _build_ui(self):
         """
-        Dynamically builds the upload form from config.
-
-        Normal layout: one column of fields, title at top, controls at bottom.
-        Two-column layout: triggered automatically when the form would be taller
-        than the usable screen height minus margins. The file fields are split
-        roughly in half across two side-by-side panels; title and controls remain
-        full-width.
+        Builds the upload form inside a scrollable canvas so it always fits
+        on screen regardless of how many fields the strategy requires.
+        The title, scrollable fields area, and controls (checkboxes / Proceed)
+        are laid out in a fixed outer frame; only the fields area scrolls.
         """
-        HINT_WRAP_LENGTH   = 533
+        HINT_WRAP_LENGTH    = 533
         LABEL_FALLBACK_WIDTH = 267
 
-        main_frame = ttk.Frame(self.root, padding="15")
-        main_frame.grid(row=0, column=0, sticky="nsew")
+        # ── Outer container fills the window ──────────────────────────────────
+        outer = ttk.Frame(self.root, padding="15")
+        outer.grid(row=0, column=0, sticky="nsew")
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0, weight=1)
+        outer.rowconfigure(1, weight=1)   # row 1 = scrollable area
+        outer.columnconfigure(0, weight=1)
 
-        # --- Title ---
-        current_row = 0
+        # ── Title ─────────────────────────────────────────────────────────────
+        title_frame = ttk.Frame(outer)
+        title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 4))
         ttk.Label(
-            main_frame,
+            title_frame,
             text=self.config.task_name,
             font=("Zurich Sans Semibold", 14)
-        ).grid(row=current_row, column=0, columnspan=3, pady=(0, 15))
-        current_row += 1
+        ).pack()
+        ttk.Separator(outer, orient="horizontal").grid(
+            row=0, column=0, sticky="ew", pady=(44, 0)
+        )
 
+        # ── Scrollable canvas for file fields ─────────────────────────────────
+        canvas_frame = ttk.Frame(outer)
+        canvas_frame.grid(row=1, column=0, sticky="nsew")
+        canvas_frame.rowconfigure(0, weight=1)
+        canvas_frame.columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(canvas_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical",
+                                  command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Inner frame rendered inside the canvas
+        inner = ttk.Frame(canvas)
+        canvas_window = canvas.create_window((0, 0), window=inner, anchor="nw")
+
+        def _on_inner_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+
+        inner.bind("<Configure>", _on_inner_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        # Mousewheel scrolling (Windows)
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # ── Build fields into inner frame ─────────────────────────────────────
+        main_frame = inner   # field-building code uses main_frame below
+
+        # ── Build all fields into the scrollable inner frame ──────────────────
+        hint_labels: list = []
+        current_row = 0
+
+        for field in self.config.file_fields:
+
+            # --- Section divider / title ---
+            if isinstance(field, SectionConfig):
+                ttk.Separator(main_frame, orient="horizontal").grid(
+                    row=current_row, column=0, columnspan=3, sticky="ew", pady=(10, 2)
+                )
+                current_row += 1
+                if field.title:
+                    ttk.Label(
+                        main_frame,
+                        text=field.title,
+                        font=("Zurich Sans Semibold", 10),
+                    ).grid(row=current_row, column=0, columnspan=3, sticky="w",
+                           padx=5, pady=(0, 4))
+                    current_row += 1
+                continue
+
+            path_var = tk.StringVar()
+            self.file_paths[field.label] = path_var
+
+            label_text = (
+                f"{field.label} *" if field.required
+                else f"{field.label}\n(optional)"
+            )
+            ttk.Label(
+                main_frame,
+                text=label_text,
+                wraplength=180,
+                justify="left",
+                anchor="w"
+            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
+
+            path_label = ttk.Label(
+                main_frame,
+                text="No file selected",
+                foreground="grey",
+                justify="left",
+                anchor="w"
+            )
+            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+            self.path_labels[field.label] = path_label
+
+            ttk.Button(
+                main_frame,
+                text="Browse...",
+                command=lambda f=field, v=path_var: self._browse_file(f, v)
+            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+            current_row += 1
+
+            # --- Sheet name row ---
+            if field.show_sheet:
+                sheet_var = tk.StringVar(value=field.default_sheet)
+                self.sheet_names[field.label] = sheet_var
+
+                sheet_label = ttk.Label(
+                    main_frame,
+                    text="Sheet name:",
+                    font=("Zurich Sans", 9),
+                    foreground="grey"
+                )
+                sheet_label.grid(row=current_row, column=0, padx=5,
+                                 pady=(0, 4), sticky="e")
+                self.sheet_labels[field.label] = sheet_label
+
+                sheet_combo = ttk.Combobox(
+                    main_frame,
+                    textvariable=sheet_var,
+                    width=28,
+                    font=("Zurich Sans", 9),
+                    state="disabled"
+                )
+                sheet_combo.grid(row=current_row, column=1, padx=5,
+                                 pady=(0, 4), sticky="w")
+                self.sheet_entries[field.label] = sheet_combo
+                current_row += 1
+
+                if field.sheet_note:
+                    ttk.Label(
+                        main_frame,
+                        text=f"  {field.sheet_note}",
+                        foreground="grey",
+                        font=("Zurich Sans", 9),
+                        wraplength=HINT_WRAP_LENGTH,
+                        justify="left",
+                    ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
+                    current_row += 1
+
+            # --- Hint label ---
+            hint_text = f"  {field.description}" if field.description else ""
+            hint_label = ttk.Label(
+                main_frame,
+                text=hint_text,
+                foreground="black",
+                font=("Zurich Sans", 9),
+                wraplength=HINT_WRAP_LENGTH,
+                justify="left"
+            )
+            hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
+            hint_labels.append(hint_label)
+            current_row += 1
+
+        # ── Output Directory (inside scrollable area) ─────────────────────────
         ttk.Separator(main_frame, orient="horizontal").grid(
             row=current_row, column=0, columnspan=3, sticky="ew", pady=5
         )
         current_row += 1
 
-        # --- Build the fields panel (single column first) ---
-        fields_frame = ttk.Frame(main_frame)
-        fields_frame.grid(row=current_row, column=0, columnspan=3, sticky="nsew")
-        hint_labels = self._build_fields_panel(fields_frame, self.config.file_fields,
-                                               HINT_WRAP_LENGTH, two_col=False)
-        current_row += 1
-
-        # --- Separator before output dir / controls ---
-        sep_row = current_row
-        ttk.Separator(main_frame, orient="horizontal").grid(
-            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
-        )
-        current_row += 1
-
-        # --- Output Directory ---
         if self.config.requires_output_directory:
             ttk.Label(
                 main_frame,
@@ -243,7 +375,8 @@ class FileUploadUI:
                 justify="left",
                 anchor="w"
             )
-            self.output_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+            self.output_label.grid(row=current_row, column=1, padx=5,
+                                   pady=(8, 0), sticky="w")
 
             ttk.Button(
                 main_frame,
@@ -264,100 +397,74 @@ class FileUploadUI:
             hint_labels.append(output_hint_label)
             current_row += 1
 
-        ttk.Separator(main_frame, orient="horizontal").grid(
-            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
-        )
-        current_row += 1
+        # ── Controls row (fixed below the canvas) ─────────────────────────────
+        controls = ttk.Frame(outer, padding=(0, 8, 0, 0))
+        controls.grid(row=2, column=0, sticky="ew")
 
-        # --- Process Only Differences Checkbox ---
+        ttk.Separator(controls, orient="horizontal").grid(
+            row=0, column=0, columnspan=3, sticky="ew", pady=(0, 5)
+        )
+
+        # Process Only Differences Checkbox
         ttk.Checkbutton(
-            main_frame,
+            controls,
             text="Process only differences",
             variable=self.process_only_differences
-        ).grid(row=current_row, column=0, columnspan=3, pady=(8, 4))
-        current_row += 1
+        ).grid(row=1, column=0, columnspan=3, pady=(4, 2))
+        ctrl_row = 2
 
-        # --- Config-driven checkboxes ---
         for cb in self.config.checkboxes:
             var = tk.BooleanVar(value=cb.get("default", False))
             self.extra_checkboxes[cb["key"]] = var
-            btn = ttk.Checkbutton(main_frame, text=cb["label"], variable=var)
-            btn.grid(row=current_row, column=0, columnspan=3, pady=(2, 2))
+            btn = ttk.Checkbutton(controls, text=cb["label"], variable=var)
+            btn.grid(row=ctrl_row, column=0, columnspan=3, pady=(2, 2))
             if cb.get("tooltip"):
                 _Tooltip(btn, cb["tooltip"])
-            current_row += 1
+            ctrl_row += 1
 
-        ttk.Separator(main_frame, orient="horizontal").grid(
-            row=current_row, column=0, columnspan=3, sticky="ew", pady=5
+        ttk.Separator(controls, orient="horizontal").grid(
+            row=ctrl_row, column=0, columnspan=3, sticky="ew", pady=5
         )
-        current_row += 1
+        ctrl_row += 1
 
-        # --- Proceed Button ---
         self.submit_btn = ttk.Button(
-            main_frame,
-            text="Proceed",
-            command=self._on_submit
+            controls, text="Proceed", command=self._on_submit
         )
-        self.submit_btn.grid(row=current_row, column=0, columnspan=3, pady=15)
+        self.submit_btn.grid(row=ctrl_row, column=0, columnspan=3, pady=(8, 4))
         self.submit_btn.config(state="disabled")
-        current_row += 1
+        ctrl_row += 1
 
         from version import __version__
         tk.Label(
-            main_frame,
+            controls,
             text=f"v{__version__}",
             font=("Zurich Sans", 8),
             foreground="#999999",
-        ).grid(row=current_row, column=0, columnspan=3, sticky="w", pady=(14, 4))
+        ).grid(row=ctrl_row, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
-        # ==========================================
-        # Check if the form overflows the screen;
-        # if so, rebuild fields_frame as two columns.
-        # ==========================================
+        # ── Size canvas to usable screen, respecting margin ───────────────────
         self.root.update_idletasks()
-        usable_height = self._usable_screen_height()
-        needed = self.root.winfo_reqheight() + 2 * self._SCREEN_MARGIN
+        M = self._SCREEN_MARGIN
+        if os.name == 'nt':
+            import ctypes, ctypes.wintypes
+            wa = ctypes.wintypes.RECT()
+            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
+            usable_h = wa.bottom - wa.top
+            usable_w = wa.right  - wa.left
+        else:
+            usable_h = self.root.winfo_screenheight()
+            usable_w = self.root.winfo_screenwidth()
 
-        if needed > usable_height:
-            # Destroy the single-column fields panel and replace with two columns.
-            fields_frame.destroy()
-            hint_labels.clear()
+        # Height the canvas may occupy = screen minus margins minus non-scroll rows
+        controls_h = controls.winfo_reqheight()
+        title_h    = 60  # title label + separator
+        max_canvas_h = usable_h - 2 * M - controls_h - title_h
+        # Natural height of the inner content
+        content_h  = inner.winfo_reqheight()
+        canvas_h   = min(content_h, max(200, max_canvas_h))
+        canvas.configure(height=canvas_h)
 
-            fields_frame2 = ttk.Frame(main_frame)
-            fields_frame2.grid(row=sep_row - 1, column=0, columnspan=3, sticky="nsew")
-
-            # Split file fields at the first SectionConfig after the midpoint
-            all_fields = self.config.file_fields
-            mid = len(all_fields) // 2
-            # Walk forward from mid to find a clean SectionConfig split point
-            split = mid
-            for i in range(mid, len(all_fields)):
-                if isinstance(all_fields[i], SectionConfig):
-                    split = i
-                    break
-
-            left_fields  = list(all_fields[:split])
-            right_fields = list(all_fields[split:])
-
-            left_panel  = ttk.Frame(fields_frame2, padding=(0, 0, 10, 0))
-            right_panel = ttk.Frame(fields_frame2, padding=(10, 0, 0, 0))
-            left_panel.grid( row=0, column=0, sticky="nsew")
-            right_panel.grid(row=0, column=1, sticky="nsew")
-            ttk.Separator(fields_frame2, orient="vertical").grid(
-                row=0, column=0, sticky="ns", padx=(0, 0)
-            )
-
-            hint_labels_l = self._build_fields_panel(left_panel,  left_fields,
-                                                     HINT_WRAP_LENGTH, two_col=True)
-            hint_labels_r = self._build_fields_panel(right_panel, right_fields,
-                                                     HINT_WRAP_LENGTH, two_col=True)
-            hint_labels   = hint_labels_l + hint_labels_r
-
-            self.root.update_idletasks()
-
-        # ==========================================
-        # Pass 2 — uniform widths on hint/path labels
-        # ==========================================
+        # ── Pass 2 — uniform hint/path label widths ───────────────────────────
         max_hint_width = max(
             (label.winfo_width() for label in hint_labels if label.winfo_width() > 1),
             default=LABEL_FALLBACK_WIDTH
@@ -368,131 +475,6 @@ class FileUploadUI:
             self.output_label.config(wraplength=max_hint_width)
         for hint_label in hint_labels:
             hint_label.config(wraplength=max_hint_width)
-
-    def _usable_screen_height(self) -> int:
-        """Return the usable screen height (minus taskbar on Windows)."""
-        if os.name == 'nt':
-            import ctypes, ctypes.wintypes
-            wa = ctypes.wintypes.RECT()
-            ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(wa), 0)
-            return wa.bottom
-        return self.root.winfo_screenheight()
-
-    def _build_fields_panel(self, parent: tk.Widget, fields: list,
-                            hint_wrap: int, two_col: bool) -> list:
-        """
-        Render a list of FileFieldConfig / SectionConfig entries into `parent`
-        using the standard 3-column grid (label | path | browse).
-
-        Returns a list of hint label widgets for later width measurement.
-        """
-        hint_labels: list = []
-        current_row = 0
-
-        for field in fields:
-
-            # --- Section divider / title ---
-            if isinstance(field, SectionConfig):
-                ttk.Separator(parent, orient="horizontal").grid(
-                    row=current_row, column=0, columnspan=3, sticky="ew", pady=(10, 2)
-                )
-                current_row += 1
-                if field.title:
-                    ttk.Label(
-                        parent,
-                        text=field.title,
-                        font=("Zurich Sans Semibold", 10),
-                    ).grid(row=current_row, column=0, columnspan=3, sticky="w",
-                           padx=5, pady=(0, 4))
-                    current_row += 1
-                continue
-
-            path_var = tk.StringVar()
-            self.file_paths[field.label] = path_var
-
-            label_text = (
-                f"{field.label} *" if field.required
-                else f"{field.label}\n(optional)"
-            )
-            ttk.Label(
-                parent,
-                text=label_text,
-                wraplength=180,
-                justify="left",
-                anchor="w"
-            ).grid(row=current_row, column=0, padx=5, pady=(8, 0), sticky="w")
-
-            path_label = ttk.Label(
-                parent,
-                text="No file selected",
-                foreground="grey",
-                justify="left",
-                anchor="w"
-            )
-            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
-            self.path_labels[field.label] = path_label
-
-            ttk.Button(
-                parent,
-                text="Browse...",
-                command=lambda f=field, v=path_var: self._browse_file(f, v)
-            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
-            current_row += 1
-
-            # --- Sheet name row ---
-            if field.show_sheet:
-                sheet_var = tk.StringVar(value=field.default_sheet)
-                self.sheet_names[field.label] = sheet_var
-
-                sheet_label = ttk.Label(
-                    parent,
-                    text="Sheet name:",
-                    font=("Zurich Sans", 9),
-                    foreground="grey"
-                )
-                sheet_label.grid(row=current_row, column=0, padx=5,
-                                 pady=(0, 4), sticky="e")
-                self.sheet_labels[field.label] = sheet_label
-
-                sheet_combo = ttk.Combobox(
-                    parent,
-                    textvariable=sheet_var,
-                    width=28,
-                    font=("Zurich Sans", 9),
-                    state="disabled"
-                )
-                sheet_combo.grid(row=current_row, column=1, padx=5,
-                                 pady=(0, 4), sticky="w")
-                self.sheet_entries[field.label] = sheet_combo
-                current_row += 1
-
-                if field.sheet_note:
-                    ttk.Label(
-                        parent,
-                        text=f"  {field.sheet_note}",
-                        foreground="grey",
-                        font=("Zurich Sans", 9),
-                        wraplength=hint_wrap,
-                        justify="left",
-                    ).grid(row=current_row, column=1, sticky="w", pady=(0, 2))
-                    current_row += 1
-
-            # --- Hint label ---
-            hint_text = f"  {field.description}" if field.description else ""
-            hint_label = ttk.Label(
-                parent,
-                text=hint_text,
-                foreground="black",
-                font=("Zurich Sans", 9),
-                wraplength=hint_wrap,
-                justify="left"
-            )
-            hint_label.grid(row=current_row, column=1, sticky="w", pady=(0, 4))
-            hint_labels.append(hint_label)
-            current_row += 1
-
-        return hint_labels
-
 
     def _apply_prefill(self, prefill: dict):
         """Restore a previous run's inputs into the form fields."""
