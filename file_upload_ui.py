@@ -231,22 +231,19 @@ class FileUploadUI:
         HINT_WRAP_LENGTH    = DIALOG_W - LABEL_COL_W - BROWSE_COL_W - 50
         LABEL_FALLBACK_WIDTH = HINT_WRAP_LENGTH // 2
 
-        # Explicit dialog size: full calculated width, 85% of usable height
-        DIALOG_H = min(inner.winfo_reqheight() if hasattr(inner, 'winfo_reqheight') else 9999,
-                       int(usable_h * 0.85) - 2 * M)
-        DIALOG_H = max(400, DIALOG_H)
+        DIALOG_H = max(400, int(usable_h * 0.85))
         self.root.minsize(DIALOG_W, 400)
-        self.root.geometry(f"{DIALOG_W}x{int(usable_h * 0.85)}")
+        self.root.geometry(f"{DIALOG_W}x{DIALOG_H}")
 
         # ── Outer container fills the window ──────────────────────────────────
         outer = ttk.Frame(self.root, padding="15")
         outer.grid(row=0, column=0, sticky="nsew")
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
-        outer.rowconfigure(1, weight=1)   # row 1 = scrollable area
+        outer.rowconfigure(2, weight=1)   # row 2 = scrollable area
         outer.columnconfigure(0, weight=1)
 
-        # ── Title ─────────────────────────────────────────────────────────────
+        # ── Title (row 0) then separator (row 1) ─────────────────────────────
         title_frame = ttk.Frame(outer)
         title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 4))
         ttk.Label(
@@ -255,12 +252,12 @@ class FileUploadUI:
             font=("Zurich Sans Semibold", F_TITLE)
         ).pack()
         ttk.Separator(outer, orient="horizontal").grid(
-            row=0, column=0, sticky="ew", pady=(max(30, int(44 * scale)), 0)
+            row=1, column=0, sticky="ew", pady=(0, 4)
         )
 
         # ── Scrollable canvas for file fields ─────────────────────────────────
         canvas_frame = ttk.Frame(outer)
-        canvas_frame.grid(row=1, column=0, sticky="nsew")
+        canvas_frame.grid(row=2, column=0, sticky="nsew")
         canvas_frame.rowconfigure(0, weight=1)
         canvas_frame.columnconfigure(0, weight=1)
 
@@ -447,7 +444,7 @@ class FileUploadUI:
 
         # ── Controls row (fixed below the canvas) ─────────────────────────────
         controls = ttk.Frame(outer, padding=(0, 8, 0, 0))
-        controls.grid(row=2, column=0, sticky="ew")
+        controls.grid(row=3, column=0, sticky="ew")
         controls.columnconfigure(0, weight=1)  # single stretching column
 
         ttk.Separator(controls, orient="horizontal").grid(
@@ -494,11 +491,10 @@ class FileUploadUI:
         # ── Size canvas to fill the dialog height ─────────────────────────────
         self.root.update_idletasks()
 
-        dialog_h   = int(usable_h * 0.85)
+        dialog_h   = DIALOG_H
         controls_h = controls.winfo_reqheight()
-        title_h    = title_frame.winfo_reqheight() + 10  # +separator
-        padding_h  = 30  # outer frame padding
-        canvas_h   = max(200, dialog_h - controls_h - title_h - padding_h)
+        title_h    = outer.winfo_reqheight() - canvas_frame.winfo_reqheight() - controls.winfo_reqheight()
+        canvas_h   = max(200, dialog_h - controls_h - max(60, title_h) - 30)
         canvas.configure(height=canvas_h)
 
         # ── Pass 2 — uniform hint/path label widths ───────────────────────────

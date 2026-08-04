@@ -58,6 +58,14 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.96 — Fix empty dialog: premature inner reference + overlapping title/separator rows (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: `DIALOG_H` was computed before `inner` was created, causing a `NameError` that silently crashed `_build_ui` and left an empty window. Replaced with `max(400, int(usable_h * 0.85))` — no forward reference. | DONE | |
+| 2 | `file_upload_ui.py`: `title_frame` and the separator were both on `outer` row 0. Separator moved to row 1; canvas frame to row 2; controls to row 3; `outer.rowconfigure` weight updated to row 2. | DONE | |
+| 3 | `version.py`: bump to `1.0.96`. | DONE | |
+
 ### v1.0.95 — Dialog layout: browse alignment, taller window, centred controls (2026-08-04)
 
 | # | Change | Status | Notes |
