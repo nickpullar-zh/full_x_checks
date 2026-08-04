@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.95 — Dialog layout: browse alignment, taller window, centred controls (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: `main_frame.columnconfigure(1, weight=1)` so path labels stretch and Browse buttons stay flush right (not floated away). Browse buttons padded `(2,8)` right to clear the scrollbar. | DONE | |
+| 2 | `file_upload_ui.py`: dialog opens at `85%` of usable screen height; canvas fills the remaining space after title and controls are measured. | DONE | |
+| 3 | `file_upload_ui.py`: controls frame uses a single weighted column — checkboxes and Proceed button are naturally centred; separators use `sticky="ew"` with `padx=8` to span full width with a small margin. | DONE | |
+| 4 | `version.py`: bump to `1.0.95`. | DONE | |
+
 ### v1.0.94 — Responsive dialog: scaled fonts and width based on screen resolution (2026-08-04)
 
 | # | Change | Status | Notes |

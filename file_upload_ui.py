@@ -231,9 +231,12 @@ class FileUploadUI:
         HINT_WRAP_LENGTH    = DIALOG_W - LABEL_COL_W - BROWSE_COL_W - 50
         LABEL_FALLBACK_WIDTH = HINT_WRAP_LENGTH // 2
 
-        # Set an explicit minimum width on the root window
-        self.root.minsize(DIALOG_W, 300)
-        self.root.geometry(f"{DIALOG_W}x1")   # width only; height auto-expands
+        # Explicit dialog size: full calculated width, 85% of usable height
+        DIALOG_H = min(inner.winfo_reqheight() if hasattr(inner, 'winfo_reqheight') else 9999,
+                       int(usable_h * 0.85) - 2 * M)
+        DIALOG_H = max(400, DIALOG_H)
+        self.root.minsize(DIALOG_W, 400)
+        self.root.geometry(f"{DIALOG_W}x{int(usable_h * 0.85)}")
 
         # ── Outer container fills the window ──────────────────────────────────
         outer = ttk.Frame(self.root, padding="15")
@@ -289,6 +292,8 @@ class FileUploadUI:
 
         # ── Build fields into inner frame ─────────────────────────────────────
         main_frame = inner   # field-building code uses main_frame below
+        # Column 1 (path label) stretches; col 0 (field label) and col 2 (browse) are fixed
+        main_frame.columnconfigure(1, weight=1)
 
         # ── Build all fields into the scrollable inner frame ──────────────────
         hint_labels: list = []
@@ -334,14 +339,14 @@ class FileUploadUI:
                 justify="left",
                 anchor="w"
             )
-            path_label.grid(row=current_row, column=1, padx=5, pady=(8, 0), sticky="w")
+            path_label.grid(row=current_row, column=1, padx=(5, 2), pady=(8, 0), sticky="ew")
             self.path_labels[field.label] = path_label
 
             ttk.Button(
                 main_frame,
                 text="Browse...",
                 command=lambda f=field, v=path_var: self._browse_file(f, v)
-            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+            ).grid(row=current_row, column=2, padx=(2, 8), pady=(8, 0), sticky="e")
             current_row += 1
 
             # --- Sheet name row ---
@@ -418,14 +423,14 @@ class FileUploadUI:
                 justify="left",
                 anchor="w"
             )
-            self.output_label.grid(row=current_row, column=1, padx=5,
-                                   pady=(8, 0), sticky="w")
+            self.output_label.grid(row=current_row, column=1, padx=(5, 2),
+                                   pady=(8, 0), sticky="ew")
 
             ttk.Button(
                 main_frame,
                 text="Browse...",
                 command=self._browse_directory
-            ).grid(row=current_row, column=2, padx=5, pady=(8, 0))
+            ).grid(row=current_row, column=2, padx=(2, 8), pady=(8, 0), sticky="e")
             current_row += 1
 
             output_hint_label = ttk.Label(
@@ -443,37 +448,38 @@ class FileUploadUI:
         # ── Controls row (fixed below the canvas) ─────────────────────────────
         controls = ttk.Frame(outer, padding=(0, 8, 0, 0))
         controls.grid(row=2, column=0, sticky="ew")
+        controls.columnconfigure(0, weight=1)  # single stretching column
 
         ttk.Separator(controls, orient="horizontal").grid(
-            row=0, column=0, columnspan=3, sticky="ew", pady=(0, 5)
+            row=0, column=0, sticky="ew", pady=(0, 5), padx=8
         )
 
-        # Process Only Differences Checkbox
+        # Process Only Differences Checkbox — centred
         ttk.Checkbutton(
             controls,
             text="Process only differences",
             variable=self.process_only_differences
-        ).grid(row=1, column=0, columnspan=3, pady=(4, 2))
+        ).grid(row=1, column=0, pady=(4, 2))
         ctrl_row = 2
 
         for cb in self.config.checkboxes:
             var = tk.BooleanVar(value=cb.get("default", False))
             self.extra_checkboxes[cb["key"]] = var
             btn = ttk.Checkbutton(controls, text=cb["label"], variable=var)
-            btn.grid(row=ctrl_row, column=0, columnspan=3, pady=(2, 2))
+            btn.grid(row=ctrl_row, column=0, pady=(2, 2))
             if cb.get("tooltip"):
                 _Tooltip(btn, cb["tooltip"])
             ctrl_row += 1
 
         ttk.Separator(controls, orient="horizontal").grid(
-            row=ctrl_row, column=0, columnspan=3, sticky="ew", pady=5
+            row=ctrl_row, column=0, sticky="ew", pady=5, padx=8
         )
         ctrl_row += 1
 
         self.submit_btn = ttk.Button(
             controls, text="Proceed", command=self._on_submit
         )
-        self.submit_btn.grid(row=ctrl_row, column=0, columnspan=3, pady=(8, 4))
+        self.submit_btn.grid(row=ctrl_row, column=0, pady=(8, 4))
         self.submit_btn.config(state="disabled")
         ctrl_row += 1
 
@@ -483,18 +489,16 @@ class FileUploadUI:
             text=f"v{__version__}",
             font=("Zurich Sans", F_SMALL),
             foreground="#999999",
-        ).grid(row=ctrl_row, column=0, columnspan=3, sticky="w", pady=(4, 0))
+        ).grid(row=ctrl_row, column=0, sticky="w", padx=8, pady=(4, 0))
 
-        # ── Size canvas to usable screen, respecting margin ───────────────────
+        # ── Size canvas to fill the dialog height ─────────────────────────────
         self.root.update_idletasks()
 
-        # Height the canvas may occupy = screen minus margins minus non-scroll rows
+        dialog_h   = int(usable_h * 0.85)
         controls_h = controls.winfo_reqheight()
-        title_h    = 60  # title label + separator
-        max_canvas_h = usable_h - 2 * M - controls_h - title_h
-        # Natural height of the inner content
-        content_h  = inner.winfo_reqheight()
-        canvas_h   = min(content_h, max(200, max_canvas_h))
+        title_h    = title_frame.winfo_reqheight() + 10  # +separator
+        padding_h  = 30  # outer frame padding
+        canvas_h   = max(200, dialog_h - controls_h - title_h - padding_h)
         canvas.configure(height=canvas_h)
 
         # ── Pass 2 — uniform hint/path label widths ───────────────────────────
