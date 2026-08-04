@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.87 — Fix Full Run Proceed button never enabling (SectionConfig in _check_ready) (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: `_check_ready` now skips non-`FileFieldConfig` entries (i.e. `SectionConfig` dividers) before checking `field.required`. Previously the loop hit a `SectionConfig`, threw `AttributeError` on `.required`, and left the button permanently disabled for Full Run. | DONE | Individual strategies have no `SectionConfig` in their field lists so were unaffected. |
+| 2 | `version.py`: bump to `1.0.87`. | DONE | |
+
 ### v1.0.86 — KEL sheet name: editable on individual strategies, locked on Full Run (2026-08-04)
 
 | # | Change | Status | Notes |

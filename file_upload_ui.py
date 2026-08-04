@@ -126,8 +126,10 @@ class FileUploadUI:
         Enables the Proceed button only when all required
         fields have been filled.
         """
-        # Check all required file fields
+        # Check all required file fields (skip SectionConfig dividers)
         for field in self.config.file_fields:
+            if not isinstance(field, FileFieldConfig):
+                continue
             if field.required and not self.file_paths[field.label].get():
                 self.submit_btn.config(state="disabled")
                 return
