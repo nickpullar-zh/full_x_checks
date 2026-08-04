@@ -45,6 +45,9 @@ def _cell_rgb(cell) -> str | None:
 
 class GroupingBy(BaseStrategy):
 
+    TAB_COLOUR        = "ED7D31"  # Orange
+    TAB_COLOUR_PASTEL = "FCE4D6"
+
     def process(self, loaded_files: dict, files: dict) -> bool:
 
         df_mapping_file, df_fip_original, df_fip_processed = self._process_fip(loaded_files)
@@ -183,6 +186,7 @@ class GroupingBy(BaseStrategy):
                 "Not in FIP": (self.FILL_ORANGE, self.FONT_ORANGE),
             },
         )
+        self._apply_tab_colours(workbook)
 
     def _process_fip(self, loaded_files) -> tuple:
         try:

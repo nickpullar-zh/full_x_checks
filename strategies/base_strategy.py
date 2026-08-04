@@ -35,6 +35,10 @@ class BaseStrategy(ABC):
     FILL_BLUE   = PatternFill(start_color="91BFE3", end_color="91BFE3", fill_type="solid")
     FONT_BLUE   = Font(color="23366F")
 
+    # Override in each strategy to apply tab colours. Empty string = no colour applied.
+    TAB_COLOUR        = ""   # main colour — applied to Comparison sheet
+    TAB_COLOUR_PASTEL = ""   # pastel tint — applied to all other data sheets
+
     def __init__(self, config: UploadTaskConfig):
         self.config = config
         self._progress_dialog = None          # Set via set_progress_dialog()
@@ -269,6 +273,23 @@ class BaseStrategy(ABC):
         else:
             self.log_step(self.log, "Sensitivity",
                           f"Could not apply label: {msg}", 0)
+
+    def _apply_tab_colours(self, workbook):
+        """
+        Colour sheet tabs based on TAB_COLOUR / TAB_COLOUR_PASTEL.
+        Comparison sheet → main colour; other data sheets → pastel;
+        Processing Log → grey. No-ops when TAB_COLOUR is empty.
+        """
+        if not self.TAB_COLOUR:
+            return
+        for name in workbook.sheetnames:
+            ws = workbook[name]
+            if name == "Processing Log":
+                ws.sheet_properties.tabColor = "808080"
+            elif "Comparison" in name:
+                ws.sheet_properties.tabColor = self.TAB_COLOUR
+            else:
+                ws.sheet_properties.tabColor = self.TAB_COLOUR_PASTEL or self.TAB_COLOUR
 
     def apply_output_formatting(self, workbook):
         """

@@ -22,6 +22,9 @@ from strategies.conditions.compare import compare
 
 class Conditions(BaseStrategy):
 
+    TAB_COLOUR        = "2167AE"  # Zurich Blue
+    TAB_COLOUR_PASTEL = "BDD7EE"
+
     def process(self, loaded_files: dict, files: dict) -> bool:
         pub_path = files["files"]["X-Checks Publication File"]
         pub_sheet = files["sheet_names"].get("X-Checks Publication File", "cross checks all")
@@ -114,3 +117,4 @@ class Conditions(BaseStrategy):
                 "Not Matched": (self.FILL_RED,   self.FONT_RED),
             },
         )
+        self._apply_tab_colours(workbook)

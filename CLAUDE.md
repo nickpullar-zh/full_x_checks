@@ -58,6 +58,18 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.89 — Tab colour coding for all individual strategy outputs (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `base_strategy.py`: add `TAB_COLOUR` / `TAB_COLOUR_PASTEL` class constants (default `""`); add `_apply_tab_colours(workbook)` — Comparison tab gets main colour, other data sheets get pastel, Processing Log gets grey. | DONE | |
+| 2 | `x_checks.py`: `TAB_COLOUR="70AD47"` (green), `TAB_COLOUR_PASTEL="D9EAD3"`; call `_apply_tab_colours` at end of `apply_output_formatting`. | DONE | |
+| 3 | `grouping_by.py`: `TAB_COLOUR="ED7D31"` (orange), `TAB_COLOUR_PASTEL="FCE4D6"`; call `_apply_tab_colours`. | DONE | |
+| 4 | `accounting_principles.py`: `TAB_COLOUR="23366F"` (dark blue), `TAB_COLOUR_PASTEL="B4C6E7"`; call `_apply_tab_colours`. | DONE | |
+| 5 | `conditions.py`: `TAB_COLOUR="2167AE"` (Zurich blue), `TAB_COLOUR_PASTEL="BDD7EE"`; call `_apply_tab_colours`. | DONE | |
+| 6 | `full_run.py`: add `STRATEGY_COLOURS_PASTEL` dict; reorder `apply_output_formatting` to delegate cell formatting first, then overwrite tab colours; supporting sheets get pastel, Comparison gets main colour, Processing Log grey. | DONE | |
+| 7 | `version.py`: bump to `1.0.89`. | DONE | |
+
 ### v1.0.88 — Fix Full Run SectionConfig crash in _load_files, full_run.py, main.py (2026-08-04)
 
 | # | Change | Status | Notes |

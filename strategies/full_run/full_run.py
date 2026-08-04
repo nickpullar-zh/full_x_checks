@@ -23,6 +23,13 @@ STRATEGY_COLOURS = {
     "Grouping By":           "ED7D31",  # Orange
 }
 
+STRATEGY_COLOURS_PASTEL = {
+    "Conditions":            "BDD7EE",
+    "Accounting Principles": "B4C6E7",
+    "X-Checks":              "D9EAD3",
+    "Grouping By":           "FCE4D6",
+}
+
 _FALLBACK_COLOURS = ["9DC3E6", "A9D18E", "FFD966", "BDD7EE", "F4B183"]
 
 _SHEET_PREFIXES = {
@@ -149,29 +156,35 @@ class FullRun(BaseStrategy):
         return True
 
     def apply_output_formatting(self, workbook):
-        # 1. Tab colours for each strategy group + Processing Log
-        strategy_sheet_names = getattr(self, "_strategy_sheet_names", {})
-        fallback_idx = 0
-        for task_name, sheet_names in strategy_sheet_names.items():
-            colour = STRATEGY_COLOURS.get(task_name)
-            if colour is None:
-                colour = _FALLBACK_COLOURS[fallback_idx % len(_FALLBACK_COLOURS)]
-                fallback_idx += 1
-            for name in sheet_names:
-                if name in workbook.sheetnames:
-                    workbook[name].sheet_properties.tabColor = colour
-        if "Processing Log" in workbook.sheetnames:
-            workbook["Processing Log"].sheet_properties.tabColor = "808080"
-
-        # 2. Delegate comparison formatting to each strategy via a prefix shim.
+        # 1. Delegate cell-level formatting to each strategy via a prefix shim.
         # Each strategy's apply_output_formatting checks for e.g. "Comparison" by
         # name — the shim maps unprefixed names to the real prefixed sheet names so
         # the strategy never needs to know about prefixes.
+        # Tab colours set by the strategy are overwritten in step 2 below.
         strategy_instances = getattr(self, "_strategy_instances", {})
         for task_name, strategy in strategy_instances.items():
             prefix = _SHEET_PREFIXES.get(task_name, task_name[:4])
             shim = _PrefixedWorkbook(workbook, prefix)
             strategy.apply_output_formatting(shim)
+
+        # 2. Tab colours for each strategy group + Processing Log (overrides any
+        #    colours set by the strategy delegates above).
+        strategy_sheet_names = getattr(self, "_strategy_sheet_names", {})
+        fallback_idx = 0
+        for task_name, sheet_names in strategy_sheet_names.items():
+            colour = STRATEGY_COLOURS.get(task_name)
+            pastel = STRATEGY_COLOURS_PASTEL.get(task_name)
+            if colour is None:
+                colour = _FALLBACK_COLOURS[fallback_idx % len(_FALLBACK_COLOURS)]
+                fallback_idx += 1
+            for name in sheet_names:
+                if name in workbook.sheetnames:
+                    if "Comparison" in name:
+                        workbook[name].sheet_properties.tabColor = colour
+                    else:
+                        workbook[name].sheet_properties.tabColor = pastel or colour
+        if "Processing Log" in workbook.sheetnames:
+            workbook["Processing Log"].sheet_properties.tabColor = "808080"
 
 
 class _PrefixedWorkbook:

@@ -9,6 +9,9 @@ from .x_check_no_selection import select_x_check_nos
 
 class XChecks(BaseStrategy):
 
+    TAB_COLOUR        = "70AD47"  # Green
+    TAB_COLOUR_PASTEL = "D9EAD3"
+
     def __init__(self, config: UploadTaskConfig):
         super().__init__(config)
 
@@ -258,3 +261,5 @@ class XChecks(BaseStrategy):
                     else:
                         xc_cell.fill = self.FILL_GREEN
                         xc_cell.font = self.FONT_GREEN
+
+        self._apply_tab_colours(workbook)

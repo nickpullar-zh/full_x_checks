@@ -37,6 +37,9 @@ OUTPUT_COLUMNS = [
 
 class AccountingPrinciples(BaseStrategy):
 
+    TAB_COLOUR        = "23366F"  # Dark Blue
+    TAB_COLOUR_PASTEL = "B4C6E7"
+
     def __init__(self, config: UploadTaskConfig):
         super().__init__(config)
 
@@ -347,3 +350,4 @@ class AccountingPrinciples(BaseStrategy):
                 "MisMatch": (self.FILL_RED,   self.FONT_RED),
             },
         )
+        self._apply_tab_colours(workbook)
