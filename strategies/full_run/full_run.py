@@ -57,7 +57,8 @@ class FullRun(BaseStrategy):
             self.log_step(self.log, "Full Run", f"— Starting: {task_name} —", 0)
 
             # Build per-strategy subsets of files and loaded_files.
-            strategy_labels = {f.label for f in config.file_fields}
+            from file_upload_config import FileFieldConfig as _FFC
+            strategy_labels = {f.label for f in config.file_fields if isinstance(f, _FFC)}
 
             strategy_files = dict(files)
             strategy_files["files"] = {

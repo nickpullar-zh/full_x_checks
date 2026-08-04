@@ -351,10 +351,11 @@ class TaskSelectorUI:
 
         debug_files = _DEBUG_FILES_MAP.get(DEBUG_TASK, DEBUG_FILES)
 
-        required_labels = {f.label for f in config.file_fields if f.required}
+        from file_upload_config import FileFieldConfig as _FFC
+        required_labels = {f.label for f in config.file_fields if isinstance(f, _FFC) and f.required}
         provided_labels = set(debug_files["files"].keys())
         missing = required_labels - provided_labels
-        extra   = provided_labels - {f.label for f in config.file_fields}
+        extra   = provided_labels - {f.label for f in config.file_fields if isinstance(f, _FFC)}
 
         if missing:
             print(f"  [ERROR] DEBUG_FILES is missing required file(s):")

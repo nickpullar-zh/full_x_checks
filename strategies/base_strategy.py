@@ -289,13 +289,14 @@ class BaseStrategy(ABC):
 
         loaded = {}
 
+        from file_upload_config import FileFieldConfig as _FFC
         column_map = {
             f.label: f.required_columns
-            for f in file_fields
+            for f in file_fields if isinstance(f, _FFC)
         }
         signals_map = {
             f.label: f.header_signals
-            for f in file_fields
+            for f in file_fields if isinstance(f, _FFC)
         }
 
         for label, path in files.items():

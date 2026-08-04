@@ -58,6 +58,15 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.88 — Fix Full Run SectionConfig crash in _load_files, full_run.py, main.py (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `strategies/base_strategy.py`: `_load_files` column_map and signals_map comprehensions now filter to `isinstance(f, FileFieldConfig)` — SectionConfig has no `.label`, `.required_columns`, or `.header_signals`. | DONE | |
+| 2 | `strategies/full_run/full_run.py`: `strategy_labels` set comprehension guarded with `isinstance(f, FileFieldConfig)`. | DONE | |
+| 3 | `main.py`: `required_labels` and `extra` set comprehensions in debug path guarded with `isinstance(f, FileFieldConfig)`. | DONE | |
+| 4 | `version.py`: bump to `1.0.88`. | DONE | |
+
 ### v1.0.87 — Fix Full Run Proceed button never enabling (SectionConfig in _check_ready) (2026-08-04)
 
 | # | Change | Status | Notes |
