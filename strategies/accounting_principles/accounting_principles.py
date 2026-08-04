@@ -38,7 +38,7 @@ OUTPUT_COLUMNS = [
 class AccountingPrinciples(BaseStrategy):
 
     TAB_COLOUR        = "23366F"  # Dark Blue
-    TAB_COLOUR_PASTEL = "B4C6E7"
+    TAB_COLOUR_PASTEL = "8BAFC7"
 
     def __init__(self, config: UploadTaskConfig):
         super().__init__(config)

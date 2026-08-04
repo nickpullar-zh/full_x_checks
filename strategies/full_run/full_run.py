@@ -25,7 +25,7 @@ STRATEGY_COLOURS = {
 
 STRATEGY_COLOURS_PASTEL = {
     "Conditions":            "BDD7EE",
-    "Accounting Principles": "B4C6E7",
+    "Accounting Principles": "8BAFC7",
     "X-Checks":              "D9EAD3",
     "Grouping By":           "FCE4D6",
 }

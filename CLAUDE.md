@@ -58,6 +58,13 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.90 — AP pastel tab colour darkened to distinguish from Conditions (2026-08-04)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `accounting_principles.py` + `full_run.py`: AP pastel changed from `B4C6E7` to `8BAFC7` (darker mid-blue) to distinguish it from Conditions pastel `BDD7EE`. | DONE | |
+| 2 | `version.py`: bump to `1.0.90`. | DONE | |
+
 ### v1.0.89 — Tab colour coding for all individual strategy outputs (2026-08-04)
 
 | # | Change | Status | Notes |
