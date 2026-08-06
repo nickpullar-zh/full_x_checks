@@ -231,9 +231,7 @@ class FileUploadUI:
         HINT_WRAP_LENGTH    = DIALOG_W - LABEL_COL_W - BROWSE_COL_W - 50
         LABEL_FALLBACK_WIDTH = HINT_WRAP_LENGTH // 2
 
-        DIALOG_H = max(400, int(usable_h * 0.85))
-        self.root.minsize(DIALOG_W, 400)
-        self.root.geometry(f"{DIALOG_W}x{DIALOG_H}")
+        self.root.minsize(DIALOG_W, 300)
 
         # ── Outer container fills the window ──────────────────────────────────
         outer = ttk.Frame(self.root, padding="15")
@@ -473,12 +471,19 @@ class FileUploadUI:
         )
         ctrl_row += 1
 
-        self.submit_btn = ttk.Button(
-            controls, text="Proceed", command=self._on_submit
-        )
-        self.submit_btn.grid(row=ctrl_row, column=0, pady=(8, 4))
-        self.submit_btn.config(state="disabled")
+        btn_frame = ttk.Frame(controls)
+        btn_frame.grid(row=ctrl_row, column=0, pady=(8, 4))
         ctrl_row += 1
+
+        ttk.Button(
+            btn_frame, text="Return to Selection", width=18, command=self._on_close
+        ).pack(side="left", padx=(0, 8))
+
+        self.submit_btn = ttk.Button(
+            btn_frame, text="Proceed", width=18, command=self._on_submit
+        )
+        self.submit_btn.pack(side="left", padx=(8, 0))
+        self.submit_btn.config(state="disabled")
 
         from version import __version__
         tk.Label(
@@ -488,14 +493,19 @@ class FileUploadUI:
             foreground="#999999",
         ).grid(row=ctrl_row, column=0, sticky="w", padx=8, pady=(4, 0))
 
-        # ── Size canvas to fill the dialog height ─────────────────────────────
+        # ── Size dialog to fit content, capped at 85% of usable screen height ───
         self.root.update_idletasks()
 
-        dialog_h   = DIALOG_H
+        max_h      = max(400, int(usable_h * 0.85))
         controls_h = controls.winfo_reqheight()
-        title_h    = outer.winfo_reqheight() - canvas_frame.winfo_reqheight() - controls.winfo_reqheight()
-        canvas_h   = max(200, dialog_h - controls_h - max(60, title_h) - 30)
+        title_h    = title_frame.winfo_reqheight() + 12   # +12 for separator + padding
+        inner_h    = inner.winfo_reqheight()
+        ideal_h    = title_h + inner_h + controls_h + 30  # 30 = outer padding
+
+        dialog_h   = min(ideal_h, max_h)
+        canvas_h   = max(100, dialog_h - controls_h - title_h - 30)
         canvas.configure(height=canvas_h)
+        self.root.geometry(f"{DIALOG_W}x{dialog_h}")
 
         # ── Pass 2 — uniform hint/path label widths ───────────────────────────
         max_hint_width = max(

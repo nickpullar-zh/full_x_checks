@@ -59,6 +59,38 @@ Strategy branches must NEVER depend on code from another strategy branch. The in
 
 ## Change Log
 
+### v1.0.98 — Remove FX-29: impossible to set incorrect sheet name (2026-08-06)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `docs/generate_fixture_uat.py`: remove FX-29 ("Full Run — abort on strategy failure"). Sheet names are populated from the file itself via combobox, so an incorrect sheet cannot be selected. Test is not executable. | DONE | Docs-only — no version bump. |
+| 2 | `docs/generate_fixture_uat.py`: remove FX-38 ("Error — wrong sheet name"). Same reason as FX-29 — sheet names come from the file combobox, so a non-existent sheet cannot be entered. | DONE | Docs-only — no version bump. |
+| 3 | `docs/generate_full_app_uat.py`: rewrite FA-34 — test is now that the sheet combobox only shows sheets from the selected file (cannot enter a non-existent name). Rewrite FA-35 — test is now that Proceed is disabled until all required files are selected. | DONE | Docs-only — no version bump. |
+| 4 | `docs/generate_fixture_uat.py`: add FX-38 (sheet combobox constrained to file contents) and rewrite FX-39 (Proceed disabled until required files selected), matching FA-34/35. | DONE | Docs-only — no version bump. |
+| 5 | `docs/generate_full_app_uat.py`: add Test Type column (Logic / Whole App) with light-blue row colouring for Logic rows, matching the fixture plan. Assign Logic to appropriate cases. Remove FA-25 ("abort on strategy failure via wrong sheet name") — impossible to test since sheet names are combobox-only. | DONE | Docs-only — no version bump. |
+| 6 | Both generators: add `_next_suffix()` — scans docs/ for existing files with the current version, picks the next letter suffix (_a, _b, ..., _z, _aa, _ab, ...). Suffix resets to _a when the version number changes. Prevents overwriting previous test plan iterations. | DONE | Docs-only — no version bump. |
+
+### v1.1.0 — "Return to Selection" left, "Proceed" right, matching progress dialog layout (2026-08-06)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: wrap both buttons in a centred `btn_frame` — "Return to Selection" (left) and "Proceed" (right), each `width=18`, `padx=(0,8)` / `padx=(8,0)` between them. Matches the Stop/Close button layout on the progress dialog. | DONE | |
+| 2 | `version.py`: bump to `1.1.0`. | DONE | |
+
+### v1.0.99 — Add "Return to Selection" button to every file upload form (2026-08-06)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: add "Return to Selection" button below Proceed, calling `_on_close()`. Closes the dialog cleanly, returning the user to the task selector. | DONE | |
+| 2 | `version.py`: bump to `1.0.99`. | DONE | |
+
+### v1.0.98 — Dialog height scales to content (2026-08-06)
+
+| # | Change | Status | Notes |
+|---|--------|--------|-------|
+| 1 | `file_upload_ui.py`: remove fixed `DIALOG_H = max(400, int(usable_h * 0.85))`. After building all fields, measure `inner.winfo_reqheight()` + controls + title and set the window to that height, capped at 85% of usable screen height. Short strategies (e.g. X-Checks, 4 fields) get a compact dialog; Full Run gets a taller one. | DONE | |
+| 2 | `version.py`: bump to `1.0.98`. | DONE | |
+
 ### v1.0.97 — Fix FX-27 XC row counts (EBX=74, FIP=25, Matched=17, MisMatched=7) (2026-08-04)
 
 | # | Change | Status | Notes |

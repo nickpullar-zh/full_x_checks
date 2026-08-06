@@ -13,6 +13,7 @@ from datetime import date
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.formatting.rule import FormulaRule
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from version import __version__
@@ -24,7 +25,36 @@ from version import __version__
 VERSION  = __version__
 TODAY    = date.today().strftime("%Y%m%d")
 OUT_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
-FILENAME = f"{TODAY} Full_Application_v{VERSION} Test Plan.xlsx"
+
+
+def _next_suffix(out_dir, stem_pattern):
+    """Return the next letter suffix (_a, _b, ..., _z, _aa, _ab, ...) for a versioned file.
+    Scans out_dir for existing files whose name contains stem_pattern and extracts used suffixes."""
+    import re
+    import string
+    used = set()
+    if os.path.isdir(out_dir):
+        for f in os.listdir(out_dir):
+            if stem_pattern in f:
+                m = re.search(r'_([a-z]+)\.xlsx$', f)
+                if m:
+                    used.add(m.group(1))
+
+    def _seq():
+        for c in string.ascii_lowercase:
+            yield c
+        for c1 in string.ascii_lowercase:
+            for c2 in string.ascii_lowercase:
+                yield c1 + c2
+
+    for s in _seq():
+        if s not in used:
+            return s
+    return "a"
+
+
+SUFFIX   = _next_suffix(OUT_DIR, f"Full_Application_v{VERSION} Test Plan_")
+FILENAME = f"{TODAY} Full_Application_v{VERSION} Test Plan_{SUFFIX}.xlsx"
 OUT_PATH = os.path.join(OUT_DIR, FILENAME)
 
 # Test data files (all in test_data\ relative to repo root)
@@ -91,6 +121,7 @@ TASKS = [
 # Zurich brand colours
 DARK_BLUE  = "FF23366F"
 LIGHT_BLUE = "FF91BFE3"
+LOGIC_BLUE = "FFD6E4F7"
 WHITE      = "FFFFFFFF"
 ALT_GREY   = "FFECEEEF"
 
@@ -117,13 +148,14 @@ def set_col_widths(ws, widths):
 # ---------------------------------------------------------------------------
 # TEST CASES
 # ---------------------------------------------------------------------------
-# Format: (ID, Area, Precondition, Steps, Expected Result)
+# Format: (ID, Area, Test Type, Precondition, Steps, Expected Result)
+# Test Type: "Logic" | "Whole App"
 
 TEST_CASES = [
 
     # ── Launch & version ────────────────────────────────────────────────────
     (
-        "FA-01", "Launch & version",
+        "FA-01", "Launch & version", "Whole App",
         f"Production EXE present in dist\\.",
         f"Double-click dist\\X-Checks_v{VERSION}.exe.",
         f"Splash screen appears showing 'X-Check Application v{VERSION} Loading...'. "
@@ -131,7 +163,7 @@ TEST_CASES = [
         f"in the title bar and UI label.",
     ),
     (
-        "FA-02", "Launch & version",
+        "FA-02", "Launch & version", "Whole App",
         "App is open at the task selector.",
         "Confirm the version shown in the title bar and UI label.",
         f"Both display v{VERSION}.",
@@ -139,14 +171,14 @@ TEST_CASES = [
 
     # ── Task selector ────────────────────────────────────────────────────────
     (
-        "FA-03", "Task selector — dropdown",
+        "FA-03", "Task selector — dropdown", "Whole App",
         "App is open at the task selector.",
         "Open the task dropdown and count the entries.",
         f"{len(TASKS)} tasks are listed in this order:\n" +
         "\n".join(f"{i+1}. {t}" for i, t in enumerate(TASKS)),
     ),
     (
-        "FA-04", "Task selector — navigation",
+        "FA-04", "Task selector — navigation", "Whole App",
         "App is open at the task selector.",
         "Select each task in turn and confirm the file-selection form title.",
         "Each task opens a correctly titled form:\n"
@@ -160,7 +192,7 @@ TEST_CASES = [
 
     # ── X-Checks ─────────────────────────────────────────────────────────────
     (
-        "FA-05", "X-Checks — file fields",
+        "FA-05", "X-Checks — file fields", "Whole App",
         "X-Checks task selected, file-selection form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -173,7 +205,7 @@ TEST_CASES = [
         "'Process only differences' checkbox is present and checked by default.",
     ),
     (
-        "FA-06", "X-Checks — run (differences only)",
+        "FA-06", "X-Checks — run (differences only)", "Logic",
         "X-Checks form open.",
         f"Set FIP File to '{FILES['xc_fip']}', "
         f"X-Checks Publication File to '{FILES['xc_pub']}' (sheet: '{SHEETS['xc_pub']}'), "
@@ -183,7 +215,7 @@ TEST_CASES = [
         f"from the publication file and {XC_FIP_MATCHED} matched in the FIP file.",
     ),
     (
-        "FA-07", "X-Checks — output structure",
+        "FA-07", "X-Checks — output structure", "Whole App",
         "FA-06 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains 7 sheets:\n"
@@ -196,7 +228,7 @@ TEST_CASES = [
         "7. Processing Log",
     ),
     (
-        "FA-08", "X-Checks — comparison counts",
+        "FA-08", "X-Checks — comparison counts", "Logic",
         "FA-06 output, Comparison sheet open.",
         f"Count the rows and check the Formula Match column breakdown. "
         f"Also verify the filtered sheet counts.",
@@ -208,7 +240,7 @@ TEST_CASES = [
         f"Not Found Data:  {XC_FORMULA_NOTFOUND} rows.",
     ),
     (
-        "FA-09", "X-Checks — Known Exception List",
+        "FA-09", "X-Checks — Known Exception List", "Logic",
         "X-Checks form open.",
         f"Add '{FILES['known_exc']}' (sheet: '{SHEETS['known_exc']}') as the "
         f"Known Exception List. Run with the same files as FA-06.",
@@ -218,7 +250,7 @@ TEST_CASES = [
 
     # ── Grouping By ──────────────────────────────────────────────────────────
     (
-        "FA-10", "Grouping By — file fields",
+        "FA-10", "Grouping By — file fields", "Whole App",
         "Grouping By task selected, file-selection form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -228,7 +260,7 @@ TEST_CASES = [
         f"4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FA-11", "Grouping By — run",
+        "FA-11", "Grouping By — run", "Logic",
         "Grouping By form open.",
         f"Set FIP File (ZQ9_VALFLDGR) to '{FILES['gb_fip']}' (sheet: '{SHEETS['gb_fip']}'), "
         f"X-Checks Publication File to '{FILES['gb_pub']}' (sheet: '{SHEETS['gb_pub']}'), "
@@ -240,7 +272,7 @@ TEST_CASES = [
         f"• EBX rows: {GB_PUB_ROWS}",
     ),
     (
-        "FA-12", "Grouping By — output structure",
+        "FA-12", "Grouping By — output structure", "Whole App",
         "FA-11 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains:\n"
@@ -251,7 +283,7 @@ TEST_CASES = [
         "5. Processing Log",
     ),
     (
-        "FA-13", "Grouping By — colour coding",
+        "FA-13", "Grouping By — colour coding", "Whole App",
         "FA-11 output, Comparison sheet open.",
         "Review the Result column.",
         "'Matched' rows have a green fill. 'Not in FIP' rows have an orange fill.",
@@ -259,7 +291,7 @@ TEST_CASES = [
 
     # ── Accounting Principles ────────────────────────────────────────────────
     (
-        "FA-14", "Accounting Principles — file fields",
+        "FA-14", "Accounting Principles — file fields", "Whole App",
         "Accounting Principles task selected, file-selection form open.",
         "Inspect the form fields.",
         "Four fields present:\n"
@@ -269,7 +301,7 @@ TEST_CASES = [
         "4. 'Known Exception List' (.xlsx, optional)",
     ),
     (
-        "FA-15", "Accounting Principles — run",
+        "FA-15", "Accounting Principles — run", "Logic",
         "Accounting Principles form open.",
         f"Set Validation Methods File to '{FILES['ap_val_mth']}' (sheet: '{SHEETS['ap_val_mth']}'), "
         f"X-Checks Publication File to '{FILES['ap_pub']}' (sheet: '{SHEETS['ap_pub']}'), "
@@ -280,7 +312,7 @@ TEST_CASES = [
         f"Log shows 'Built Key column from MK + ValidRule'.",
     ),
     (
-        "FA-16", "Accounting Principles — output structure",
+        "FA-16", "Accounting Principles — output structure", "Whole App",
         "FA-15 complete. Output workbook open.",
         "Check the sheet tabs.",
         "Workbook contains:\n"
@@ -292,7 +324,7 @@ TEST_CASES = [
 
     # ── Conditions ───────────────────────────────────────────────────────────
     (
-        "FA-17", "Conditions — file fields",
+        "FA-17", "Conditions — file fields", "Whole App",
         "Conditions task selected, file-selection form open.",
         "Inspect the form fields.",
         "Three fields present:\n"
@@ -302,7 +334,7 @@ TEST_CASES = [
         "'Process only differences' checkbox present and checked by default.",
     ),
     (
-        "FA-18", "Conditions — run (differences only)",
+        "FA-18", "Conditions — run (differences only)", "Logic",
         "Conditions form open. 'Process only differences' checked (default).",
         f"Set X-Checks Publication File to '{FILES['cond_pub']}' (sheet: '{SHEETS['cond_pub']}'), "
         f"FIP File (ZQ9_VALMETH) to '{FILES['cond_fip']}' (sheet: '{SHEETS['cond_fip']}'). click Proceed.",
@@ -310,20 +342,20 @@ TEST_CASES = [
         f"and {COND_DIFF_PAIRS} pairs compared.",
     ),
     (
-        "FA-19", "Conditions — run (full file)",
+        "FA-19", "Conditions — run (full file)", "Logic",
         "Conditions form open. 'Process only differences' unchecked.",
         "Run with same files as FA-18.",
         f"Progress log reports full-file extraction mode. "
         f"{COND_FULL_PAIRS} pairs compared (more than the {COND_DIFF_PAIRS} in differences mode).",
     ),
     (
-        "FA-20", "Conditions — colour coding",
+        "FA-20", "Conditions — colour coding", "Whole App",
         "FA-18 or FA-19 complete. Output workbook open, Comparison sheet.",
         "Review the Comparison column.",
         "'Matched' cells have a green fill. 'Not Matched' cells have a red fill.",
     ),
     (
-        "FA-21", "Conditions — FIP Data column header",
+        "FA-21", "Conditions — FIP Data column header", "Whole App",
         "FA-18 or FA-19 complete. Output workbook open, FIP Data sheet.",
         "Check the first column header.",
         "First column is labelled 'Key (Concatenated)'.",
@@ -331,7 +363,7 @@ TEST_CASES = [
 
     # ── Full Run ─────────────────────────────────────────────────────────────
     (
-        "FA-22", "Full Run — file fields",
+        "FA-22", "Full Run — file fields", "Whole App",
         "Full Run task selected, file-selection form open.",
         "Count the file fields.",
         "All unique fields from every strategy are merged into one form with no "
@@ -341,7 +373,7 @@ TEST_CASES = [
         "Known Exception List.",
     ),
     (
-        "FA-23", "Full Run — run all strategies",
+        "FA-23", "Full Run — run all strategies", "Logic",
         "Full Run form open. All test files loaded.",
         f"Set all required files using the test_data\\ files:\n"
         f"• FIP File: '{FILES['xc_fip']}'\n"
@@ -357,7 +389,7 @@ TEST_CASES = [
         "steps for each strategy. Run completes with 'Processing complete'.",
     ),
     (
-        "FA-24", "Full Run — combined output structure",
+        "FA-24", "Full Run — combined output structure", "Whole App",
         "FA-23 complete. Combined output workbook open.",
         "Check all sheet tabs and their tab colours.",
         "One workbook containing all strategy output sheets, each prefixed with "
@@ -365,26 +397,18 @@ TEST_CASES = [
         "Tabs are colour-coded by strategy group. A single 'Processing Log' sheet "
         "at the end contains the combined log.",
     ),
-    (
-        "FA-25", "Full Run — abort on strategy failure",
-        "Full Run form open.",
-        "Set an incorrect sheet name for one of the required files, then click Proceed.",
-        "The failing strategy logs a clear error. Full Run aborts immediately "
-        "rather than continuing to the next strategy. "
-        "'Return to Form' is available.",
-    ),
 
     # ── Settings menu / Known Exception Builder ───────────────────────────────
     (
-        "FA-26", "Settings — gear menu",
+        "FA-25", "Settings — gear menu", "Whole App",
         "App is open at the task selector.",
         "Click the ⚙ gear button at the bottom-right of the task selector.",
         "A popup menu appears below the button containing at least one entry: "
         "'Build Known Exception List…'. No dialog opens directly.",
     ),
     (
-        "FA-27", "Settings — open Known Exception Builder",
-        "Settings popup menu open (FA-26).",
+        "FA-26", "Settings — open Known Exception Builder", "Whole App",
+        "Settings popup menu open (FA-25).",
         "Click 'Build Known Exception List…'.",
         "The Known Exception Builder dialog opens as a modal window. "
         "It contains: a 'Save as' path field showing hint text "
@@ -394,7 +418,7 @@ TEST_CASES = [
         "and a Build button.",
     ),
     (
-        "FA-28", "Known Exception Builder — build and open",
+        "FA-27", "Known Exception Builder — build and open", "Whole App",
         "Known Exception Builder dialog open. An output folder is available.",
         "Click Browse, select an output folder, type a filename (e.g. 'test_kel'). "
         "Leave 'Open file after building' checked. Click Build.",
@@ -408,7 +432,7 @@ TEST_CASES = [
 
     # ── Processing Log ────────────────────────────────────────────────────────
     (
-        "FA-29", "Processing Log — content",
+        "FA-28", "Processing Log — content", "Whole App",
         "Any completed run. Output workbook open, Processing Log sheet.",
         "Review the log entries.",
         f"First entry shows v{VERSION}. "
@@ -417,7 +441,7 @@ TEST_CASES = [
         "All entries have a Timestamp, File, Step, and Count column.",
     ),
     (
-        "FA-30", "Processing Log — output path entry",
+        "FA-29", "Processing Log — output path entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the 'Output written to' entry.",
         "An entry with File='Output' and Step starting 'Output written to:' "
@@ -425,7 +449,7 @@ TEST_CASES = [
         "file was closed.",
     ),
     (
-        "FA-31", "Processing Log — sensitivity label entry",
+        "FA-30", "Processing Log — sensitivity label entry", "Whole App",
         "Any completed run. Processing Log sheet open.",
         "Find the sensitivity label entry.",
         "An entry with File='Sensitivity' and Step='Expected label: Internal_Use_Only' "
@@ -435,7 +459,7 @@ TEST_CASES = [
 
     # ── Sensitivity label ──────────────────────────────────────────────────────
     (
-        "FA-32", "Sensitivity label — applied",
+        "FA-31", "Sensitivity label — applied", "Whole App",
         "Any completed run. Output file saved to disk.",
         "Right-click the output .xlsx in Explorer → Properties → Details, "
         "or open in Excel and check the sensitivity bar.",
@@ -445,7 +469,7 @@ TEST_CASES = [
 
     # ── Stop / error handling ──────────────────────────────────────────────────
     (
-        "FA-33", "Stop / Return to Form",
+        "FA-32", "Stop / Return to Form", "Whole App",
         "Any task started (click Proceed).",
         "Click Stop during processing.",
         "Processing halts cleanly. Progress dialog shows 'Processing halted by user'. "
@@ -453,20 +477,26 @@ TEST_CASES = [
         "form with previously chosen files pre-filled.",
     ),
     (
-        "FA-34", "Error handling — wrong sheet name",
-        "Any task's file-selection form open.",
-        "Set the sheet name for any file to 'does_not_exist', then click Proceed.",
-        "Run aborts with a clear error identifying the missing sheet. "
-        "App returns to form — does not crash or exit.",
+        "FA-33", "UI — sheet name constrained to file contents", "Whole App",
+        "Any task's file-selection form open. Browse to any Excel file.",
+        "After selecting an Excel file, inspect the sheet name dropdown.",
+        "The sheet name dropdown is populated with only the sheets present in the selected file. "
+        "It is not possible to type or select a sheet name that does not exist in the file — "
+        "the combobox is read-only and restricted to the file's own sheet names.",
     ),
     (
-        "FA-35", "Error handling — missing required file",
-        "Any task's file-selection form open.",
-        "click Proceed without selecting any required files.",
-        "Start does not begin processing. Form indicates which required fields "
-        "are missing and does not crash.",
+        "FA-34", "UI — Proceed button disabled until required files selected", "Whole App",
+        "Any task's file-selection form open. No files selected.",
+        "Observe the Proceed button before selecting any files. "
+        "Then select only optional files. Then select all required files.",
+        "Proceed button is disabled (greyed out) while any required file field is empty. "
+        "Selecting only optional files does not enable it. "
+        "Proceed button becomes enabled only once all required file fields are populated.",
     ),
 ]
+
+LOGIC_COUNT     = sum(1 for t in TEST_CASES if t[2] == "Logic")
+WHOLE_APP_COUNT = sum(1 for t in TEST_CASES if t[2] == "Whole App")
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +509,12 @@ OVERVIEW_ROWS = [
         f"End-to-end validation of X-Checks Full Application v{VERSION} against the "
         f"test_data\\ files. Covers all five strategies (Collect Live X-Checks, X-Checks, "
         f"Grouping By, Accounting Principles, Conditions) and Full Run, plus shared "
-        f"infrastructure: Processing Log, sensitivity labelling, stop/error handling.",
+        f"infrastructure: Processing Log, sensitivity labelling, stop/error handling.\n\n"
+        f"Test cases are categorised:\n"
+        f"  Logic ({LOGIC_COUNT} cases)     — verifies row counts and processing output. "
+        f"Run after every code change to confirm strategy logic is correct.\n"
+        f"  Whole App ({WHOLE_APP_COUNT} cases) — verifies UI, structure, labelling, error handling. "
+        f"Run for full release sign-off.",
     ),
     (
         "Scope",
@@ -578,17 +613,25 @@ def _build_test_cases(wb):
     ws = wb.create_sheet("Test Cases")
     ws.sheet_view.showGridLines = False
     set_col_widths(ws, {
-        "A": 12, "B": 26, "C": 36, "D": 50, "E": 50,
-        "F": 36, "G": 12, "H": 18, "I": 14,
+        "A": 10, "B": 26, "C": 14, "D": 36, "E": 50,
+        "F": 50, "G": 36, "H": 12, "I": 18, "J": 14,
     })
 
-    headers = ["ID", "Area", "Precondition", "Steps", "Expected Result",
+    headers = ["ID", "Area", "Test Type", "Precondition", "Steps", "Expected Result",
                "Actual Result", "Pass / Fail", "Tester", "Date"]
 
     tc = ws.cell(row=1, column=1, value=f"Full Application v{VERSION} — UAT Test Cases")
     tc.font = _semibold(size=16)
     tc.alignment = TOP_WRAP
-    ws.merge_cells("A1:I1")
+    ws.merge_cells("A1:J1")
+
+    # Legend row
+    ws.row_dimensions[2].height = 18
+    leg = ws.cell(row=2, column=1,
+                  value="Test Type:   Logic = verify processing output counts     Whole App = verify UI, structure, labelling, error handling")
+    leg.font = _font(size=9, color="FF444444")
+    leg.alignment = TOP_WRAP
+    ws.merge_cells("A2:J2")
 
     ws.row_dimensions[3].height = 28
     for col_idx, hdr in enumerate(headers, start=1):
@@ -598,19 +641,26 @@ def _build_test_cases(wb):
         cell.border = ALL_THIN
         cell.alignment = CENTER_WRAP
 
-    for row_offset, (tc_id, area, precond, steps, expected) in enumerate(TEST_CASES):
+    last_data_row = 3 + len(TEST_CASES)
+    for row_offset, (tc_id, area, test_type, precond, steps, expected) in enumerate(TEST_CASES):
         row = 4 + row_offset
         ws.row_dimensions[row].height = 80
-        fill = _fill(ALT_GREY) if row_offset % 2 == 1 else None
         for col_idx, val in enumerate(
-            [tc_id, area, precond, steps, expected, "", "", "", ""], start=1
+            [tc_id, area, test_type, precond, steps, expected, "", "", "", ""], start=1
         ):
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.font = _font()
             cell.border = ALL_THIN
             cell.alignment = TOP_WRAP
-            if fill:
-                cell.fill = fill
+        ws.cell(row=row, column=3).font = _semibold()
+
+    # Light-blue CF for Logic rows
+    cf_range = f"A4:J{last_data_row}"
+    cf_fill = PatternFill(patternType="solid", fgColor=LOGIC_BLUE, bgColor=LOGIC_BLUE)
+    ws.conditional_formatting.add(
+        cf_range,
+        FormulaRule(formula=['$C4="Logic"'], fill=cf_fill),
+    )
 
 
 def _build_signoff(wb):

@@ -26,7 +26,36 @@ from version import __version__
 VERSION  = __version__
 TODAY    = date.today().strftime("%Y%m%d")
 OUT_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
-FILENAME = f"{TODAY} Fixture_UAT_v{VERSION} Test Plan.xlsx"
+
+
+def _next_suffix(out_dir, stem_pattern):
+    """Return the next letter suffix (_a, _b, ..., _z, _aa, _ab, ...) for a versioned file.
+    Scans out_dir for existing files whose name contains stem_pattern and extracts used suffixes."""
+    import re
+    import string
+    used = set()
+    if os.path.isdir(out_dir):
+        for f in os.listdir(out_dir):
+            if stem_pattern in f:
+                m = re.search(r'_([a-z]+)\.xlsx$', f)
+                if m:
+                    used.add(m.group(1))
+
+    def _seq():
+        for c in string.ascii_lowercase:
+            yield c
+        for c1 in string.ascii_lowercase:
+            for c2 in string.ascii_lowercase:
+                yield c1 + c2
+
+    for s in _seq():
+        if s not in used:
+            return s
+    return "a"
+
+
+SUFFIX   = _next_suffix(OUT_DIR, f"Fixture_UAT_v{VERSION} Test Plan_")
+FILENAME = f"{TODAY} Fixture_UAT_v{VERSION} Test Plan_{SUFFIX}.xlsx"
 OUT_PATH = os.path.join(OUT_DIR, FILENAME)
 
 F = "test_data\\fixtures"
@@ -535,14 +564,6 @@ TEST_CASES = [
         "(e.g. 'XC — Comparison', 'GB — Comparison', 'AP — Comparison', 'Cond — Comparison'). "
         "Tabs are colour-coded by strategy. Single 'Processing Log' sheet at the end.",
     ),
-    (
-        "FX-29", "Full Run — abort on strategy failure", "Whole App",
-        "Full Run form open.",
-        "Set an incorrect sheet name for one file, then click Proceed.",
-        "Failing strategy logs a clear error. Full Run aborts immediately — "
-        "does not continue to the next strategy. 'Return to Form' is available.",
-    ),
-
     # ── Settings / Known Exception Builder ────────────────────────────────────
     (
         "FX-30", "Settings — gear menu", "Whole App",
@@ -611,17 +632,21 @@ TEST_CASES = [
         "'Return to Form' reopens the form with previously chosen files pre-filled.",
     ),
     (
-        "FX-38", "Error — wrong sheet name", "Whole App",
-        "Any task's file-selection form open.",
-        "Set a sheet name to 'does_not_exist', then click Proceed.",
-        "Run aborts with a clear error identifying the missing sheet. "
-        "App returns to form — does not crash.",
+        "FX-38", "UI — sheet name constrained to file contents", "Whole App",
+        "Any task's file-selection form open. Browse to any Excel file.",
+        "After selecting an Excel file, inspect the sheet name dropdown.",
+        "The sheet name dropdown is populated with only the sheets present in the selected file. "
+        "It is not possible to type or select a sheet name that does not exist in the file — "
+        "the combobox is read-only and restricted to the file's own sheet names.",
     ),
     (
-        "FX-39", "Error — missing required file", "Whole App",
-        "Any task's file-selection form open.",
-        "click Proceed without selecting any required files.",
-        "Start does not begin processing. Form indicates missing required fields.",
+        "FX-39", "UI — Proceed button disabled until required files selected", "Whole App",
+        "Any task's file-selection form open. No files selected.",
+        "Observe the Proceed button before selecting any files. "
+        "Then select only optional files. Then select all required files.",
+        "Proceed button is disabled (greyed out) while any required file field is empty. "
+        "Selecting only optional files does not enable it. "
+        "Proceed button becomes enabled only once all required file fields are populated.",
     ),
 ]
 
